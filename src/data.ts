@@ -260,7 +260,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     id: 'cake-lemon-cream',
     name: 'Lemon Cream Cheese Cake',
     description: 'Bright, zesty lemon-infused sponge cake perfectly matched with a velvety, tangy cream cheese frosting. A refreshing, premium balance of sweet and tart.',
-    image: 'https://images.unsplash.com/photo-1519869325930-281384150729?auto=format&fit=crop&w=800&q=80',
+    image: 'https://images.unsplash.com/photo-1534766555764-ce878a5e3a2b?auto=format&fit=crop&w=800&q=80',
     prepTime: 20,
     cookTime: 35,
     difficulty: 'Hard',

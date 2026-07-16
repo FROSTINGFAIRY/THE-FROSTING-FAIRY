@@ -133,57 +133,62 @@ export default function ShoppingList({
     setIsLocating(true);
     setLocationFeedback('Connecting to GPS satellites...');
 
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const lat = position.coords.latitude;
-        const lon = position.coords.longitude;
-        setGpsCoordinates(`${lat.toFixed(6)}, ${lon.toFixed(6)}`);
-        setLocationFeedback('Pin secured! Fetching street address...');
+    try {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
+          setGpsCoordinates(`${lat.toFixed(6)}, ${lon.toFixed(6)}`);
+          setLocationFeedback('Pin secured! Fetching street address...');
 
-        try {
-          const response = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&addressdetails=1`
-          );
-          if (response.ok) {
-            const data = await response.json();
-            if (data && data.display_name) {
-              setDeliveryAddress(data.display_name);
-              setLocationFeedback('Address auto-filled successfully! ✨');
+          try {
+            const response = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&addressdetails=1`
+            );
+            if (response.ok) {
+              const data = await response.json();
+              if (data && data.display_name) {
+                setDeliveryAddress(data.display_name);
+                setLocationFeedback('Address auto-filled successfully! ✨');
+              } else {
+                setDeliveryAddress(`Latitude: ${lat.toFixed(6)}, Longitude: ${lon.toFixed(6)}`);
+                setLocationFeedback('Coordinates pinned! (Type flat/building number)');
+              }
             } else {
               setDeliveryAddress(`Latitude: ${lat.toFixed(6)}, Longitude: ${lon.toFixed(6)}`);
-              setLocationFeedback('Coordinates pinned! (Type flat/building number)');
+              setLocationFeedback('Coordinates pinned! (Type street details)');
             }
-          } else {
+          } catch (err) {
             setDeliveryAddress(`Latitude: ${lat.toFixed(6)}, Longitude: ${lon.toFixed(6)}`);
-            setLocationFeedback('Coordinates pinned! (Type street details)');
+            setLocationFeedback('Location secured! (Lookup offline, type landmark)');
+          } finally {
+            setIsLocating(false);
           }
-        } catch (err) {
-          setDeliveryAddress(`Latitude: ${lat.toFixed(6)}, Longitude: ${lon.toFixed(6)}`);
-          setLocationFeedback('Location secured! (Lookup offline, type landmark)');
-        } finally {
+        },
+        (error) => {
           setIsLocating(false);
-        }
-      },
-      (error) => {
-        setIsLocating(false);
-        console.error(error);
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            setLocationFeedback('Location permission denied. Please write address manually.');
-            break;
-          case error.POSITION_UNAVAILABLE:
-            setLocationFeedback('GPS signal unavailable. Please write address manually.');
-            break;
-          case error.TIMEOUT:
-            setLocationFeedback('GPS connection timed out. Please write address manually.');
-            break;
-          default:
-            setLocationFeedback('Failed to access location. Type address below.');
-            break;
-        }
-      },
-      { timeout: 8000, enableHighAccuracy: true }
-    );
+          console.error(error);
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              setLocationFeedback('Location permission denied. Please write address manually, or open the website in a new tab.');
+              break;
+            case error.POSITION_UNAVAILABLE:
+              setLocationFeedback('GPS signal unavailable. Please write address manually.');
+              break;
+            case error.TIMEOUT:
+              setLocationFeedback('GPS connection timed out. Please write address manually.');
+              break;
+            default:
+              setLocationFeedback('Failed to access location. Type address below.');
+              break;
+          }
+        },
+        { timeout: 8000, enableHighAccuracy: true }
+      );
+    } catch (err) {
+      setIsLocating(false);
+      setLocationFeedback('Location blocked by browser or iframe policy. Open the app in a new tab to pin!');
+    }
   };
 
   const handlePlaceOrder = (e: React.FormEvent) => {

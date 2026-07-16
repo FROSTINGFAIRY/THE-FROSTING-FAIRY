@@ -1,9 +1,7 @@
 {
   "name": "Remix: THE FROSTING FAIRY",
   "description": "A luxury custom confectionery e-commerce website offering artisanal cakes, bespoke cupcakes, and handcrafted pastries with live ordering and order status tracking.",
-  "requestFramePermissions": [
-    "geolocation"
-  ],
+  "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
   ]

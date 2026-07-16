@@ -47,12 +47,77 @@ export default function RecipeDetail({
 
   // Gallery state for multiple attractive product pictures
   const [activeImgIdx, setActiveImgIdx] = useState(0);
-  const images = getRecipeImages(recipe);
+  const [customImageUrl, setCustomImageUrl] = useState<string>('');
+
+  // AI Live Image Generator State
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [aiError, setAiError] = useState('');
+  const [generationStep, setGenerationStep] = useState('Mixing ingredients...');
+
+  const images = React.useMemo(() => {
+    const list = getRecipeImages(recipe);
+    if (customImageUrl) {
+      return [customImageUrl, ...list];
+    }
+    return list;
+  }, [recipe, customImageUrl]);
+
   const activeImageUrl = images[activeImgIdx] || recipe.image;
 
   useEffect(() => {
     setActiveImgIdx(0);
+    setCustomImageUrl('');
+    setAiPrompt('');
+    setAiError('');
   }, [recipe.id]);
+
+  const steps = [
+    'Mixing organic flour & sugar...',
+    'Preheating premium bakery oven...',
+    'Piping custom frostings...',
+    'Sprinkling with magic fairy dust...',
+    'Gemini AI rendering final masterpiece...'
+  ];
+
+  const handleGenerateAiImage = async () => {
+    if (!aiPrompt.trim()) return;
+    
+    setIsGenerating(true);
+    setAiError('');
+    
+    let stepIndex = 0;
+    setGenerationStep(steps[0]);
+    const stepInterval = setInterval(() => {
+      stepIndex = (stepIndex + 1) % steps.length;
+      setGenerationStep(steps[stepIndex]);
+    }, 1500);
+
+    try {
+      const response = await fetch('/api/generate-image', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ prompt: `${recipe.name}: ${aiPrompt}` }),
+      });
+
+      const data = await response.json();
+      clearInterval(stepInterval);
+
+      if (response.ok && data.imageUrl) {
+        setCustomImageUrl(data.imageUrl);
+        setActiveImgIdx(0); // Automatically view the generated image
+      } else {
+        setAiError(data.error || 'Failed to craft your customized cake mock-up.');
+      }
+    } catch (err: any) {
+      clearInterval(stepInterval);
+      setAiError('Network interruption. Please verify your connection.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const priceOption = recipe.priceOptions?.[selectedOptionIndex] || recipe.priceOptions?.[0] || { label: 'Standard', price: 500 };
   const unitPrice = priceOption.price;
@@ -67,7 +132,7 @@ export default function RecipeDetail({
       price: priceOption.price,
       amount: quantity,
       unit: 'Qty',
-      image: recipe.image,
+      image: customImageUrl || recipe.image,
       customMessage: recipe.category === 'Signature Cakes' ? customMessage : '',
       recipeName: frostingFlavor,
     });
@@ -302,6 +367,85 @@ export default function RecipeDetail({
                 />
               </div>
             )}
+
+            {/* Live AI Design Visualizer */}
+            <div className="space-y-3 bg-brand-pink-light/10 border border-brand-pink/20 rounded-2xl p-4.5">
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-bold font-mono uppercase tracking-wider text-brand-pink-dark flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-brand-pink fill-brand-pink animate-pulse" />
+                  <span>Live AI Design Generator</span>
+                </label>
+                <span className="bg-brand-pink/15 text-brand-pink-dark font-mono text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase">
+                  Live Preview
+                </span>
+              </div>
+              <p className="text-xs text-brand-cocoa-light leading-normal">
+                Describe your custom decorations, tiers, colors, or theme, and watch Gemini AI generate a live photographic mock-up of your dream confectionery!
+              </p>
+              
+              <div className="flex flex-col gap-2">
+                <textarea
+                  rows={2}
+                  placeholder="e.g. Two-tier pastel lilac cake decorated with edible butterflies, sugar pearls, and fresh lavender sprigs..."
+                  value={aiPrompt}
+                  onChange={(e) => setAiPrompt(e.target.value)}
+                  className="w-full bg-white border border-brand-cocoa-border rounded-xl px-4 py-2 text-xs text-brand-cocoa focus:outline-none focus:ring-2 focus:ring-brand-pink/20 focus:border-brand-pink resize-none"
+                />
+                
+                {aiError && (
+                  <p className="text-xs text-red-500 font-semibold flex items-center gap-1">
+                    ⚠️ {aiError}
+                  </p>
+                )}
+
+                <button
+                  type="button"
+                  disabled={isGenerating || !aiPrompt.trim()}
+                  onClick={handleGenerateAiImage}
+                  className={`w-full py-2.5 rounded-xl text-xs font-bold font-sans transition-all flex items-center justify-center gap-2 border cursor-pointer ${
+                    isGenerating
+                      ? 'bg-brand-cream border-brand-cocoa-border text-brand-cocoa-light'
+                      : !aiPrompt.trim()
+                      ? 'bg-white border-brand-cocoa-border/60 text-brand-cocoa-light/60 hover:border-brand-cocoa-border'
+                      : 'bg-white hover:bg-brand-pink-light/20 border-brand-pink/40 hover:border-brand-pink text-brand-pink-dark shadow-3xs hover:shadow-2xs'
+                  }`}
+                >
+                  {isGenerating ? (
+                    <>
+                      <span className="w-3.5 h-3.5 border-2 border-brand-pink border-t-transparent rounded-full animate-spin" />
+                      <span>{generationStep}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-3.5 h-3.5 text-brand-pink fill-brand-pink" />
+                      <span>Generate Live Mock-up 🪄</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {customImageUrl && (
+                <div className="mt-3.5 p-3 bg-white border border-brand-pink/30 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
+                  <div className="w-14 h-14 rounded-lg overflow-hidden border border-brand-cocoa-border shrink-0">
+                    <img src={customImageUrl} alt="Generated design preview" className="w-full h-full object-cover" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-[9px] font-mono font-bold text-brand-pink uppercase tracking-wider block">Mock-up Applied!</span>
+                    <span className="text-[11px] font-sans font-medium text-brand-cocoa-light block truncate mt-0.5">Your description is bound to your cart order.</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCustomImageUrl('');
+                        setAiPrompt('');
+                      }}
+                      className="text-[10px] font-bold font-mono text-brand-cocoa-light hover:text-red-500 mt-1 cursor-pointer block"
+                    >
+                      ✕ Reset Custom Design
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Quantity Selector */}
             <div className="space-y-2 border-t border-brand-cocoa-border/40 pt-4 flex items-center justify-between">

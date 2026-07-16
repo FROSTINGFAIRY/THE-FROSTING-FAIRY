@@ -133,19 +133,19 @@ export default function Home({
     <div id="home-view-container" className="flex-1 flex flex-col bg-brand-cream">
       
       {/* 1. LUXURIOUS HERO SECTION */}
-      <section id="home-hero" className="relative h-[550px] lg:h-[620px] overflow-hidden bg-brand-cocoa flex items-center justify-center text-center px-4">
+      <section id="home-hero" className="relative min-h-[850px] lg:min-h-[950px] py-16 lg:py-24 overflow-hidden bg-brand-cocoa flex flex-col items-center justify-center text-center px-4">
         {/* Absolute Background Image with parallax overlay */}
         <div className="absolute inset-0 z-0">
           <img 
             src={heroImage} 
             alt="Artisanal Cake Showcase" 
-            className="w-full h-full object-cover opacity-35 scale-105 transition-all duration-10000"
+            className="w-full h-full object-cover opacity-25 scale-105 transition-all duration-10000"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-brand-cocoa/50 to-brand-cream" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/75 via-brand-cocoa/60 to-brand-cream" />
         </div>
 
         {/* Content Box */}
-        <div className="relative z-10 max-w-4xl mx-auto space-y-6 text-white px-2">
+        <div className="relative z-10 max-w-6xl w-full mx-auto space-y-8 text-white px-2 flex flex-col items-center">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -164,9 +164,9 @@ export default function Home({
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="font-display font-black text-4xl sm:text-5xl lg:text-6xl text-white uppercase tracking-tight leading-none"
+            className="font-display font-black text-4xl sm:text-5xl lg:text-6xl text-white uppercase tracking-tight leading-none text-center"
           >
-            Handcrafted <span className="text-brand-pink">Magic</span>,<br />
+            Handcrafted <span className="text-brand-pink animate-pulse">Magic</span>,<br />
             Baked For Life's Milestones
           </motion.h1>
 
@@ -174,35 +174,92 @@ export default function Home({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.6, delay: 0.4 }}
-            className="text-sm sm:text-base text-brand-cream-light/90 max-w-2xl mx-auto leading-relaxed font-sans"
+            className="text-sm sm:text-base text-brand-cream-light/90 max-w-2xl mx-auto leading-relaxed font-sans text-center"
           >
             Welcome to <span className="font-bold text-white uppercase">{websiteName}</span>. We translate sweet dreams into luxury confectionery—using fine organic ingredients, bespoke recipes, and custom hand-piped decorations.
           </motion.p>
 
+          {/* MASSIVE CALL-TO-ACTION PORTALS (HIGHLIGHTED BIGGER THAN ANYTHING ELSE) */}
           <motion.div
-            initial={{ opacity: 0, y: 15 }}
+            initial={{ opacity: 0, y: 35 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.55 }}
-            className="flex flex-wrap items-center justify-center gap-4 pt-4"
+            transition={{ duration: 0.8, delay: 0.5 }}
+            className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-5xl pt-6"
           >
-            <button
+            {/* PORTAL 1: EXPLORE OUR MENU */}
+            <div 
               onClick={() => onNavigateToTab('discover', 'All')}
-              className="px-8 py-3.5 bg-brand-pink hover:bg-brand-pink-dark text-white text-xs font-extrabold uppercase tracking-widest rounded-full transition-all shadow-lg hover:shadow-brand-pink/20 flex items-center gap-2 group cursor-pointer"
+              className="group relative overflow-hidden rounded-3xl border-2 border-brand-pink/30 hover:border-brand-pink bg-brand-cocoa/85 backdrop-blur-md p-8 sm:p-10 text-left transition-all duration-300 hover:shadow-[0_20px_50px_rgba(236,72,153,0.15)] cursor-pointer flex flex-col justify-between min-h-[300px] sm:min-h-[340px] transform hover:-translate-y-2"
             >
-              <span>Explore Our Menu</span>
-              <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-            </button>
-            <button
+              {/* Background decorative image with hover zoom */}
+              <div className="absolute inset-0 z-0 opacity-20 group-hover:opacity-40 transition-all duration-500">
+                <img 
+                  src="https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=800&q=80" 
+                  alt="Pastry Menu background" 
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                />
+              </div>
+              <div className="absolute inset-0 bg-gradient-to-t from-brand-cocoa via-brand-cocoa/40 to-transparent opacity-80 z-0" />
+              
+              <div className="relative z-10 space-y-4">
+                <span className="inline-block px-3.5 py-1 rounded-full bg-brand-pink/25 text-brand-pink-light font-mono text-[10px] font-bold uppercase tracking-wider">
+                  Boutique Collection
+                </span>
+                <h3 className="font-display font-black text-3xl sm:text-4xl text-white uppercase tracking-tight leading-none group-hover:text-brand-pink transition-colors">
+                  Explore <br />Our Menu
+                </h3>
+                <p className="text-xs sm:text-sm text-brand-cream-light/90 leading-relaxed font-sans max-w-md">
+                  Delve into our freshly-baked cupcakes, dense cocoa brownies, custom cinnamon rolls, and gourmet additions. Customize flavors, portion sizes, and frostings dynamically.
+                </p>
+              </div>
+
+              <div className="relative z-10 pt-6">
+                <button className="inline-flex items-center gap-2.5 px-8 py-4 bg-brand-pink hover:bg-brand-pink-dark text-white text-xs font-extrabold uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-brand-pink/20 cursor-pointer group-hover:scale-[1.05]">
+                  <span>Sift The Entire Menu</span>
+                  <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1.5" />
+                </button>
+              </div>
+            </div>
+
+            {/* PORTAL 2: ORDER CUSTOM CAKES */}
+            <div 
               onClick={() => onNavigateToTab('discover', 'Signature Cakes')}
-              className="px-8 py-3.5 bg-white/10 hover:bg-white/20 border border-white/30 text-white text-xs font-extrabold uppercase tracking-widest rounded-full transition-all backdrop-blur-xs cursor-pointer"
+              className="group relative overflow-hidden rounded-3xl border-2 border-brand-pink/30 hover:border-brand-pink bg-brand-cocoa/85 backdrop-blur-md p-8 sm:p-10 text-left transition-all duration-300 hover:shadow-[0_20px_50px_rgba(236,72,153,0.15)] cursor-pointer flex flex-col justify-between min-h-[300px] sm:min-h-[340px] transform hover:-translate-y-2"
             >
-              Order Custom Cakes
-            </button>
+              {/* Background decorative image with hover zoom */}
+              <div className="absolute inset-0 z-0 opacity-20 group-hover:opacity-40 transition-all duration-500">
+                <img 
+                  src="https://images.unsplash.com/photo-1535141192574-5d4897c13636?auto=format&fit=crop&w=800&q=80" 
+                  alt="Custom Cake background" 
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                />
+              </div>
+              <div className="absolute inset-0 bg-gradient-to-t from-brand-cocoa via-brand-cocoa/40 to-transparent opacity-80 z-0" />
+
+              <div className="relative z-10 space-y-4">
+                <span className="inline-block px-3.5 py-1 rounded-full bg-brand-pink/25 text-brand-pink-light font-mono text-[10px] font-bold uppercase tracking-wider">
+                  Bespoke Artistry
+                </span>
+                <h3 className="font-display font-black text-3xl sm:text-4xl text-white uppercase tracking-tight leading-none group-hover:text-brand-pink transition-colors">
+                  Order <br />Custom Cakes
+                </h3>
+                <p className="text-xs sm:text-sm text-brand-cream-light/90 leading-relaxed font-sans max-w-md">
+                  Collaborate directly with our master pastry architects. Design luxurious tiered wedding cakes, milestone birthday layers, themed centerpieces, and custom sugar plaques.
+                </p>
+              </div>
+
+              <div className="relative z-10 pt-6">
+                <button className="inline-flex items-center gap-2.5 px-8 py-4 bg-white/10 group-hover:bg-brand-pink group-hover:text-white border border-white/30 group-hover:border-brand-pink text-white text-xs font-extrabold uppercase tracking-widest rounded-xl transition-all cursor-pointer group-hover:scale-[1.05]">
+                  <span>Consult & Order Custom Cake</span>
+                  <Sparkles className="w-4 h-4 text-brand-pink group-hover:text-white" />
+                </button>
+              </div>
+            </div>
           </motion.div>
         </div>
 
         {/* Curved Divider */}
-        <div className="absolute bottom-0 left-0 right-0 h-16 bg-brand-cream" style={{ clipPath: 'ellipse(60% 100% at 50% 100%)' }} />
+        <div className="absolute bottom-0 left-0 right-0 h-16 bg-brand-cream animate-fade-in" style={{ clipPath: 'ellipse(60% 100% at 50% 100%)' }} />
       </section>
 
 
