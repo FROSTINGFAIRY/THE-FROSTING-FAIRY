@@ -182,9 +182,14 @@ export default function MealPlanner({
                       {/* Collection Details Grid */}
                       <div className="border-t border-brand-cocoa-border/60 pt-3 grid grid-cols-2 gap-4 bg-brand-cream-light/35 p-3 rounded-xl">
                         <div>
-                          <span className="font-mono text-[9px] uppercase tracking-wider text-brand-cocoa-light/80 block">Customer</span>
+                          <span className="font-mono text-[9px] uppercase tracking-wider text-brand-cocoa-light/80 block">Customer Info</span>
                           <span className="font-sans font-bold text-brand-cocoa text-xs block truncate">{order.customerName || order.contactName}</span>
                           <span className="text-[10px] text-brand-cocoa-light block truncate mt-0.5">{order.customerPhone || order.contactPhone}</span>
+                          {order.deliveryType === 'Delivery' && order.deliveryAddress && (
+                            <span className="text-[10px] text-brand-cocoa/90 block mt-1.5 leading-tight font-medium bg-white/70 px-1.5 py-1 rounded border border-brand-cocoa-border/25">
+                              📍 {order.deliveryAddress}
+                            </span>
+                          )}
                         </div>
                         <div>
                           <span className="font-mono text-[9px] uppercase tracking-wider text-brand-cocoa-light/80 block">{order.deliveryType === 'Delivery' ? 'Delivery Time' : 'Collection Time'}</span>

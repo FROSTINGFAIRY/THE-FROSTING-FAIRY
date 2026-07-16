@@ -11,7 +11,12 @@ import {
   Plus, 
   Award, 
   ShieldCheck, 
-  Star 
+  Star,
+  LayoutGrid,
+  Cake,
+  ChefHat,
+  Flame,
+  Cookie
 } from 'lucide-react';
 import { Recipe } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
@@ -59,6 +64,69 @@ const DEFAULT_TESTIMONIALS: Testimonial[] = [
     date: '1 week ago'
   }
 ];
+
+const CATEGORY_INFOS = [
+  {
+    name: 'Signature Cakes',
+    emoji: '🎂',
+    description: 'Bespoke layered sponge cakes whipped with silky buttercreams, premium chocolates, and fresh organic fruits.',
+    image: 'https://images.unsplash.com/photo-1535141192574-5d4897c13636?auto=format&fit=crop&w=600&q=80',
+    itemCountText: 'Premium Tiered Cakes',
+    startingPrice: 500,
+  },
+  {
+    name: 'Cupcakes',
+    emoji: '🧁',
+    description: 'Perfect, beautifully frosted individual treats topped with elegant piping and sprinkles of fairy dust.',
+    image: 'https://images.unsplash.com/photo-1576618148400-f54bed99fcfd?auto=format&fit=crop&w=600&q=80',
+    itemCountText: 'Fluffy Personal Swirls',
+    startingPrice: 120,
+  },
+  {
+    name: 'Brownies',
+    emoji: '🍫',
+    description: 'Deep, rich, fudgy squares featuring chocolate-crackle crusts and premium imported Belgian cocoa.',
+    image: 'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=600&q=80',
+    itemCountText: 'Belgian Chocolate Fudge',
+    startingPrice: 150,
+  },
+  {
+    name: 'Cookies',
+    emoji: '🍪',
+    description: 'Warm, crispy on the outside, and incredibly soft-chewy on the inside, stuffed with premium chocolate chunks.',
+    image: 'https://images.unsplash.com/photo-1499636136210-6f4ee915583e?auto=format&fit=crop&w=600&q=80',
+    itemCountText: 'Artisanal Chewy Cookies',
+    startingPrice: 90,
+  },
+  {
+    name: 'New Additions',
+    emoji: '🍩',
+    description: 'Exciting daily specials, fluffy custard bombolonis, soft-glazed bakes, and gourmet cinnamon rolls.',
+    image: 'https://images.unsplash.com/photo-1544982503-9f984c14501a?auto=format&fit=crop&w=600&q=80',
+    itemCountText: 'Artisanal Bakes & Specials',
+    startingPrice: 150,
+  }
+];
+
+const getCategoryIcon = (name: string) => {
+  const iconClass = "w-4 h-4 md:w-5 md:h-5 transition-transform group-hover:scale-110 shrink-0 text-brand-pink group-hover:text-white";
+  switch (name) {
+    case 'All':
+      return <LayoutGrid className={iconClass} />;
+    case 'Signature Cakes':
+      return <Cake className={iconClass} />;
+    case 'Cupcakes':
+      return <ChefHat className={iconClass} />;
+    case 'Brownies':
+      return <Flame className={iconClass} />;
+    case 'Cookies':
+      return <Cookie className={iconClass} />;
+    case 'New Additions':
+      return <Sparkles className={iconClass} />;
+    default:
+      return <Sparkles className={iconClass} />;
+  }
+};
 
 export default function Home({
   recipes,
@@ -263,8 +331,92 @@ export default function Home({
       </section>
 
 
+
+
+      {/* 4. PREMIUM QUICK CATEGORY FILTERS & PORTAL COVERS */}
+      <section id="home-collections-portal" className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-brand-cocoa-border/20">
+        <div className="text-center max-w-2xl mx-auto space-y-2 mb-10">
+          <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-brand-pink font-bold flex items-center justify-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5 fill-brand-pink animate-pulse" />
+            <span>the magic oven collections</span>
+          </span>
+          <h3 className="font-display font-black text-2xl sm:text-3xl text-brand-cocoa uppercase tracking-tight">
+            Our Fairy Confections
+          </h3>
+          <p className="text-xs sm:text-sm text-brand-cocoa-light/90 leading-relaxed font-sans">
+            Filter and explore our specialised confections. Select a category below to sift through specific recipes, multiple attractive product pictures, and exact custom sizing and pricing details.
+          </p>
+        </div>
+
+        {/* Premium horizontal interactive pills */}
+        <div className="flex flex-wrap justify-center gap-3 mb-10">
+          {['All', ...CATEGORY_INFOS.map(c => c.name)].map((catName) => {
+            return (
+              <button
+                key={catName}
+                onClick={() => onNavigateToTab('discover', catName)}
+                className="group px-4 py-2.5 rounded-full border border-brand-cocoa-border/60 hover:border-brand-pink bg-white hover:bg-brand-pink text-brand-cocoa hover:text-white transition-all cursor-pointer shadow-2xs hover:shadow-md flex items-center gap-2 text-xs font-semibold"
+              >
+                {getCategoryIcon(catName)}
+                <span className="font-sans tracking-tight">{catName}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Highlighted Product Category Cover Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 text-left">
+          {CATEGORY_INFOS.map((cat, idx) => (
+            <motion.div
+              key={cat.name}
+              initial={{ opacity: 0, y: 15 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.4, delay: idx * 0.08 }}
+              onClick={() => onNavigateToTab('discover', cat.name)}
+              className="bg-white rounded-2xl border border-brand-cocoa-border overflow-hidden shadow-xs hover:shadow-md hover:border-brand-pink/40 transition-all duration-350 cursor-pointer group flex flex-col"
+            >
+              {/* Visual Category Photo Overlay */}
+              <div className="h-56 overflow-hidden relative bg-brand-cream-light">
+                <img
+                  src={cat.image}
+                  alt={cat.name}
+                  className="w-full h-full object-cover transition-transform duration-750 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent flex flex-col justify-end p-5">
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-brand-pink-light/95 flex items-center gap-1.5 mb-1">
+                    <span>✨ {cat.itemCountText}</span>
+                  </span>
+                  <h4 className="font-display font-black text-xl text-white uppercase tracking-tight">
+                    {cat.name}
+                  </h4>
+                </div>
+                {/* Hover Floating action indicator */}
+                <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-xs w-9 h-9 rounded-full border border-brand-cocoa-border/40 flex items-center justify-center text-brand-cocoa opacity-0 group-hover:opacity-100 transition-all shadow-sm">
+                  <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5 text-brand-pink" />
+                </div>
+              </div>
+
+              {/* Info details */}
+              <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
+                <p className="text-xs text-brand-cocoa-light leading-relaxed">
+                  {cat.description}
+                </p>
+                <div className="flex items-center justify-between pt-3 border-t border-brand-cocoa-border/30">
+                  <span className="text-[9px] font-mono text-brand-cocoa-light/70 uppercase">Starting From</span>
+                  <span className="text-sm font-display font-black text-brand-pink">
+                    ₹{cat.startingPrice}
+                  </span>
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+
       {/* 2. THE BRAND VISION STORY */}
-      <section id="home-story-section" className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+      <section id="home-story-section" className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-center border-t border-brand-cocoa-border/20">
         
         {/* Left Column: Visual Grid of Baking Mastery */}
         <div className="lg:col-span-6 grid grid-cols-2 gap-4 relative">
@@ -397,73 +549,6 @@ export default function Home({
               </p>
             </div>
           </div>
-        </div>
-      </section>
-
-
-      {/* 4. CURATED COLLECTIONS OVERVIEW */}
-      <section id="home-collections-portal" className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-        <div className="text-center max-w-2xl mx-auto space-y-2 mb-12">
-          <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-brand-pink font-bold">Chef's Signature Selections</span>
-          <h3 className="font-display font-black text-2xl sm:text-3xl text-brand-cocoa uppercase tracking-tight">Our Curated Portals</h3>
-          <p className="text-xs sm:text-sm text-brand-cocoa-light/90 font-sans">
-            Choose a specialized collection and begin custom tailoring your order size, flavor profiles, and frostings.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 text-left">
-          {[
-            {
-              name: 'Signature Cakes',
-              image: 'https://images.unsplash.com/photo-1535141192574-5d4897c13636?auto=format&fit=crop&w=400&q=80',
-              tagline: 'Stately celebrations',
-              btnText: 'Sift Layered Cakes'
-            },
-            {
-              name: 'Cupcakes',
-              image: 'https://images.unsplash.com/photo-1576618148400-f54bed99fcfd?auto=format&fit=crop&w=400&q=80',
-              tagline: 'Artful single servings',
-              btnText: 'Sift Cupcakes'
-            },
-            {
-              name: 'Brownies',
-              image: 'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=400&q=80',
-              tagline: 'Decadent fudge bites',
-              btnText: 'Sift Brownies'
-            },
-            {
-              name: 'New Additions',
-              image: 'https://images.unsplash.com/photo-1544982503-9f984c14501a?auto=format&fit=crop&w=400&q=80',
-              tagline: 'Fresh daily donuts',
-              btnText: 'Sift Bakery Specials'
-            }
-          ].map((col) => (
-            <div 
-              key={col.name} 
-              className="bg-white border border-brand-cocoa-border rounded-2xl overflow-hidden shadow-2xs hover:shadow-md hover:border-brand-pink/30 transition-all duration-300 group flex flex-col justify-between"
-            >
-              <div className="h-44 overflow-hidden bg-brand-cream-light">
-                <img 
-                  src={col.image} 
-                  alt={col.name} 
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-              </div>
-              <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
-                <div>
-                  <span className="text-[8px] font-mono uppercase tracking-widest text-brand-pink block">{col.tagline}</span>
-                  <h4 className="font-display font-bold text-base text-brand-cocoa mt-0.5">{col.name}</h4>
-                </div>
-                <button
-                  onClick={() => onNavigateToTab('discover', col.name)}
-                  className="w-full py-2 bg-brand-cream-light/60 hover:bg-brand-pink hover:text-white text-[10px] font-mono uppercase tracking-wider font-extrabold text-brand-cocoa rounded-lg transition-all border border-brand-cocoa-border/40 hover:border-brand-pink flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  <span>{col.btnText}</span>
-                  <ArrowRight className="w-3 h-3" />
-                </button>
-              </div>
-            </div>
-          ))}
         </div>
       </section>
 
@@ -635,121 +720,6 @@ export default function Home({
         </div>
       </section>
 
-
-      {/* 6. INTERACTIVE BOUTIQUE STORE LOCATOR */}
-      <section id="home-locator-section" className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-brand-cocoa-border/40">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-          
-          {/* Left: Contact and Boutique Hours details */}
-          <div className="lg:col-span-5 text-left space-y-6">
-            <div className="space-y-2">
-              <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-brand-pink font-bold">Come Say Hello</span>
-              <h3 className="font-display font-black text-2xl sm:text-3xl text-brand-cocoa uppercase tracking-tight">Our Boutique Confectionery</h3>
-              <p className="text-xs sm:text-sm text-brand-cocoa-light/90 leading-relaxed font-sans">
-                Visit our magical physical parlor to consult on bespoke tiered designs, taste fresh frosting combinations, or collect pre-ordered customized bakes.
-              </p>
-            </div>
-
-            <div className="space-y-4 pt-2">
-              <div className="flex items-start gap-3.5">
-                <div className="w-8 h-8 rounded-full bg-brand-pink/15 flex items-center justify-center text-brand-pink shrink-0 mt-0.5 border border-brand-pink/20">
-                  <MapPin className="w-4 h-4" />
-                </div>
-                <div>
-                  <h4 className="font-sans font-bold text-xs uppercase tracking-wider text-brand-cocoa">Boutique Address</h4>
-                  <p className="text-xs text-brand-cocoa-light mt-0.5 leading-relaxed font-sans">
-                    12, Seraphina Gardens, Lane 3-A,<br />
-                    Royal Pastry Boulevard, Mumbai, MH - 400012
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3.5">
-                <div className="w-8 h-8 rounded-full bg-brand-pink/15 flex items-center justify-center text-brand-pink shrink-0 mt-0.5 border border-brand-pink/20">
-                  <Clock className="w-4 h-4" />
-                </div>
-                <div>
-                  <h4 className="font-sans font-bold text-xs uppercase tracking-wider text-brand-cocoa">Collection & Store Hours</h4>
-                  <p className="text-xs text-brand-cocoa-light mt-0.5 font-sans">
-                    Mon - Sat: 10:00 AM – 08:00 PM <br />
-                    Sunday: 11:00 AM – 05:00 PM
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3.5">
-                <div className="w-8 h-8 rounded-full bg-brand-pink/15 flex items-center justify-center text-brand-pink shrink-0 mt-0.5 border border-brand-pink/20">
-                  <Mail className="w-4 h-4" />
-                </div>
-                <div>
-                  <h4 className="font-sans font-bold text-xs uppercase tracking-wider text-brand-cocoa">Gourmet Hotline</h4>
-                  <p className="text-xs text-brand-cocoa-light mt-0.5 font-sans">
-                    Inquiries: <a href="mailto:hellofrostingfairy@gmail.com" className="text-brand-pink font-bold hover:underline">hellofrostingfairy@gmail.com</a><br />
-                    Phone: <span className="font-mono text-brand-pink font-bold">+91 98765 43210</span>
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-2">
-              <a
-                href="https://maps.google.com/?q=Mumbai+Boutique+Bakery"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-6 py-3 bg-brand-cocoa text-brand-cream hover:bg-brand-cocoa-light text-xs font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-xs"
-              >
-                <MapPin className="w-4 h-4 text-brand-pink" />
-                <span>Get Interactive Directions</span>
-              </a>
-            </div>
-          </div>
-
-          {/* Right: Immersive interactive mockup of Google Maps */}
-          <div className="lg:col-span-7 h-[300px] sm:h-[350px] bg-white rounded-2xl border border-brand-cocoa-border overflow-hidden relative shadow-xs p-1">
-            <div className="w-full h-full rounded-xl bg-slate-50 relative overflow-hidden flex flex-col items-center justify-center text-center p-6 border border-dashed border-brand-cocoa-border/60">
-              {/* Fake grid map visualization using stylish SVG map lines */}
-              <div className="absolute inset-0 opacity-[0.08] pointer-events-none">
-                <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-                  <defs>
-                    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                      <rect width="40" height="40" fill="none" />
-                      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="currentColor" strokeWidth="1" />
-                    </pattern>
-                  </defs>
-                  <rect width="100%" height="100%" fill="url(#grid)" />
-                </svg>
-                {/* Simulated streets */}
-                <div className="absolute top-[35%] left-0 right-0 h-4 bg-slate-600/30" />
-                <div className="absolute top-0 bottom-0 left-[45%] w-4 bg-slate-600/30" />
-                <div className="absolute top-0 bottom-0 left-[15%] w-2 bg-slate-600/30 rotate-12" />
-                <div className="absolute top-[70%] left-0 right-0 h-3 bg-slate-600/30 -rotate-6" />
-              </div>
-
-              {/* Floating Map Pin info block */}
-              <div className="relative z-10 bg-white border border-brand-cocoa-border p-4 rounded-xl shadow-md max-w-xs space-y-2 text-left">
-                <div className="flex items-center gap-1.5 text-brand-pink font-bold text-xs uppercase font-mono">
-                  <span className="w-2.5 h-2.5 rounded-full bg-brand-pink animate-ping shrink-0" />
-                  <MapPin className="w-4 h-4 shrink-0" />
-                  <span>The Frosting Fairy</span>
-                </div>
-                <p className="text-[10px] text-brand-cocoa-light leading-relaxed font-sans">
-                  Suite 12, Seraphina Gardens, Lane 3-A, Royal Pastry Boulevard, Mumbai.
-                </p>
-                <div className="flex items-center justify-between text-[8px] font-mono font-bold uppercase border-t border-brand-cream/80 pt-2 text-brand-pink-dark">
-                  <span>★ 4.9 Rating</span>
-                  <span>Open Now</span>
-                </div>
-              </div>
-
-              <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between bg-brand-cocoa/90 backdrop-blur-xs text-white px-3 py-2 rounded-xl text-[9px] font-mono uppercase tracking-wider shadow-md">
-                <span>Satellite View Connected</span>
-                <span className="text-emerald-400 font-bold">● Active GPS</span>
-              </div>
-            </div>
-          </div>
-
-        </div>
-      </section>
 
     </div>
   );

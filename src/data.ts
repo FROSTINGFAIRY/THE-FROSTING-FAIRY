@@ -37,7 +37,7 @@ export const INITIAL_RECIPES: Recipe[] = [
       { step: 2, text: 'Add organic eggs one by one, folding in vanilla bean paste until completely integrated.', durationMs: 120000 },
       { step: 3, text: 'Bake layers at 170°C (340°F) for exactly 28-32 minutes until a cake tester comes out with light crumbs.', durationMs: 1800000 }
     ],
-    isFavorite: true
+    isFavorite: false
   },
   {
     id: 'cake-chocolate',
@@ -183,7 +183,7 @@ export const INITIAL_RECIPES: Recipe[] = [
       { step: 2, text: 'Whip butterscotch sauce into premium buttercream frosting.', durationMs: 180000 },
       { step: 3, text: 'Assemble with generous sprinkles of praline between sponge layers.', durationMs: 180000 }
     ],
-    isFavorite: true
+    isFavorite: false
   },
   {
     id: 'cake-caramel',
@@ -254,7 +254,7 @@ export const INITIAL_RECIPES: Recipe[] = [
       { step: 2, text: 'Slice deep cocoa cake base into three thin, even layers.', durationMs: 120000 },
       { step: 3, text: 'Layer each tier with smooth chocolate ganache, chill, and coat with chocolate glaze.', durationMs: 600000 }
     ],
-    isFavorite: true
+    isFavorite: false
   },
   {
     id: 'cake-lemon-cream',
@@ -428,7 +428,7 @@ export const INITIAL_RECIPES: Recipe[] = [
       { step: 2, text: 'Bake for 18 minutes; cool. Whip butter and cream cheese for icing.', durationMs: 1200000 },
       { step: 3, text: 'Pipe rich velvet swirls and garnish with cake crumbs.', durationMs: 120000 }
     ],
-    isFavorite: true
+    isFavorite: false
   },
   {
     id: 'cupcake-oreo',
@@ -496,7 +496,7 @@ export const INITIAL_RECIPES: Recipe[] = [
       { step: 2, text: 'Warm Nutella slightly and pipe directly into the core of each cupcake.', durationMs: 120000 },
       { step: 3, text: 'Frost with hazelnut-chocolate cream and crown with hazelnut bits.', durationMs: 180000 }
     ],
-    isFavorite: true
+    isFavorite: false
   },
 
   // --- BROWNIES (BOX OF 6) ---
@@ -533,7 +533,7 @@ export const INITIAL_RECIPES: Recipe[] = [
       { step: 2, text: 'Whisk eggs and sugar vigorously for 4 minutes to create the shiny crinkle top.', durationMs: 240000 },
       { step: 3, text: 'Fold melted chocolate and flour, then bake at 175°C for exactly 20-22 minutes.', durationMs: 1320000 }
     ],
-    isFavorite: true
+    isFavorite: false
   },
   {
     id: 'brownie-oreo',
@@ -667,7 +667,7 @@ export const INITIAL_RECIPES: Recipe[] = [
       { step: 2, text: 'Spread evenly in an 8-inch square pan and level with a small spatula.', durationMs: 120000 },
       { step: 3, text: 'Bake for exactly 21-23 minutes to preserve the melting chip puddles.', durationMs: 1320000 }
     ],
-    isFavorite: true
+    isFavorite: false
   },
   {
     id: 'brownie-biscoff',
@@ -735,7 +735,7 @@ export const INITIAL_RECIPES: Recipe[] = [
       { step: 2, text: 'Drizzle rich pistachio cream butter and draw a beautiful pattern.', durationMs: 180000 },
       { step: 3, text: 'Bake for 23 minutes, pull out, and immediately scatter crushed green pistachios.', durationMs: 1380000 }
     ],
-    isFavorite: true
+    isFavorite: false
   },
 
   // --- COOKIES (BOX OF 6) ---
@@ -772,7 +772,7 @@ export const INITIAL_RECIPES: Recipe[] = [
       { step: 2, text: 'Fold in chocolate chips; scoop large 2oz balls of cookie dough.', durationMs: 120000 },
       { step: 3, text: 'Bake at 180°C for exactly 10 minutes until edges are set but center remains soft.', durationMs: 600000 }
     ],
-    isFavorite: true
+    isFavorite: false
   },
   {
     id: 'cookie-double-choco',
@@ -904,7 +904,7 @@ export const INITIAL_RECIPES: Recipe[] = [
       { step: 2, text: 'Chill cookie balls for 15 minutes to prevent flat spreading.', durationMs: 900000 },
       { step: 3, text: 'Bake at 170°C for 11 minutes; cool before moving.', durationMs: 660000 }
     ],
-    isFavorite: true
+    isFavorite: false
   },
 
   // --- NEW ADDITIONS (BOX OF 6) ---
@@ -940,7 +940,7 @@ export const INITIAL_RECIPES: Recipe[] = [
       { step: 2, text: 'Deep fry donuts until puffed and perfectly golden brown on both sides.', durationMs: 300000 },
       { step: 3, text: 'Roll immediately in fine sugar, poke a hole, and pipe cold vanilla custard.', durationMs: 180000 }
     ],
-    isFavorite: true
+    isFavorite: false
   },
   {
     id: 'add-bomboloni-hazelnut',
@@ -1106,7 +1106,7 @@ export const INITIAL_RECIPES: Recipe[] = [
       { step: 2, text: 'Dip golden donuts in melted white chocolate glaze.', durationMs: 120000 },
       { step: 3, text: 'Scatter Oreo cookie crumbs immediately while the chocolate is wet.', durationMs: 120000 }
     ],
-    isFavorite: true
+    isFavorite: false
   },
   {
     id: 'add-roll-sugar',
@@ -1173,7 +1173,7 @@ export const INITIAL_RECIPES: Recipe[] = [
       { step: 2, text: 'While steaming hot, poke fine holes and soak with warm condensed milk.', durationMs: 120000 },
       { step: 3, text: 'Let rest for 5 minutes to absorb the creamy milk before serving.', durationMs: 300000 }
     ],
-    isFavorite: true
+    isFavorite: false
   },
   {
     id: 'add-roll-cream-cheese',
@@ -1206,6 +1206,6 @@ export const INITIAL_RECIPES: Recipe[] = [
       { step: 2, text: 'Let rolls cool down slightly (about 5 minutes) so frosting melts nicely but stays thick.', durationMs: 300000 },
       { step: 3, text: 'Spread a massive, velvety layer of frosting over the buns.', durationMs: 120000 }
     ],
-    isFavorite: true
+    isFavorite: false
   }
 ];

@@ -1,7 +1,30 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Flame, Clock, ChefHat, Star, Heart, ArrowRight, ChevronLeft, ChevronRight, ArrowLeft, Sparkles } from 'lucide-react';
+import { Search, Flame, Clock, ChefHat, Star, Heart, ArrowRight, ChevronLeft, ChevronRight, ArrowLeft, Sparkles, LayoutGrid, Cake, Cookie } from 'lucide-react';
 import { Recipe } from '../types';
 import { motion } from 'motion/react';
+
+// Custom helper to render premium SVG icons for categories instead of emojis
+const getCategoryIcon = (name: string, isActive: boolean) => {
+  const iconClass = `w-4 h-4 md:w-5 md:h-5 transition-transform group-hover:scale-110 shrink-0 ${
+    isActive ? 'text-white' : 'text-brand-pink'
+  }`;
+  switch (name) {
+    case 'All':
+      return <LayoutGrid className={iconClass} />;
+    case 'Signature Cakes':
+      return <Cake className={iconClass} />;
+    case 'Cupcakes':
+      return <ChefHat className={iconClass} />;
+    case 'Brownies':
+      return <Flame className={iconClass} />;
+    case 'Cookies':
+      return <Cookie className={iconClass} />;
+    case 'New Additions':
+      return <Sparkles className={iconClass} />;
+    default:
+      return <Sparkles className={iconClass} />;
+  }
+};
 
 // Predefined extra images for each category to guarantee that every confection 
 // has multiple gorgeous, high-resolution product photos.
@@ -288,11 +311,11 @@ export default function Dashboard({
       )}
 
       {/* Category Tabs Selection */}
-      <section id="categories-section" className="mb-6">
-        <h4 id="categories-title" className="text-xs font-semibold font-mono uppercase tracking-wider text-brand-cocoa-light mb-4">
+      <section id="categories-section" className="mb-8">
+        <h4 id="categories-title" className="text-xs font-bold font-mono uppercase tracking-widest text-brand-cocoa-light mb-4">
           Quick Category Filter
         </h4>
-        <div id="categories-tabs-wrapper" className="flex gap-2.5 overflow-x-auto pb-2 scrollbar-none">
+        <div id="categories-tabs-wrapper" className="flex gap-3.5 overflow-x-auto pb-3 pt-1 scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
           {categories.map((cat) => {
             const isActive = activeCategory === cat.name;
             return (
@@ -300,13 +323,13 @@ export default function Dashboard({
                 key={cat.name}
                 id={`category-tab-${cat.name}`}
                 onClick={() => setActiveCategory(cat.name)}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-sans font-medium border transition-all shrink-0 cursor-pointer ${
+                className={`group flex items-center gap-2.5 px-6 py-3.5 rounded-2xl text-sm md:text-base font-sans font-extrabold border-2 transition-all duration-300 shrink-0 cursor-pointer ${
                   isActive
-                    ? 'bg-brand-pink border-brand-pink text-white shadow-sm shadow-brand-pink/15'
-                    : 'bg-white border-brand-cocoa-border text-brand-cocoa-light hover:bg-brand-pink-light/40 hover:text-brand-cocoa'
+                    ? 'bg-brand-pink border-brand-pink text-white shadow-md shadow-brand-pink/20 scale-[1.03]'
+                    : 'bg-white border-brand-cocoa-border text-brand-cocoa-light hover:border-brand-pink hover:text-brand-cocoa hover:shadow-sm'
                 }`}
               >
-                <span id={`category-emoji-${cat.name}`}>{cat.emoji}</span>
+                {getCategoryIcon(cat.name, isActive)}
                 <span id={`category-label-${cat.name}`}>{cat.name}</span>
               </button>
             );
@@ -348,8 +371,8 @@ export default function Dashboard({
                     className="w-full h-full object-cover transition-transform duration-750 group-hover:scale-105"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent flex flex-col justify-end p-5 text-left">
-                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-brand-pink-light/90 flex items-center gap-1 mb-1">
-                      <span>{cat.emoji}</span>
+                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-brand-pink-light/90 flex items-center gap-1.5 mb-1">
+                      {getCategoryIcon(cat.name, false)}
                       <span>{cat.itemCountText}</span>
                     </span>
                     <h4 className="font-display font-black text-xl text-white uppercase tracking-tight">

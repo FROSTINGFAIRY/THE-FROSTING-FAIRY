@@ -114,7 +114,7 @@ export default function AdminDashboard({
   upiQrCode,
   setUpiQrCode,
 }: AdminDashboardProps) {
-  const [adminTab, setAdminTab] = useState<'products' | 'branding' | 'authority' | 'orders'>('products');
+  const [adminTab, setAdminTab] = useState<'overview' | 'products' | 'branding' | 'authority' | 'orders'>('overview');
   const [searchQuery, setSearchQuery] = useState('');
 
   // --- INSTAGRAM DM CONFIGURATION ---
@@ -956,6 +956,17 @@ export default function AdminDashboard({
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-brand-cocoa-border/60 mb-6 gap-2">
         <div className="flex flex-wrap gap-2">
           <button
+            onClick={() => setAdminTab('overview')}
+            className={`px-5 py-3 font-semibold text-sm transition-all border-b-2 flex items-center gap-2 cursor-pointer ${
+              adminTab === 'overview'
+                ? 'border-brand-pink text-brand-pink font-bold border-brand-pink'
+                : 'border-transparent text-brand-cocoa-light hover:text-brand-cocoa'
+            }`}
+          >
+            <span className="p-1 rounded-md bg-brand-pink-light/35 text-brand-pink">📊</span>
+            <span>Executive Summary</span>
+          </button>
+          <button
             onClick={() => setAdminTab('products')}
             className={`px-5 py-3 font-semibold text-sm transition-all border-b-2 flex items-center gap-2 cursor-pointer ${
               adminTab === 'products'
@@ -1011,6 +1022,146 @@ export default function AdminDashboard({
           <span>Sign Out</span>
         </button>
       </div>
+
+      {/* TAB CONTENT: EXECUTIVE BOUTIQUE OVERVIEW */}
+      {adminTab === 'overview' && (
+        <div className="space-y-8 animate-fade-in text-left">
+          {/* Hero Welcome banner */}
+          <div className="bg-gradient-to-r from-brand-cocoa to-brand-cocoa-light text-white p-6 sm:p-8 rounded-3xl border border-brand-cocoa-border shadow-md relative overflow-hidden">
+            <div className="absolute top-0 right-0 opacity-10 pointer-events-none transform translate-x-12 -translate-y-6">
+              <Sparkles className="w-64 h-64 text-white" />
+            </div>
+            <div className="relative z-10 space-y-2 max-w-xl">
+              <span className="text-[10px] font-mono uppercase tracking-widest text-brand-pink font-extrabold flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 fill-brand-pink animate-pulse" />
+                <span>Boutique Headquarters</span>
+              </span>
+              <h2 className="font-display font-black text-2xl sm:text-3xl uppercase tracking-tight">
+                Welcome back, {googleUser?.name || 'Fairy Chef'}!
+              </h2>
+              <p className="text-xs sm:text-sm text-brand-cream-light/80 leading-relaxed">
+                Your administrative session is secure. From here, you can manage real-time boutique confections, customize global brand assets, fulfill custom client orders, and track system audits.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            {/* Real-time Sales and Operational KPI cards */}
+            <div className="lg:col-span-8 space-y-6">
+              <h3 className="font-display font-bold text-sm text-brand-cocoa uppercase tracking-wider">
+                Boutique Key Performance Indicators
+              </h3>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                <div className="bg-white p-5 rounded-2xl border border-brand-cocoa-border shadow-xs hover:border-brand-pink/50 transition-colors">
+                  <span className="font-mono text-[9px] uppercase tracking-wider text-brand-cocoa-light font-bold">Menu Portfolio</span>
+                  <div className="flex items-baseline gap-1 mt-2">
+                    <span className="text-3xl font-black text-brand-cocoa font-display">{recipes.length}</span>
+                    <span className="text-xs text-brand-cocoa-light font-sans font-medium">Items</span>
+                  </div>
+                  <span className="text-[10px] text-brand-cocoa-light block mt-1.5 font-sans">Across {new Set(recipes.map(r => r.category)).size} unique categories</span>
+                </div>
+
+                <div className="bg-white p-5 rounded-2xl border border-brand-cocoa-border shadow-xs hover:border-brand-pink/50 transition-colors">
+                  <span className="font-mono text-[9px] uppercase tracking-wider text-brand-cocoa-light font-bold">Active Orders</span>
+                  <div className="flex items-baseline gap-1 mt-2">
+                    <span className="text-3xl font-black text-brand-pink font-display">{mealPlan.length}</span>
+                    <span className="text-xs text-brand-cocoa-light font-sans font-medium">Active</span>
+                  </div>
+                  <span className="text-[10px] text-brand-cocoa-light block mt-1.5 font-sans">
+                    {mealPlan.filter(o => o.status === 'Pending' || !o.status).length} pending processing
+                  </span>
+                </div>
+
+                <div className="bg-white p-5 rounded-2xl border border-brand-cocoa-border shadow-xs hover:border-brand-pink/50 transition-colors">
+                  <span className="font-mono text-[9px] uppercase tracking-wider text-brand-cocoa-light font-bold">Total Sales Value</span>
+                  <div className="flex items-baseline gap-1 mt-2">
+                    <span className="text-3xl font-black text-brand-cocoa font-display">₹{mealPlan.reduce((acc, order) => {
+                      if (!order.estimatedPrice) return acc;
+                      const num = typeof order.estimatedPrice === 'number'
+                        ? order.estimatedPrice
+                        : parseInt(String(order.estimatedPrice).replace(/[^0-9]/g, '')) || 0;
+                      return acc + num;
+                    }, 0)}</span>
+                  </div>
+                  <span className="text-[10px] text-brand-cocoa-light block mt-1.5 font-sans">Queued customer pipeline</span>
+                </div>
+              </div>
+
+              {/* Quick Action Panel */}
+              <div className="bg-white p-6 rounded-2xl border border-brand-cocoa-border shadow-xs space-y-4">
+                <h4 className="font-sans font-bold text-xs uppercase tracking-wider text-brand-cocoa">
+                  Quick Management Shortcuts
+                </h4>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <button
+                    onClick={() => setAdminTab('products')}
+                    className="p-3 bg-brand-cream-light/30 hover:bg-brand-pink-light/40 border border-brand-cocoa-border/40 rounded-xl text-center group cursor-pointer transition-all animate-none h-auto w-auto"
+                  >
+                    <span className="text-lg block group-hover:scale-110 transition-transform">🎂</span>
+                    <span className="text-[11px] font-bold text-brand-cocoa block mt-1">Manage Menu</span>
+                  </button>
+                  <button
+                    onClick={() => setAdminTab('branding')}
+                    className="p-3 bg-brand-cream-light/30 hover:bg-brand-pink-light/40 border border-brand-cocoa-border/40 rounded-xl text-center group cursor-pointer transition-all animate-none h-auto w-auto"
+                  >
+                    <span className="text-lg block group-hover:scale-110 transition-transform">👑</span>
+                    <span className="text-[11px] font-bold text-brand-cocoa block mt-1">Logo & Style</span>
+                  </button>
+                  <button
+                    onClick={() => setAdminTab('orders')}
+                    className="p-3 bg-brand-cream-light/30 hover:bg-brand-pink-light/40 border border-brand-cocoa-border/40 rounded-xl text-center group cursor-pointer transition-all animate-none h-auto w-auto"
+                  >
+                    <span className="text-lg block group-hover:scale-110 transition-transform">📦</span>
+                    <span className="text-[11px] font-bold text-brand-cocoa block mt-1">Orders Desk</span>
+                  </button>
+                  <button
+                    onClick={() => setAdminTab('authority')}
+                    className="p-3 bg-brand-cream-light/30 hover:bg-brand-pink-light/40 border border-brand-cocoa-border/40 rounded-xl text-center group cursor-pointer transition-all animate-none h-auto w-auto"
+                  >
+                    <span className="text-lg block group-hover:scale-110 transition-transform">🛡️</span>
+                    <span className="text-[11px] font-bold text-brand-cocoa block mt-1">Security & Role</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Audit Logs Right Sidebar on Overview */}
+            <div className="lg:col-span-4 space-y-6">
+              <h3 className="font-display font-bold text-sm text-brand-cocoa uppercase tracking-wider flex items-center gap-1.5">
+                <Activity className="w-4 h-4 text-brand-pink animate-pulse" />
+                <span>Real-Time Audit Stream</span>
+              </h3>
+              
+              <div className="bg-white p-5 rounded-2xl border border-brand-cocoa-border shadow-xs flex flex-col h-[320px]">
+                <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+                  {auditLogs.slice(0, 8).map((log) => (
+                    <div key={log.id} className="text-left text-xs border-b border-brand-cream pb-2 last:border-0">
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <span className="font-mono text-[9px] font-semibold text-brand-cocoa-light">{log.time}</span>
+                        <span className={`font-mono text-[8px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider ${
+                          log.status === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                          log.status === 'warning' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+                          'bg-brand-pink-light/40 text-brand-pink border border-brand-pink/10'
+                        }`}>
+                          {log.role.split(' ')[0]}
+                        </span>
+                      </div>
+                      <p className="text-brand-cocoa font-medium text-[11px] leading-relaxed">{log.action}</p>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  onClick={() => setAdminTab('authority')}
+                  className="mt-3 text-center text-[10px] font-bold font-mono uppercase tracking-wider text-brand-pink hover:text-brand-pink-dark transition-colors pt-2.5 border-t border-brand-cream cursor-pointer"
+                >
+                  View All Audit Logs &rarr;
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* TAB CONTENT: PRODUCT PRICES & PICTURES */}
       {adminTab === 'products' && (
@@ -2090,6 +2241,12 @@ export default function AdminDashboard({
                             <Phone className="w-3.5 h-3.5 text-brand-cocoa-light shrink-0" />
                             <span className="font-mono text-[10px] text-brand-cocoa">{order.customerPhone || order.contactPhone || 'No contact provided'}</span>
                           </div>
+                          {order.deliveryType === 'Delivery' && order.deliveryAddress && (
+                            <div className="mt-1.5 p-1.5 bg-brand-pink-light/30 border border-brand-pink/15 rounded-lg text-[11px] text-brand-cocoa font-medium flex items-start gap-1.5">
+                              <span className="shrink-0 text-brand-pink font-sans">📍</span>
+                              <span>{order.deliveryAddress}</span>
+                            </div>
+                          )}
                         </div>
 
                         <div className="space-y-1 text-left">

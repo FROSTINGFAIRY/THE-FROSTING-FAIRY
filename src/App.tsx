@@ -16,7 +16,7 @@ import AdminDashboard from './components/AdminDashboard';
 import { INITIAL_RECIPES } from './data';
 import { Recipe, ShoppingItem, MealPlanEntry, MealType } from './types';
 import { AnimatePresence, motion } from 'motion/react';
-import { X, Instagram } from 'lucide-react';
+import { X, Instagram, ArrowLeft } from 'lucide-react';
 
 // Local storage key names
 const RECIPES_STORAGE_KEY = 'gusto_recipes';
@@ -75,6 +75,7 @@ export default function App() {
   const [activeCategory, setActiveCategory] = useState<string>('All');
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [preselectedRecipeId, setPreselectedRecipeId] = useState<string>('');
+  const [tabHistory, setTabHistory] = useState<string[]>([]);
 
   // Default orders to populate the custom planner and make it feel alive immediately
   const [mealPlan, setMealPlan] = useState<MealPlanEntry[]>(() => {
@@ -285,6 +286,21 @@ export default function App() {
     setSelectedRecipe(null);
   };
 
+  // Enhanced Back option
+  const handleGoBack = () => {
+    if (selectedRecipe) {
+      setSelectedRecipe(null);
+      return;
+    }
+    if (tabHistory.length > 0) {
+      const prevTab = tabHistory[tabHistory.length - 1];
+      setTabHistory((prev) => prev.slice(0, -1));
+      setActiveTab(prevTab);
+    } else {
+      setActiveTab('home');
+    }
+  };
+
   // --- CUSTOM ORDER HANDLERS ---
   const handleAddMeal = (entry: MealPlanEntry) => {
     setMealPlan((prev) => [...prev, entry]);
@@ -466,6 +482,10 @@ export default function App() {
           <Home
             recipes={recipes}
             onNavigateToTab={(tab, category) => {
+              setTabHistory((prev) => {
+                if (prev.length > 0 && prev[prev.length - 1] === activeTab) return prev;
+                return [...prev, activeTab];
+              });
               setActiveTab(tab);
               if (category) {
                 setActiveCategory(category);
@@ -495,7 +515,13 @@ export default function App() {
             recipes={recipes}
             onSelectRecipe={handleSelectRecipe}
             onToggleFavorite={handleToggleFavorite}
-            onGoToDiscover={() => setActiveTab('discover')}
+            onGoToDiscover={() => {
+              setTabHistory((prev) => {
+                if (prev.length > 0 && prev[prev.length - 1] === activeTab) return prev;
+                return [...prev, activeTab];
+              });
+              setActiveTab('discover');
+            }}
           />
         );
       case 'planner':
@@ -560,6 +586,10 @@ export default function App() {
         activeTab={selectedRecipe ? 'discover' : activeTab}
         setActiveTab={(tab) => {
           setSelectedRecipe(null); // Close active recipe detail when changing tabs
+          setTabHistory((prev) => {
+            if (prev.length > 0 && prev[prev.length - 1] === activeTab) return prev;
+            return [...prev, activeTab];
+          });
           setActiveTab(tab);
         }}
         shoppingItemsCount={shoppingList.reduce((acc, item) => acc + item.amount, 0)}
@@ -571,7 +601,7 @@ export default function App() {
       />
 
       {/* Main Screen Layout with AnimatePresence */}
-      <main id="app-main-content" className="flex-1 w-full flex flex-col">
+      <main id="app-main-content" className="flex-1 w-full flex flex-col relative">
         <AnimatePresence mode="wait">
           <motion.div
             key={selectedRecipe ? `detail-${selectedRecipe.id}` : activeTab}
@@ -584,6 +614,19 @@ export default function App() {
             {renderContent()}
           </motion.div>
         </AnimatePresence>
+
+        {/* Global Floating Back Button */}
+        {(tabHistory.length > 0 || selectedRecipe) && activeTab !== 'home' && (
+          <div className="fixed bottom-6 left-6 z-40 animate-fadeIn">
+            <button
+              onClick={handleGoBack}
+              className="flex items-center gap-2 px-5 py-3 bg-brand-cocoa text-white hover:bg-brand-cocoa-light text-xs font-semibold rounded-full shadow-xl border border-brand-cocoa border-brand-cocoa-border cursor-pointer transition-all hover:-translate-y-0.5 active:translate-y-0 uppercase tracking-widest"
+            >
+              <ArrowLeft className="w-4 h-4 text-brand-pink" />
+              <span>Back</span>
+            </button>
+          </div>
+        )}
       </main>
 
       {/* Dynamic Global Toast Notifications System */}
@@ -626,7 +669,7 @@ export default function App() {
 
       {/* Luxury Brand Store Footer */}
       <footer className="bg-brand-cocoa text-brand-cream border-t border-brand-cocoa-border py-12 px-6 shrink-0 mt-auto">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 text-left text-sm">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 text-left text-sm">
           <div className="space-y-3">
             <div className="flex items-center gap-3">
               <div className="w-14 h-14 rounded-full border border-brand-cream/25 overflow-hidden bg-white/10 p-0.5 shrink-0">
@@ -637,11 +680,6 @@ export default function App() {
             <p className="text-brand-cream-light/70 text-xs leading-relaxed">
               We specialize in artisanal pastries, custom milestone cakes, and organic hand-piped treats. Handcrafted with love in our signature fairy kitchen.
             </p>
-          </div>
-          <div className="space-y-2">
-            <h4 className="font-sans font-bold text-xs uppercase tracking-widest text-brand-pink">Store Collection Hours</h4>
-            <p className="text-brand-cream-light/70 text-xs">Mon - Sat: 10:00 AM - 08:00 PM</p>
-            <p className="text-brand-cream-light/70 text-xs">Sunday: 11:00 AM - 05:00 PM</p>
           </div>
           <div className="space-y-2">
             <h4 className="font-sans font-bold text-xs uppercase tracking-widest text-brand-pink">gourmet assistance</h4>
