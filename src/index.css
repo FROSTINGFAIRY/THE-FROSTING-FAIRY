@@ -1,12 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Sacramento&family=JetBrains+Mono:wght@400;500;600&display=swap');
 @import "tailwindcss";
 
-@theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Playfair Display", Georgia, serif;
-  --font-cursive: "Sacramento", cursive;
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
-
+:root {
   --color-brand-pink: #E87A90;
   --color-brand-pink-dark: #C24D63;
   --color-brand-pink-light: #FFF0F2;
@@ -16,6 +11,37 @@
   --color-brand-cocoa: #4D3425;
   --color-brand-cocoa-light: #8C6F5E;
   --color-brand-cocoa-border: #F3EAE5;
+  --theme-transition-duration: 300ms;
+}
+
+.dark {
+  --color-brand-pink: #FF8DA1;
+  --color-brand-pink-dark: #E87A90;
+  --color-brand-pink-light: #221220;
+  --color-brand-pink-accent: #4B203F;
+  --color-brand-cream: #0E0712; /* Midnight Velvet deep background */
+  --color-brand-cream-light: #160D1E; /* Velvet purple-gray/dark elevated background */
+  --color-brand-cocoa: #FCF7F4; /* Light contrast text */
+  --color-brand-cocoa-light: #C4B0BE; /* Muted contrast text */
+  --color-brand-cocoa-border: #24142F; /* Dark velvet border */
+  --theme-transition-duration: 300ms;
+}
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Playfair Display", Georgia, serif;
+  --font-cursive: "Sacramento", cursive;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --color-brand-pink: var(--color-brand-pink);
+  --color-brand-pink-dark: var(--color-brand-pink-dark);
+  --color-brand-pink-light: var(--color-brand-pink-light);
+  --color-brand-pink-accent: var(--color-brand-pink-accent);
+  --color-brand-cream: var(--color-brand-cream);
+  --color-brand-cream-light: var(--color-brand-cream-light);
+  --color-brand-cocoa: var(--color-brand-cocoa);
+  --color-brand-cocoa-light: var(--color-brand-cocoa-light);
+  --color-brand-cocoa-border: var(--color-brand-cocoa-border);
 }
 
 /* Base styles for scrollbars and animations */
@@ -30,4 +56,51 @@
 body {
   background-color: var(--color-brand-cream);
   color: var(--color-brand-cocoa);
+  transition: background-color var(--theme-transition-duration) ease, color var(--theme-transition-duration) ease;
 }
+
+/* Adaptive overrides for utility styles when in Midnight Velvet dark mode */
+.dark .bg-white {
+  background-color: var(--color-brand-cream-light) !important;
+}
+
+.dark .text-gray-900,
+.dark .text-brand-cocoa {
+  color: var(--color-brand-cocoa) !important;
+}
+
+.dark .text-gray-700,
+.dark .text-gray-600,
+.dark .text-gray-500,
+.dark .text-brand-cocoa-light {
+  color: var(--color-brand-cocoa-light) !important;
+}
+
+.dark .border-gray-100,
+.dark .border-brand-cocoa-border,
+.dark .border-gray-200 {
+  border-color: var(--color-brand-cocoa-border) !important;
+}
+
+.dark input,
+.dark select,
+.dark textarea {
+  background-color: var(--color-brand-cream) !important;
+  color: var(--color-brand-cocoa) !important;
+  border-color: var(--color-brand-cocoa-border) !important;
+}
+
+.dark input::placeholder,
+.dark select::placeholder,
+.dark textarea::placeholder {
+  color: var(--color-brand-cocoa-light) !important;
+  opacity: 0.7;
+}
+
+/* Smooth transitions globally for theme colors */
+* {
+  transition-property: background-color, border-color, text-decoration-color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: var(--theme-transition-duration);
+}
+

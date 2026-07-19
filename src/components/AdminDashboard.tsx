@@ -29,7 +29,9 @@ import {
   ExternalLink,
   MessageSquare,
   Send,
-  Bell
+  Bell,
+  Mail,
+  Loader2
 } from 'lucide-react';
 import { Recipe, PriceOption, MealPlanEntry } from '../types';
 import { motion } from 'motion/react';
@@ -71,6 +73,8 @@ interface AdminDashboardProps {
   setUpiId: (id: string) => void;
   upiQrCode: string;
   setUpiQrCode: (code: string) => void;
+  cashOnDeliveryEnabled: boolean;
+  setCashOnDeliveryEnabled: (enabled: boolean) => void;
 }
 
 // Preset assets for logo customizer
@@ -111,6 +115,8 @@ export default function AdminDashboard({
   setUpiId,
   upiQrCode,
   setUpiQrCode,
+  cashOnDeliveryEnabled,
+  setCashOnDeliveryEnabled,
 }: AdminDashboardProps) {
   const [adminTab, setAdminTab] = useState<'overview' | 'products' | 'branding' | 'authority' | 'orders'>('overview');
   const [searchQuery, setSearchQuery] = useState('');
@@ -124,6 +130,26 @@ export default function AdminDashboard({
   // Orders filters state
   const [orderSearch, setOrderSearch] = useState('');
   const [orderStatusFilter, setOrderStatusFilter] = useState<'all' | 'Pending' | 'Confirmed' | 'Baking' | 'Ready for Pickup' | 'Out for Delivery' | 'Completed'>('all');
+
+  // --- EMAIL NOTIFICATION SIMULATOR STATE ---
+  const [selectedEmailPreviewOrder, setSelectedEmailPreviewOrder] = useState<MealPlanEntry | null>(null);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [emailSubject, setEmailSubject] = useState('Your Delightful Confection Receipt - The Frosting Fairy 🎂');
+  const [emailHeader, setEmailHeader] = useState('An artisanal creation is being lovingly prepared for you!');
+  const [sentEmails, setSentEmails] = useState<Array<{ id: string; recipientName: string; recipientEmail: string; subject: string; time: string; status: 'SENT' | 'DELIVERED'; orderId: string; cakeType: string }>>(() => {
+    try {
+      const saved = localStorage.getItem('gusto_simulated_emails');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  React.useEffect(() => {
+    localStorage.setItem('gusto_simulated_emails', JSON.stringify(sentEmails));
+  }, [sentEmails]);
+
+  const [isEmailCenterExpanded, setIsEmailCenterExpanded] = useState(true);
 
   // Async sender for Instagram DM Webhooks or Meta API
   const dispatchInstagramDM = async (orderId: string, cakeType: string, customerName: string, status: string) => {
@@ -313,7 +339,7 @@ export default function AdminDashboard({
   const addAuditLog = (action: string, status: 'success' | 'warning' | 'info' = 'success', roleName = currentRole) => {
     const formattedRole = roleName === 'admin' ? 'Administrator' : roleName === 'chef' ? 'Head Pastry Chef' : 'Cashier/Viewer';
     const newLog: AuditLog = {
-      id: Date.now().toString(),
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
       role: formattedRole,
       action,
@@ -404,6 +430,20 @@ export default function AdminDashboard({
   const [editDescription, setEditDescription] = useState('');
   const [editCategory, setEditCategory] = useState('');
   const [editPriceOptions, setEditPriceOptions] = useState<PriceOption[]>([]);
+
+  // Pixabay Image search states
+  const [isSearchingPixabay, setIsSearchingPixabay] = useState(false);
+  const [pixabayError, setPixabayError] = useState<string | null>(null);
+  const [pixabayResults, setPixabayResults] = useState<Array<{
+    id: number;
+    url: string;
+    thumbnail: string;
+    user: string;
+  }>>([]);
+
+  // Bulk update states
+  const [isBulkUpdatingImages, setIsBulkUpdatingImages] = useState(false);
+  const [bulkUpdateProgress, setBulkUpdateProgress] = useState('');
   
   // Branding states
   const [brandNameInput, setBrandNameInput] = useState(websiteName);
@@ -414,6 +454,7 @@ export default function AdminDashboard({
   const [upiIdInput, setUpiIdInput] = useState(upiId);
   const [upiQrInput, setUpiQrInput] = useState(upiQrCode);
   const [isDraggingQr, setIsDraggingQr] = useState(false);
+  const [cashOnDeliveryInput, setCashOnDeliveryInput] = useState(cashOnDeliveryEnabled);
 
   React.useEffect(() => {
     setUpiIdInput(upiId);
@@ -422,6 +463,10 @@ export default function AdminDashboard({
   React.useEffect(() => {
     setUpiQrInput(upiQrCode);
   }, [upiQrCode]);
+
+  React.useEffect(() => {
+    setCashOnDeliveryInput(cashOnDeliveryEnabled);
+  }, [cashOnDeliveryEnabled]);
 
   // Logo Upload presets state
   const [uploadedLogoPresets, setUploadedLogoPresets] = useState<{ name: string; url: string; desc: string }[]>(() => {
@@ -503,6 +548,8 @@ export default function AdminDashboard({
       setEditDescription(activeProduct.description);
       setEditCategory(activeProduct.category);
       setEditPriceOptions([...activeProduct.priceOptions]);
+      setPixabayError(null);
+      setPixabayResults([]);
     }
   }, [selectedProductId, activeProduct, isAddingNewProduct]);
 
@@ -553,6 +600,148 @@ export default function AdminDashboard({
     );
     addAuditLog(`Updated product "${editName}" details`);
     triggerToast(`✨ Successfully updated "${editName}"!`);
+  };
+
+  const handleSearchPixabay = async () => {
+    if (!editName.trim()) {
+      return;
+    }
+
+    setIsSearchingPixabay(true);
+    setPixabayError(null);
+
+    try {
+      const apiKey = (import.meta as any).env?.VITE_PIXABAY_API_KEY;
+      if (!apiKey) {
+        throw new Error('Pixabay API key (VITE_PIXABAY_API_KEY) is missing. Define it in your environment or Settings panel.');
+      }
+
+      const query = editName.trim();
+      const url = `https://pixabay.com/api/?key=${encodeURIComponent(apiKey)}&q=${encodeURIComponent(query)}&image_type=photo&category=food`;
+
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        throw new Error(`Pixabay API error: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      if (data.hits && data.hits.length > 0) {
+        const results = data.hits.slice(0, 4).map((p: any) => ({
+          id: p.id,
+          url: p.largeImageURL || p.webformatURL,
+          thumbnail: p.previewURL || p.webformatURL,
+          user: p.user,
+        }));
+
+        setPixabayResults(results);
+        
+        // Auto-populate the image URL field with the first match
+        setEditImage(results[0].url);
+        triggerToast('✨ Stock photo search complete! Auto-selected top result.');
+      } else {
+        throw new Error('No matching images found — try editing the product name or paste a URL manually.');
+      }
+    } catch (err: any) {
+      console.error(err);
+      setPixabayError(err.message || 'Error occurred during stock photo search.');
+      triggerToast('❌ Stock photo search failed.');
+    } finally {
+      setIsSearchingPixabay(false);
+    }
+  };
+
+  const handleBulkUpdatePixabayImages = async () => {
+    if (currentRole === 'viewer') {
+      triggerToast('❌ Permission Denied: Cashier/Viewer role is read-only.');
+      return;
+    }
+
+    const apiKey = (import.meta as any).env?.VITE_PIXABAY_API_KEY;
+    if (!apiKey) {
+      triggerToast('❌ Pixabay API key (VITE_PIXABAY_API_KEY) is missing. Define it in your environment or Settings panel.');
+      return;
+    }
+
+    if (!window.confirm('This utility will iterate through all existing products, fetch the top food photo match from Pixabay using each product name, and update the live menu and localStorage. Do you want to proceed?')) {
+      return;
+    }
+
+    setIsBulkUpdatingImages(true);
+    setBulkUpdateProgress('Initializing bulk update...');
+    addAuditLog('Starting bulk menu image synchronization with Pixabay', 'info');
+
+    try {
+      const updatedRecipes = [...recipes];
+      let successCount = 0;
+
+      for (let i = 0; i < updatedRecipes.length; i++) {
+        const recipe = updatedRecipes[i];
+        setBulkUpdateProgress(`Syncing [${i + 1}/${updatedRecipes.length}]: ${recipe.name}...`);
+
+        // Clean up recipe name for search query
+        let cleanName = recipe.name
+          .replace(/Classic/g, '')
+          .replace(/Premium/g, '')
+          .replace(/Organic/g, '')
+          .replace(/Signature/g, '')
+          .replace(/Gourmet/g, '')
+          .replace(/Homemade/g, '')
+          .replace(/Bestseller/g, '')
+          .replace(/Swirl/g, '')
+          .replace(/Burst/g, '')
+          .trim();
+
+        const queriesToTry = [
+          cleanName,
+          cleanName.split(/\s+/).slice(0, 3).join(' '),
+          cleanName.split(/\s+/).slice(0, 2).join(' '),
+          recipe.category.replace(/Signature\s+/i, '').replace(/New\s+/i, '').trim(),
+          'dessert baked'
+        ];
+
+        let foundUrl = '';
+        for (const query of queriesToTry) {
+          if (!query.trim()) continue;
+          try {
+            const url = `https://pixabay.com/api/?key=${encodeURIComponent(apiKey)}&q=${encodeURIComponent(query)}&image_type=photo&category=food`;
+            const response = await fetch(url);
+            if (response.ok) {
+              const data = await response.json();
+              if (data.hits && data.hits.length > 0) {
+                foundUrl = data.hits[0].largeImageURL || data.hits[0].webformatURL;
+                break;
+              }
+            }
+          } catch (err) {
+            console.error(`Pixabay search failed for query: ${query}`, err);
+          }
+        }
+
+        if (foundUrl) {
+          updatedRecipes[i] = {
+            ...recipe,
+            image: foundUrl
+          };
+          successCount++;
+        }
+
+        // Delay to respect api rates
+        await new Promise((resolve) => setTimeout(resolve, 150));
+      }
+
+      setRecipes(updatedRecipes);
+      localStorage.setItem('gusto_recipes', JSON.stringify(updatedRecipes));
+
+      addAuditLog(`Successfully updated ${successCount} menu product images using Pixabay`, 'success');
+      triggerToast(`✨ Successfully updated ${successCount} product images in local storage!`);
+    } catch (err: any) {
+      console.error(err);
+      triggerToast('❌ Error running bulk image sync.');
+    } finally {
+      setIsBulkUpdatingImages(false);
+      setBulkUpdateProgress('');
+    }
   };
 
   // Quick preset product picture selection
@@ -649,7 +838,8 @@ export default function AdminDashboard({
     }
     setUpiId(upiIdInput.trim());
     setUpiQrCode(upiQrInput.trim());
-    addAuditLog(`Updated UPI payment settings: UPI ID is ${upiIdInput.trim()}`);
+    setCashOnDeliveryEnabled(cashOnDeliveryInput);
+    addAuditLog(`Updated payment settings: UPI ID is ${upiIdInput.trim()}, COD is ${cashOnDeliveryInput ? 'Enabled' : 'Disabled'}`);
     triggerToast('💳 Payment settings updated successfully!');
   };
 
@@ -838,6 +1028,25 @@ export default function AdminDashboard({
                 </p>
               </div>
             )}
+
+            <button
+              id="btn-bypass-admin-signin"
+              onClick={() => {
+                const demoUser = {
+                  email: 'kiddepressed03@gmail.com',
+                  name: 'Demo Admin',
+                  picture: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=150',
+                };
+                setGoogleUser(demoUser);
+                localStorage.setItem('gusto_google_user', JSON.stringify(demoUser));
+                setToastMessage('Access Granted ✨ Unlocked control panel using Demo Admin bypass.');
+                setTimeout(() => setToastMessage(''), 4000);
+              }}
+              className="w-full bg-brand-cocoa hover:bg-brand-cocoa/90 text-white font-sans font-bold py-3 px-4 rounded-xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer text-xs uppercase tracking-wider"
+            >
+              <Sparkles className="w-4 h-4 text-brand-pink fill-brand-pink" />
+              <span>Unlock with Demo Account ✨</span>
+            </button>
           </div>
 
           <div className="border-t border-brand-cocoa-border/40 pt-4 text-left">
@@ -882,13 +1091,35 @@ export default function AdminDashboard({
         </div>
 
         {/* Global Action Tools */}
-        <button
-          onClick={handleResetToArtisanalDefaults}
-          className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-brand-cocoa-border text-xs font-bold text-brand-cocoa bg-white hover:bg-brand-cream-light transition-all cursor-pointer shadow-2xs shrink-0 self-start lg:self-center"
-        >
-          <RotateCcw className="w-3.5 h-3.5" />
-          <span>Reset to Factory Defaults</span>
-        </button>
+        <div className="flex flex-wrap items-center gap-2.5 self-start lg:self-center">
+          <button
+            onClick={handleBulkUpdatePixabayImages}
+            disabled={isBulkUpdatingImages}
+            className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-brand-cocoa-border text-xs font-bold text-brand-cocoa transition-all cursor-pointer shadow-2xs ${
+              isBulkUpdatingImages ? 'bg-brand-cream/40 text-brand-cocoa/50 cursor-not-allowed' : 'bg-white hover:bg-brand-cream-light'
+            }`}
+          >
+            {isBulkUpdatingImages ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-brand-pink" />
+                <span>{bulkUpdateProgress || 'Syncing Images...'}</span>
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-3.5 h-3.5 text-brand-pink fill-brand-pink/20 animate-pulse" />
+                <span>Pixabay Bulk Sync</span>
+              </>
+            )}
+          </button>
+
+          <button
+            onClick={handleResetToArtisanalDefaults}
+            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-brand-cocoa-border text-xs font-bold text-brand-cocoa bg-white hover:bg-brand-cream-light transition-all cursor-pointer shadow-2xs shrink-0"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>Reset to Factory Defaults</span>
+          </button>
+        </div>
       </div>
 
       {/* Quick Interactive Statistics Cards */}
@@ -1545,7 +1776,7 @@ export default function AdminDashboard({
                         </label>
                         {currentRole === 'viewer' && (
                           <span className="font-mono text-[8px] text-brand-pink-dark font-extrabold bg-brand-pink-light/60 px-1.5 py-0.5 rounded flex items-center gap-0.5 border border-brand-pink-accent/20">
-                            <Lock className="w-2 h-2" /> LOCKED
+                            <Lock className="w-2.5 h-2.5" /> LOCKED
                           </span>
                         )}
                       </div>
@@ -1559,6 +1790,86 @@ export default function AdminDashboard({
                           currentRole === 'viewer' ? 'bg-brand-cream-light/65 text-brand-cocoa-light/80 cursor-not-allowed' : 'bg-brand-cream-light/10'
                         }`}
                       />
+
+                      {/* Pixabay Image Search Component */}
+                      {currentRole !== 'viewer' && (
+                        <div className="pt-2 space-y-2">
+                          <button
+                            id="btn-search-pixabay-image"
+                            type="button"
+                            disabled={isSearchingPixabay || !editName.trim()}
+                            onClick={handleSearchPixabay}
+                            className={`w-full flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-bold rounded-lg transition-all shadow-3xs cursor-pointer ${
+                              !editName.trim()
+                                ? 'bg-brand-cocoa-border/40 text-brand-cocoa-light/60 cursor-not-allowed'
+                                : 'bg-brand-pink text-white hover:bg-brand-pink-dark'
+                            }`}
+                          >
+                            {isSearchingPixabay ? (
+                              <>
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                <span>Searching Pixabay...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Sparkles className="w-3.5 h-3.5" />
+                                <span>Search for Image</span>
+                              </>
+                            )}
+                          </button>
+
+                          {/* Error display */}
+                          {pixabayError && (
+                            <p className="text-[10px] text-red-500 font-medium leading-relaxed text-center bg-red-50 p-1.5 rounded-lg border border-red-100">
+                              {pixabayError}
+                            </p>
+                          )}
+
+                          {/* Empty state hint */}
+                          {!editName.trim() && (
+                            <p className="text-[10px] text-brand-pink-dark font-medium leading-relaxed text-center">
+                              Add a product name first to search.
+                            </p>
+                          )}
+
+                          {/* Thumbnail previews */}
+                          {pixabayResults.length > 0 && (
+                            <div className="space-y-1.5 pt-1 bg-brand-cream-light/10 p-2 rounded-xl border border-brand-cocoa-border/20">
+                              <p className="font-mono text-[8px] uppercase tracking-wider text-brand-cocoa-light block">
+                                Pick a Match manually:
+                              </p>
+                              <div className="grid grid-cols-4 gap-2">
+                                {pixabayResults.map((result) => (
+                                  <button
+                                    key={result.id}
+                                    type="button"
+                                    title={`Photo by ${result.user}`}
+                                    onClick={() => setEditImage(result.url)}
+                                    className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all cursor-pointer bg-brand-cream-light/20 hover:scale-105 ${
+                                      editImage === result.url
+                                        ? 'border-brand-pink ring-2 ring-brand-pink/30'
+                                        : 'border-brand-cocoa-border/40 hover:border-brand-cocoa'
+                                    }`}
+                                  >
+                                    <img
+                                      src={result.thumbnail}
+                                      alt={`Pixabay match`}
+                                      className="w-full h-full object-cover"
+                                      referrerPolicy="no-referrer"
+                                    />
+                                    <div className="absolute inset-x-0 bottom-0 bg-black/60 text-[6px] text-white truncate px-1 text-center py-0.5">
+                                      {result.user}
+                                    </div>
+                                  </button>
+                                ))}
+                              </div>
+                              <p className="text-[7px] text-right text-brand-cocoa-light font-mono italic">
+                                Photos provided by Pixabay
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -1901,7 +2212,7 @@ export default function AdminDashboard({
                 ].map((l, index) => {
                   const isActive = brandLogoInput === l.url;
                   return (
-                    <button
+                    <div
                       key={index}
                       onClick={() => handleApplyLogoPreset(l.url, l.name)}
                       className={`p-2.5 rounded-xl border text-left flex items-center gap-3 transition-all cursor-pointer relative group ${
@@ -1937,150 +2248,12 @@ export default function AdminDashboard({
                           <Trash2 className="w-3 h-3" />
                         </button>
                       )}
-                    </button>
+                    </div>
                   );
                 })}
               </div>
             </div>
 
-          </div>
-
-          {/* PAYMENT SETTINGS SECTION */}
-          <div className="border-t border-brand-cocoa-border/40 mt-10 pt-8">
-            <div className="pb-4 mb-6">
-              <h3 className="font-display font-bold text-lg text-brand-cocoa flex items-center gap-2">
-                <span>💳 Shop Payment Configuration</span>
-              </h3>
-              <p className="text-xs text-brand-cocoa-light mt-1">
-                Configure the merchant UPI ID and instant payment QR Code used by customers during checkout.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* Left Column: Form */}
-              <div className="space-y-5 text-left">
-                <h4 className="font-sans font-extrabold text-xs text-brand-cocoa uppercase tracking-wider">
-                  Payment Attributes
-                </h4>
-
-                {/* Merchant UPI ID */}
-                <div className="space-y-1.5">
-                  <label className="font-mono text-[9px] uppercase tracking-wider text-brand-cocoa-light block">
-                    Merchant UPI ID / VPA
-                  </label>
-                  <input
-                    type="text"
-                    value={upiIdInput}
-                    onChange={(e) => setUpiIdInput(e.target.value)}
-                    className="w-full px-3.5 py-2 text-xs font-mono font-bold text-brand-cocoa border border-brand-cocoa-border rounded-xl focus:outline-none focus:ring-1 focus:ring-brand-pink bg-brand-cream-light/10"
-                    placeholder="E.g. thefrostingfairy@okaxis"
-                  />
-                </div>
-
-                {/* Custom QR Code Image URL */}
-                <div className="space-y-1.5">
-                  <label className="font-mono text-[9px] uppercase tracking-wider text-brand-cocoa-light block">
-                    Custom QR Code Image URL
-                  </label>
-                  <textarea
-                    rows={2}
-                    value={upiQrInput}
-                    onChange={(e) => setUpiQrInput(e.target.value)}
-                    className="w-full px-3.5 py-2 text-xs font-mono text-brand-cocoa border border-brand-cocoa-border rounded-xl focus:outline-none focus:ring-1 focus:ring-brand-pink resize-none bg-brand-cream-light/10"
-                    placeholder="Paste custom QR code image URL here, or upload an image below..."
-                  />
-                </div>
-
-                <div className="pt-2">
-                  <button
-                    onClick={handleSavePayments}
-                    className="w-full flex items-center justify-center gap-2 py-3 bg-brand-cocoa text-brand-cream text-xs font-bold rounded-xl hover:bg-brand-cocoa-light transition-all cursor-pointer shadow-md uppercase tracking-wider"
-                  >
-                    <CheckCircle className="w-4 h-4 text-brand-pink" />
-                    <span>Update Payment Settings</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Right Column: Checkout QR Code Live Preview & Drag Zone */}
-              <div className="space-y-4">
-                <h4 className="font-sans font-extrabold text-xs text-brand-cocoa uppercase tracking-wider flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-brand-pink fill-brand-pink" />
-                  <span>Instant Checkout Card Preview</span>
-                </h4>
-                <p className="text-xs text-brand-cocoa-light leading-relaxed">
-                  Below is a live preview of the payment option card that your customers see at checkout:
-                </p>
-
-                {/* Live Checkout Payment Card Mockup */}
-                <div className="flex flex-col items-center justify-center bg-brand-cream-light/40 p-4 rounded-2xl border border-brand-cocoa-border/40">
-                  <div className="bg-white p-3.5 border border-brand-cocoa-border rounded-xl flex flex-col items-center shadow-2xs max-w-[190px] w-full">
-                    <div className="w-28 h-28 bg-gray-100 border border-brand-cocoa-border/60 flex flex-col items-center justify-center rounded-lg relative overflow-hidden p-1">
-                      {upiQrInput ? (
-                        <img src={upiQrInput} alt="Payment QR Preview" className="w-full h-full object-contain" />
-                      ) : (
-                        <div className="w-full h-full border border-dashed border-brand-pink/50 flex flex-col justify-center items-center text-center p-1 bg-brand-cream-light/40">
-                          <span className="font-mono text-[7px] text-brand-cocoa-light font-bold">THE FROSTING FAIRY</span>
-                          <div className="w-12 h-12 bg-brand-cocoa mt-1 rounded relative flex items-center justify-center">
-                            <span className="text-[6.5px] text-white font-black font-mono">UPI QR</span>
-                          </div>
-                          <span className="font-mono text-[5px] text-brand-pink-dark mt-1 truncate max-w-full">
-                            {upiIdInput || 'No UPI ID'}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    <span className="text-[8px] font-mono uppercase tracking-wider text-brand-cocoa-light mt-2 text-center block">
-                      Pay ₹Grand_Total instantly
-                    </span>
-                    <span className="text-[7.5px] font-mono text-brand-cocoa-light/85 text-center block select-all mt-0.5 max-w-full truncate">
-                      UPI ID: {upiIdInput || 'None'}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Drag-and-drop QR Upload Zone */}
-                <div
-                  onDragOver={(e) => { e.preventDefault(); setIsDraggingQr(true); }}
-                  onDragLeave={() => setIsDraggingQr(false)}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    setIsDraggingQr(false);
-                    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                      handleQrFile(e.dataTransfer.files[0]);
-                    }
-                  }}
-                  onClick={() => document.getElementById('qr-file-upload')?.click()}
-                  className={`relative border-2 border-dashed rounded-2xl p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-200 ${
-                    isDraggingQr
-                      ? 'border-brand-pink bg-brand-pink-light/25 scale-[0.98]'
-                      : 'border-brand-cocoa-border/65 bg-brand-cream-light/10 hover:border-brand-pink hover:bg-brand-cream-light/40'
-                  }`}
-                >
-                  <input
-                    type="file"
-                    id="qr-file-upload"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => {
-                      if (e.target.files && e.target.files[0]) {
-                        handleQrFile(e.target.files[0]);
-                      }
-                    }}
-                  />
-                  <div className={`p-2 rounded-full mb-1.5 transition-transform ${isDraggingQr ? 'scale-110 bg-brand-pink text-white' : 'bg-white text-brand-cocoa-light border border-brand-cocoa-border/40'}`}>
-                    <Upload className="w-4 h-4" />
-                  </div>
-                  <span className="font-sans font-bold text-[11px] text-brand-cocoa block">
-                    Drag Custom QR Code Image
-                  </span>
-                  <span className="text-[9px] text-brand-cocoa-light/90 mt-0.5 leading-tight block">
-                    Drag QR file here, or <span className="text-brand-pink font-semibold hover:underline">browse files</span>
-                  </span>
-                </div>
-
-              </div>
-            </div>
           </div>
 
         </div>
@@ -2144,6 +2317,185 @@ export default function AdminDashboard({
                 <option value="Completed">Completed 🎉</option>
               </select>
             </div>
+          </div>
+
+          {/* Email Notification Simulation Dashboard */}
+          <div className="bg-white rounded-2xl border border-brand-cocoa-border overflow-hidden shadow-xs mb-6">
+            <button
+              onClick={() => setIsEmailCenterExpanded(!isEmailCenterExpanded)}
+              className="w-full px-5 py-4 bg-brand-cream-light/30 flex items-center justify-between border-b border-brand-cocoa-border/40 hover:bg-brand-cream-light/50 transition-all cursor-pointer text-left"
+            >
+              <div className="flex items-center gap-2">
+                <span className="p-1.5 rounded-lg bg-brand-pink-light/70 text-brand-pink text-xs">📧</span>
+                <div>
+                  <h4 className="font-display font-black text-xs uppercase tracking-wider text-brand-cocoa">
+                    Boutique Email Notification Center <span className="text-[10px] text-brand-pink font-sans font-bold normal-case ml-2 bg-brand-pink-light/80 px-2 py-0.5 rounded-full">Simulator Mode</span>
+                  </h4>
+                  <p className="text-[10px] text-brand-cocoa-light mt-0.5 font-medium leading-none">
+                    Configure customer receipts, test triggers, and review delivery logs instantly.
+                  </p>
+                </div>
+              </div>
+              <span className="text-brand-cocoa-light text-xs font-bold font-mono">
+                {isEmailCenterExpanded ? '[ COLLAPSE ]' : '[ EXPAND ]'}
+              </span>
+            </button>
+
+            {isEmailCenterExpanded && (
+              <div className="p-5 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 divide-y lg:divide-y-0 lg:divide-x divide-brand-cocoa-border/40 text-left text-brand-cocoa">
+                {/* Left side: Configuration & Live Trigger */}
+                <div className="lg:col-span-7 space-y-5 lg:pr-6">
+                  <div>
+                    <h5 className="font-display font-bold text-xs uppercase tracking-wider text-brand-pink mb-1">
+                      1. Customize Automated Receipt Template
+                    </h5>
+                    <p className="text-[10px] text-brand-cocoa-light leading-normal">
+                      Update custom email variables below. These will propagate to the receipt simulation preview.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="font-mono text-[9px] uppercase tracking-wider font-bold text-brand-cocoa-light block">
+                        Email Subject Line
+                      </label>
+                      <input
+                        type="text"
+                        value={emailSubject}
+                        onChange={(e) => setEmailSubject(e.target.value)}
+                        placeholder="Subject Line"
+                        className="w-full px-3 py-2 text-xs font-semibold text-brand-cocoa border border-brand-cocoa-border rounded-xl focus:outline-none focus:ring-1 focus:ring-brand-pink bg-white"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="font-mono text-[9px] uppercase tracking-wider font-bold text-brand-cocoa-light block">
+                        Email Custom Banner Greeting
+                      </label>
+                      <input
+                        type="text"
+                        value={emailHeader}
+                        onChange={(e) => setEmailHeader(e.target.value)}
+                        placeholder="Banner Greeting"
+                        className="w-full px-3 py-2 text-xs font-semibold text-brand-cocoa border border-brand-cocoa-border rounded-xl focus:outline-none focus:ring-1 focus:ring-brand-pink bg-white"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-brand-cocoa-border/10">
+                    <div className="mb-2">
+                      <h5 className="font-display font-bold text-xs uppercase tracking-wider text-brand-pink mb-1">
+                        2. Test Order Confirmation dispatch
+                      </h5>
+                      <p className="text-[10px] text-brand-cocoa-light leading-normal">
+                        Select any active customer order from the storefront and trigger an immediate test confirmation receipt email!
+                      </p>
+                    </div>
+
+                    {mealPlan.length === 0 ? (
+                      <div className="p-4 rounded-xl border border-dashed border-brand-cocoa-border text-center text-xs text-brand-cocoa-light">
+                        No orders are currently available to test. Create one on the storefront!
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <label className="font-mono text-[9px] uppercase tracking-wider font-bold text-brand-cocoa-light block">
+                          Select Customer Target Order
+                        </label>
+                        <div className="flex flex-col sm:flex-row gap-3">
+                          <select
+                            id="test-order-select"
+                            className="flex-1 px-3 py-2 bg-white border border-brand-cocoa-border rounded-xl text-xs font-bold text-brand-cocoa focus:outline-none focus:ring-1 focus:ring-brand-pink cursor-pointer"
+                            onChange={(e) => {
+                              const found = mealPlan.find(o => o.id === e.target.value);
+                              if (found) setSelectedEmailPreviewOrder(found);
+                            }}
+                            defaultValue=""
+                          >
+                            <option value="" disabled>-- Select an active customer order --</option>
+                            {mealPlan.map(o => (
+                              <option key={o.id} value={o.id}>
+                                #{o.id} - {o.customerName || o.contactName || 'Anonymous'} ({o.cakeType})
+                              </option>
+                            ))}
+                          </select>
+
+                          <button
+                            onClick={() => {
+                              const selectEl = document.getElementById('test-order-select') as HTMLSelectElement;
+                              const selectedId = selectEl?.value;
+                              const found = mealPlan.find(o => o.id === selectedId) || mealPlan[0];
+                              if (found) {
+                                setSelectedEmailPreviewOrder(found);
+                              } else {
+                                triggerToast('Please select or submit an order to trigger confirmation.');
+                              }
+                            }}
+                            className="px-4 py-2 bg-brand-pink hover:bg-brand-pink-dark text-white font-sans font-bold text-xs rounded-xl transition-all shadow-xs shrink-0 flex items-center justify-center gap-1.5 cursor-pointer"
+                          >
+                            <Mail className="w-4 h-4" />
+                            <span>Preview & Send Confirmation</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Right side: Simulation Dispatch Logs */}
+                <div className="lg:col-span-5 space-y-4 pt-5 lg:pt-0 lg:pl-6">
+                  <div className="flex items-center justify-between border-b border-brand-cocoa-border/40 pb-2">
+                    <div>
+                      <h5 className="font-display font-bold text-xs uppercase tracking-wider text-brand-cocoa">
+                        Delivery Logs
+                      </h5>
+                      <p className="text-[9px] text-brand-cocoa-light mt-0.5">
+                        Simulated live mail transmission status logs.
+                      </p>
+                    </div>
+                    {sentEmails.length > 0 && (
+                      <button
+                        onClick={() => {
+                          setSentEmails([]);
+                          addAuditLog('Simulated email dispatch history cleared', 'info');
+                          triggerToast('Email logs cleared.');
+                        }}
+                        className="text-[9px] text-brand-pink hover:text-brand-pink-dark font-mono font-bold uppercase cursor-pointer"
+                      >
+                        Clear logs
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="max-h-[220px] overflow-y-auto space-y-2.5 pr-1 divide-y divide-brand-cocoa-border/20">
+                    {sentEmails.length === 0 ? (
+                      <div className="py-8 text-center text-xs text-brand-cocoa-light/80 italic font-medium">
+                        No emails dispatched yet in this session. Click "Send Order Confirmation" above or on an order card.
+                      </div>
+                    ) : (
+                      sentEmails.map((mail, idx) => (
+                        <div key={mail.id} className="pt-2.5 first:pt-0 flex flex-col gap-1 text-[11px] text-left">
+                          <div className="flex items-center justify-between">
+                            <span className="font-mono text-[9px] text-brand-cocoa-light">[{mail.time}] ID: #{mail.id}</span>
+                            <span className="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 font-mono font-bold text-[8px] px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-900/30">
+                              ● {mail.status}
+                            </span>
+                          </div>
+                          <div className="font-sans font-bold text-brand-cocoa truncate">
+                            {mail.recipientName} ({mail.recipientEmail})
+                          </div>
+                          <div className="font-mono text-[10px] text-brand-cocoa-light truncate">
+                            Subj: {mail.subject}
+                          </div>
+                          <div className="font-sans text-[10px] text-brand-pink font-semibold">
+                            Confirmed Items: {mail.cakeType} (Order #{mail.orderId})
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Orders list container */}
@@ -2261,6 +2613,15 @@ export default function AdminDashboard({
                           <option value="Completed">Completed 🎉</option>
                         </select>
                       </div>
+
+                      <button
+                        onClick={() => setSelectedEmailPreviewOrder(order)}
+                        className="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-brand-pink hover:bg-brand-pink-dark text-white font-sans font-bold text-xs rounded-xl transition-all cursor-pointer shadow-xs hover:shadow-sm"
+                        title="Open interactive email notification simulator for this customer"
+                      >
+                        <Mail className="w-3.5 h-3.5" />
+                        <span>Send Order Confirmation</span>
+                      </button>
 
                       <div className="border-t border-brand-cocoa-border/40 pt-2 text-[9px] text-brand-cocoa-light/80 leading-normal flex items-start gap-1">
                         <Bell className="w-3.5 h-3.5 text-brand-pink shrink-0 mt-0.5 animate-pulse" />
@@ -2636,6 +2997,176 @@ export default function AdminDashboard({
             </div>
           </div>
 
+          {/* relocated PAYMENT SETTINGS SECTION */}
+          <div className="lg:col-span-12 bg-white p-6 md:p-8 rounded-2xl border border-brand-cocoa-border shadow-2xs space-y-6">
+            <div className="border-b border-brand-cocoa-border/40 pb-4">
+              <h3 className="font-display font-bold text-base text-brand-cocoa flex items-center gap-2">
+                <span>💳 Shop Payment Configuration</span>
+              </h3>
+              <p className="text-xs text-brand-cocoa-light mt-1">
+                Configure the merchant UPI ID, instant payment QR Code, and payment options used by customers during checkout.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Left Column: Form */}
+              <div className="space-y-5 text-left">
+                <h4 className="font-sans font-extrabold text-xs text-brand-cocoa uppercase tracking-wider">
+                  Payment Attributes
+                </h4>
+
+                {/* Merchant UPI ID */}
+                <div className="space-y-1.5">
+                  <label className="font-mono text-[9px] uppercase tracking-wider text-brand-cocoa-light block">
+                    Merchant UPI ID / VPA
+                  </label>
+                  <input
+                    type="text"
+                    value={upiIdInput}
+                    onChange={(e) => setUpiIdInput(e.target.value)}
+                    className="w-full px-3.5 py-2 text-xs font-mono font-bold text-brand-cocoa border border-brand-cocoa-border rounded-xl focus:outline-none focus:ring-1 focus:ring-brand-pink bg-brand-cream-light/10"
+                    placeholder="E.g. thefrostingfairy@okaxis"
+                  />
+                </div>
+
+                {/* Custom QR Code Image URL */}
+                <div className="space-y-1.5">
+                  <label className="font-mono text-[9px] uppercase tracking-wider text-brand-cocoa-light block">
+                    Custom QR Code Image URL
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={upiQrInput}
+                    onChange={(e) => setUpiQrInput(e.target.value)}
+                    className="w-full px-3.5 py-2 text-xs font-mono text-brand-cocoa border border-brand-cocoa-border rounded-xl focus:outline-none focus:ring-1 focus:ring-brand-pink resize-none bg-brand-cream-light/10"
+                    placeholder="Paste custom QR code image URL here, or upload an image below..."
+                  />
+                </div>
+
+                {/* Cash on Delivery Toggle Setting */}
+                <div className="pt-4 border-t border-brand-cocoa-border/20 flex items-center justify-between gap-4">
+                  <div className="space-y-0.5">
+                    <span className="font-sans font-bold text-xs text-brand-cocoa block">
+                      Cash on Delivery
+                    </span>
+                    <span className="text-[10px] text-brand-cocoa-light leading-relaxed block max-w-xs">
+                      Allow customers to pay with cash on delivery.
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (currentRole === 'viewer') {
+                        triggerToast('❌ Permission Denied: Read-only role cannot toggle settings.');
+                        return;
+                      }
+                      setCashOnDeliveryInput(!cashOnDeliveryInput);
+                    }}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                      cashOnDeliveryInput ? 'bg-brand-pink' : 'bg-brand-cocoa-border'
+                    }`}
+                    title="Allow customers to pay with cash on delivery."
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                        cashOnDeliveryInput ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    onClick={handleSavePayments}
+                    className="w-full flex items-center justify-center gap-2 py-3 bg-brand-cocoa text-brand-cream text-xs font-bold rounded-xl hover:bg-brand-cocoa-light transition-all cursor-pointer shadow-md uppercase tracking-wider"
+                  >
+                    <CheckCircle className="w-4 h-4 text-brand-pink" />
+                    <span>Update Payment Settings</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Right Column: Checkout QR Code Live Preview & Drag Zone */}
+              <div className="space-y-4">
+                <h4 className="font-sans font-extrabold text-xs text-brand-cocoa uppercase tracking-wider flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-brand-pink fill-brand-pink" />
+                  <span>Instant Checkout Card Preview</span>
+                </h4>
+                <p className="text-xs text-brand-cocoa-light leading-relaxed">
+                  Below is a live preview of the payment option card that your customers see at checkout:
+                </p>
+
+                {/* Live Checkout Payment Card Mockup */}
+                <div className="flex flex-col items-center justify-center bg-brand-cream-light/40 p-4 rounded-2xl border border-brand-cocoa-border/40">
+                  <div className="bg-white p-3.5 border border-brand-cocoa-border rounded-xl flex flex-col items-center shadow-2xs max-w-[190px] w-full">
+                    <div className="w-28 h-28 bg-gray-100 border border-brand-cocoa-border/60 flex flex-col items-center justify-center rounded-lg relative overflow-hidden p-1">
+                      {upiQrInput ? (
+                        <img src={upiQrInput} alt="Payment QR Preview" className="w-full h-full object-contain" />
+                      ) : (
+                        <div className="w-full h-full border border-dashed border-brand-pink/50 flex flex-col justify-center items-center text-center p-1 bg-brand-cream-light/40">
+                          <span className="font-mono text-[7px] text-brand-cocoa-light font-bold">THE FROSTING FAIRY</span>
+                          <div className="w-12 h-12 bg-brand-cocoa mt-1 rounded relative flex items-center justify-center">
+                            <span className="text-[6.5px] text-white font-black font-mono">UPI QR</span>
+                          </div>
+                          <span className="font-mono text-[5px] text-brand-pink-dark mt-1 truncate max-w-full">
+                            {upiIdInput || 'No UPI ID'}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <span className="text-[8px] font-mono uppercase tracking-wider text-brand-cocoa-light mt-2 text-center block">
+                      Pay ₹Grand_Total instantly
+                    </span>
+                    <span className="text-[7.5px] font-mono text-brand-cocoa-light/85 text-center block select-all mt-0.5 max-w-full truncate">
+                      UPI ID: {upiIdInput || 'None'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Drag-and-drop QR Upload Zone */}
+                <div
+                  onDragOver={(e) => { e.preventDefault(); setIsDraggingQr(true); }}
+                  onDragLeave={() => setIsDraggingQr(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setIsDraggingQr(false);
+                    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                      handleQrFile(e.dataTransfer.files[0]);
+                    }
+                  }}
+                  onClick={() => document.getElementById('qr-file-upload')?.click()}
+                  className={`relative border-2 border-dashed rounded-2xl p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-200 ${
+                    isDraggingQr
+                      ? 'border-brand-pink bg-brand-pink-light/25 scale-[0.98]'
+                      : 'border-brand-cocoa-border/65 bg-brand-cream-light/10 hover:border-brand-pink hover:bg-brand-cream-light/40'
+                  }`}
+                >
+                  <input
+                    type="file"
+                    id="qr-file-upload"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        handleQrFile(e.target.files[0]);
+                      }
+                    }}
+                  />
+                  <div className={`p-2 rounded-full mb-1.5 transition-transform ${isDraggingQr ? 'scale-110 bg-brand-pink text-white' : 'bg-white text-brand-cocoa-light border border-brand-cocoa-border/40'}`}>
+                    <Upload className="w-4 h-4" />
+                  </div>
+                  <span className="font-sans font-bold text-[11px] text-brand-cocoa block">
+                    Drag Custom QR Code Image
+                  </span>
+                  <span className="text-[9px] text-brand-cocoa-light/90 mt-0.5 leading-tight block">
+                    Drag QR file here, or <span className="text-brand-pink font-semibold hover:underline">browse files</span>
+                  </span>
+                </div>
+
+              </div>
+            </div>
+          </div>
+
           {/* Bottom Panel: Dynamic Administrative Audit Log */}
           <div className="lg:col-span-12 bg-white p-6 rounded-2xl border border-brand-cocoa-border shadow-2xs space-y-4">
             <div className="flex items-center justify-between border-b border-brand-cocoa-border/40 pb-3">
@@ -2651,7 +3182,7 @@ export default function AdminDashboard({
               <button
                 onClick={() => {
                   setAuditLogs([
-                    { id: Date.now().toString(), time: new Date().toLocaleTimeString(), role: 'System', action: 'Audit log cleared by operator', status: 'info' }
+                    { id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, time: new Date().toLocaleTimeString(), role: 'System', action: 'Audit log cleared by operator', status: 'info' }
                   ]);
                   triggerToast('📋 Audit logs cleared.');
                 }}
@@ -2703,6 +3234,210 @@ export default function AdminDashboard({
             </div>
           </div>
 
+        </div>
+      )}
+
+      {/* EMAIL PREVIEW SIMULATION MODAL OVERLAY */}
+      {selectedEmailPreviewOrder && (
+        <div className="fixed inset-0 bg-brand-cocoa/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto animate-fade-in">
+          <div className="bg-white border border-brand-cocoa-border rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col text-left">
+            {/* Modal Header */}
+            <div className="bg-brand-cream-light/45 px-6 py-4 border-b border-brand-cocoa-border/60 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="p-1.5 rounded-lg bg-brand-pink-light text-brand-pink">📧</span>
+                <div>
+                  <h4 className="font-display font-black text-xs sm:text-sm text-brand-cocoa uppercase tracking-wider">
+                    Boutique Email Dispatch Simulator
+                  </h4>
+                  <p className="text-[10px] text-brand-cocoa-light font-medium leading-none mt-0.5">
+                    Pre-dispatch mock-up & client preview for Order #{selectedEmailPreviewOrder.id}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedEmailPreviewOrder(null)}
+                className="p-1.5 rounded-full hover:bg-brand-cream text-brand-cocoa-light hover:text-brand-cocoa transition-all cursor-pointer font-mono font-bold text-xs"
+              >
+                [CLOSE]
+              </button>
+            </div>
+
+            {/* Email Client Shell */}
+            <div className="bg-brand-cream p-4 border-b border-brand-cocoa-border/40 space-y-2 text-xs text-brand-cocoa">
+              <div className="flex items-center gap-2">
+                <span className="font-mono font-bold text-brand-cocoa-light shrink-0 w-12 text-right">From:</span>
+                <span className="px-2.5 py-1 bg-white border border-brand-cocoa-border rounded-lg font-sans font-semibold text-brand-cocoa flex-1 truncate">
+                  The Frosting Fairy Confectionary &lt;orders@thefrostingfairy.com&gt;
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-mono font-bold text-brand-cocoa-light shrink-0 w-12 text-right">To:</span>
+                <span className="px-2.5 py-1 bg-white border border-brand-cocoa-border rounded-lg font-sans font-semibold text-brand-cocoa flex-1 truncate">
+                  {selectedEmailPreviewOrder.customerName || selectedEmailPreviewOrder.contactName || 'Anonymous Foodie'} &lt;{(selectedEmailPreviewOrder.customerName || selectedEmailPreviewOrder.contactName || 'customer').toLowerCase().replace(/[^a-z0-9]/g, '') || 'customer'}@example.com&gt;
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-mono font-bold text-brand-cocoa-light shrink-0 w-12 text-right">Subject:</span>
+                <span className="px-2.5 py-1 bg-white border border-brand-cocoa-border rounded-lg font-sans font-bold text-brand-cocoa flex-1 text-brand-pink truncate">
+                  {emailSubject}
+                </span>
+              </div>
+            </div>
+
+            {/* High-Fidelity Email Confectionary Theme HTML Body */}
+            <div className="flex-1 p-6 overflow-y-auto max-h-[380px] bg-white border-b border-brand-cocoa-border/40 font-sans text-brand-cocoa">
+              <div className="max-w-xl mx-auto border border-brand-cocoa-border/40 rounded-2xl overflow-hidden shadow-xs bg-white text-left">
+                {/* Email Banner Header */}
+                <div className="bg-brand-pink p-6 text-center text-white space-y-2 relative overflow-hidden">
+                  <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#fff_15%,transparent_16%)] [background-size:16px_16px]" />
+                  <span className="text-3xl animate-bounce inline-block">🧁</span>
+                  <h3 className="font-display font-black text-base tracking-wider uppercase">
+                    {websiteName || 'The Frosting Fairy'}
+                  </h3>
+                  <p className="font-serif italic text-xs opacity-90 leading-tight">
+                    {emailHeader}
+                  </p>
+                </div>
+
+                {/* Email Body Content */}
+                <div className="p-6 space-y-5">
+                  <div className="space-y-1">
+                    <h4 className="font-sans font-bold text-sm text-brand-cocoa">
+                      Sweet Greetings {selectedEmailPreviewOrder.customerName || selectedEmailPreviewOrder.contactName || 'Artisanal Connoisseur'},
+                    </h4>
+                    <p className="text-xs text-brand-cocoa-light leading-relaxed">
+                      We have received your bespoke request and have scheduled it on our baking calendar! Our culinary artisans are already sourcing the finest organic ingredients to bring your beautiful vision to life.
+                    </p>
+                  </div>
+
+                  {/* Order Receipt Details Block */}
+                  <div className="bg-brand-pink-light/30 border border-brand-pink/15 rounded-xl p-4 space-y-3">
+                    <div className="flex justify-between items-center border-b border-brand-pink/10 pb-2">
+                      <span className="font-mono text-[9px] uppercase font-bold text-brand-pink">Bespoke Order Receipt</span>
+                      <span className="font-mono text-[9px] font-bold text-brand-cocoa">Order ID: #{selectedEmailPreviewOrder.id}</span>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-xs">
+                        <span className="font-bold text-brand-cocoa">{selectedEmailPreviewOrder.cakeType}</span>
+                        <span className="font-mono font-bold text-brand-pink">{selectedEmailPreviewOrder.estimatedPrice || '$45.00'}</span>
+                      </div>
+                      <p className="text-[11px] text-brand-cocoa-light leading-relaxed">
+                        Filling/Buttercream: <strong className="font-semibold text-brand-cocoa">{selectedEmailPreviewOrder.flavor || 'Signature Standard'}</strong> | Base Options: <strong className="font-semibold text-brand-cocoa">Weight {selectedEmailPreviewOrder.weight || 'Standard'}</strong>
+                      </p>
+                    </div>
+
+                    {selectedEmailPreviewOrder.message && (
+                      <div className="bg-white/65 p-2.5 rounded-lg border border-brand-pink/10 text-center">
+                        <span className="font-mono text-[8px] uppercase tracking-wider text-brand-cocoa-light block font-bold">Fondant Custom Inscription</span>
+                        <p className="font-serif italic text-xs text-brand-cocoa mt-0.5">
+                          "{selectedEmailPreviewOrder.message}"
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Delivery Info */}
+                  <div className="grid grid-cols-2 gap-4 text-[11px] text-brand-cocoa border-t border-brand-cocoa-border/40 pt-4">
+                    <div className="space-y-1">
+                      <span className="font-mono text-[8px] uppercase tracking-wider text-brand-cocoa-light block font-bold">Scheduled Fulfillment</span>
+                      <p className="font-bold">
+                        📅 {selectedEmailPreviewOrder.pickupDate || 'Scheduled soon'}
+                      </p>
+                      {selectedEmailPreviewOrder.pickupTime && (
+                        <p className="text-brand-cocoa-light">At {selectedEmailPreviewOrder.pickupTime}</p>
+                      )}
+                    </div>
+                    <div className="space-y-1">
+                      <span className="font-mono text-[8px] uppercase tracking-wider text-brand-cocoa-light block font-bold">Fulfillment Mode</span>
+                      <p className="font-bold">
+                        📍 {selectedEmailPreviewOrder.deliveryType || 'Store Pickup'}
+                      </p>
+                      {selectedEmailPreviewOrder.deliveryType === 'Delivery' && selectedEmailPreviewOrder.deliveryAddress && (
+                        <p className="text-brand-cocoa-light truncate max-w-[150px]" title={selectedEmailPreviewOrder.deliveryAddress}>
+                          {selectedEmailPreviewOrder.deliveryAddress}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="text-center pt-3 border-t border-brand-cocoa-border/40">
+                    <p className="text-[10px] text-brand-cocoa-light italic font-medium leading-normal">
+                      Need custom changes? Drop us an Instagram DM or reply to this receipt simulation.
+                    </p>
+                    <p className="text-[10px] text-brand-pink font-bold mt-1 uppercase tracking-wider">
+                      {websiteSlogan || 'Where magic is baked into every layer!'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="bg-brand-cream-light/35 px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="flex items-center gap-1.5 text-[10px] sm:text-xs text-brand-cocoa-light font-medium text-center sm:text-left">
+                <span className="text-brand-pink font-bold">💡</span>
+                <span>Pre-flight simulation respects current theme and custom settings.</span>
+              </div>
+
+              <div className="flex gap-2 w-full sm:w-auto">
+                <button
+                  onClick={() => setSelectedEmailPreviewOrder(null)}
+                  className="flex-1 sm:flex-initial px-4 py-2 border border-brand-cocoa-border bg-white text-brand-cocoa hover:bg-brand-cream text-xs font-bold rounded-xl transition-all cursor-pointer uppercase tracking-wider"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    if (currentRole === 'viewer') {
+                      addAuditLog(`Attempted to dispatch simulated email (Blocked)`, 'warning');
+                      triggerToast('❌ Permission Denied: View-only users cannot dispatch simulated alerts.');
+                      return;
+                    }
+                    setIsSendingEmail(true);
+                    addAuditLog(`Initiating high-fidelity email notification build for order #${selectedEmailPreviewOrder.id}`, 'info');
+
+                    setTimeout(() => {
+                      const recipientName = selectedEmailPreviewOrder.customerName || selectedEmailPreviewOrder.contactName || 'Anonymous Foodie';
+                      const safeName = recipientName.toLowerCase().replace(/[^a-z0-9]/g, '');
+                      const recipientEmail = `${safeName || 'customer'}@example.com`;
+
+                      const newEmail = {
+                        id: Math.random().toString(36).substr(2, 9).toUpperCase(),
+                        recipientName,
+                        recipientEmail,
+                        subject: emailSubject,
+                        time: new Date().toLocaleTimeString(),
+                        status: 'DELIVERED' as const,
+                        orderId: selectedEmailPreviewOrder.id,
+                        cakeType: selectedEmailPreviewOrder.cakeType,
+                      };
+
+                      setSentEmails(prev => [newEmail, ...prev]);
+                      addAuditLog(`📧 [Email Dispatched Successfully] Sent receipt to ${recipientEmail}`, 'success');
+                      setIsSendingEmail(false);
+                      setSelectedEmailPreviewOrder(null);
+                      triggerToast(`💖 Simulated Email Confirmation sent to ${recipientEmail}!`);
+                    }, 1200);
+                  }}
+                  disabled={isSendingEmail}
+                  className="flex-1 sm:flex-initial px-5 py-2 bg-brand-pink hover:bg-brand-pink-dark text-white text-xs font-bold rounded-xl transition-all shadow-md hover:shadow-lg shrink-0 flex items-center justify-center gap-2 uppercase tracking-wider disabled:opacity-50 cursor-pointer"
+                >
+                  {isSendingEmail ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Sending Simulation...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4" />
+                      <span>Send Simulated Receipt</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

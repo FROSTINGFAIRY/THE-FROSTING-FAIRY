@@ -8,7 +8,6 @@ import Navbar from './components/Navbar';
 import logoImg from './assets/images/frosting_fairy_logo_1784129178255.jpg';
 import Home from './components/Home';
 import Dashboard from './components/Dashboard';
-import FavoritesGrid from './components/FavoritesGrid';
 import MealPlanner from './components/MealPlanner';
 import ShoppingList from './components/ShoppingList';
 import RecipeDetail from './components/RecipeDetail';
@@ -27,7 +26,7 @@ export default function App() {
   // --- SCHEMA VERSIONING HEURISTIC ---
   // Store "gusto_data_version" in localStorage and reset when the version doesn't match,
   // preventing fragile guessing based on recipe names or fields.
-  const CURRENT_DATA_VERSION = '2';
+  const CURRENT_DATA_VERSION = '3';
   
   // Run schema migration check on load before initializing states
   const storedVersion = localStorage.getItem('gusto_data_version');
@@ -70,11 +69,30 @@ export default function App() {
     return localStorage.getItem('gusto_upi_qr_code') || '';
   });
 
+  const [cashOnDeliveryEnabled, setCashOnDeliveryEnabled] = useState<boolean>(() => {
+    const saved = localStorage.getItem('gusto_cash_on_delivery_enabled');
+    return saved !== null ? saved === 'true' : true;
+  });
+
   const [activeTab, setActiveTab] = useState<string>('home');
   const [activeCategory, setActiveCategory] = useState<string>('All');
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [preselectedRecipeId, setPreselectedRecipeId] = useState<string>('');
   const [tabHistory, setTabHistory] = useState<string[]>([]);
+
+  // Theme support
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    return (localStorage.getItem('gusto_theme') as 'light' | 'dark') || 'light';
+  });
+
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('gusto_theme', theme);
+  }, [theme]);
 
   // Default orders to populate the custom planner and make it feel alive immediately
   const [mealPlan, setMealPlan] = useState<MealPlanEntry[]>(() => {
@@ -195,6 +213,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('gusto_upi_qr_code', upiQrCode);
   }, [upiQrCode]);
+
+  useEffect(() => {
+    localStorage.setItem('gusto_cash_on_delivery_enabled', String(cashOnDeliveryEnabled));
+  }, [cashOnDeliveryEnabled]);
 
   // --- GLOBAL TOAST SYSTEM & STATUS CHANGE DETECTOR ---
   const [toasts, setToasts] = useState<{ id: string; title: string; message: string; type: 'success' | 'info' | 'warning' }[]>([]);
@@ -531,21 +553,6 @@ export default function App() {
             websiteSlogan={websiteSlogan}
           />
         );
-      case 'favorites':
-        return (
-          <FavoritesGrid
-            recipes={recipes}
-            onSelectRecipe={handleSelectRecipe}
-            onToggleFavorite={handleToggleFavorite}
-            onGoToDiscover={() => {
-              setTabHistory((prev) => {
-                if (prev.length > 0 && prev[prev.length - 1] === activeTab) return prev;
-                return [...prev, activeTab];
-              });
-              setActiveTab('discover');
-            }}
-          />
-        );
       case 'planner':
         return (
           <MealPlanner
@@ -571,6 +578,7 @@ export default function App() {
             onCheckout={handleCheckout}
             upiId={upiId}
             upiQrCode={upiQrCode}
+            cashOnDeliveryEnabled={cashOnDeliveryEnabled}
           />
         );
       case 'admin':
@@ -591,15 +599,14 @@ export default function App() {
             setUpiId={setUpiId}
             upiQrCode={upiQrCode}
             setUpiQrCode={setUpiQrCode}
+            cashOnDeliveryEnabled={cashOnDeliveryEnabled}
+            setCashOnDeliveryEnabled={setCashOnDeliveryEnabled}
           />
         );
       default:
         return null;
     }
   };
-
-  // Count how many items are currently marked as favorites
-  const favoritesCount = recipes.filter((r) => r.isFavorite).length;
 
   return (
     <div id="app-root-container" className="min-h-screen bg-brand-cream text-brand-cocoa font-sans antialiased flex flex-col">
@@ -616,10 +623,11 @@ export default function App() {
         }}
         shoppingItemsCount={shoppingList.reduce((acc, item) => acc + item.amount, 0)}
         mealPlanCount={mealPlan.length}
-        favoritesCount={favoritesCount}
         logo={logo}
         websiteName={websiteName}
         websiteSlogan={websiteSlogan}
+        theme={theme}
+        toggleTheme={() => setTheme((t) => (t === 'light' ? 'dark' : 'light'))}
       />
 
       {/* Main Screen Layout with AnimatePresence */}

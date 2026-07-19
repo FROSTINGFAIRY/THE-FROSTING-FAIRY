@@ -1,15 +1,16 @@
 import React from 'react';
-import { Cake, ShoppingBag, Calendar, Heart, Menu, X, Sparkles, Settings, Mail, Instagram } from 'lucide-react';
+import { Cake, ShoppingBag, Calendar, Heart, Menu, X, Sparkles, Settings, Mail, Instagram, Sun, Moon } from 'lucide-react';
 
 interface NavbarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   shoppingItemsCount: number;
   mealPlanCount: number;
-  favoritesCount: number;
   logo: string;
   websiteName: string;
   websiteSlogan: string;
+  theme: 'light' | 'dark';
+  toggleTheme: () => void;
 }
 
 export default function Navbar({
@@ -17,10 +18,11 @@ export default function Navbar({
   setActiveTab,
   shoppingItemsCount,
   mealPlanCount,
-  favoritesCount,
   logo,
   websiteName,
   websiteSlogan,
+  theme,
+  toggleTheme,
 }: NavbarProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   const [showContactDropdown, setShowContactDropdown] = React.useState(false);
@@ -74,22 +76,6 @@ export default function Navbar({
               }`}
             >
               Our Menu
-            </button>
-            <button
-              onClick={() => setActiveTab('favorites')}
-              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
-                activeTab === 'favorites'
-                  ? 'text-brand-pink bg-brand-pink-light/30'
-                  : 'text-brand-cocoa-light hover:text-brand-cocoa hover:bg-brand-cream-light/40'
-              }`}
-            >
-              <Heart className="w-4 h-4" />
-              <span>Favorites</span>
-              {favoritesCount > 0 && (
-                <span className="bg-brand-pink text-white text-[10px] font-bold font-mono px-1.5 py-0.5 rounded-full">
-                  {favoritesCount}
-                </span>
-              )}
             </button>
             <button
               onClick={() => setActiveTab('planner')}
@@ -169,6 +155,19 @@ export default function Navbar({
 
           {/* Right Action Icons */}
           <div className="hidden md:flex items-center space-x-3">
+            {/* Theme Toggle Button */}
+            <button
+              onClick={toggleTheme}
+              title={theme === 'light' ? 'Switch to Midnight Velvet' : 'Switch to Light Mode'}
+              className="p-3 rounded-full border border-brand-cocoa-border bg-white text-brand-cocoa hover:border-brand-pink-accent/50 hover:bg-brand-pink-light/20 transition-all cursor-pointer shadow-xs flex items-center justify-center"
+            >
+              {theme === 'light' ? (
+                <Moon className="w-5 h-5 text-brand-cocoa-light hover:text-brand-pink" />
+              ) : (
+                <Sun className="w-5 h-5 text-yellow-400 hover:text-brand-pink" />
+              )}
+            </button>
+
             <button
               onClick={() => setActiveTab('shopping')}
               className={`relative p-3 rounded-full border border-brand-cocoa-border transition-all cursor-pointer ${
@@ -187,10 +186,23 @@ export default function Navbar({
           </div>
 
           {/* Mobile Menu Button */}
-          <div className="flex items-center md:hidden">
+          <div className="flex items-center md:hidden gap-2">
+            {/* Mobile Theme Toggle Button */}
+            <button
+              onClick={toggleTheme}
+              title={theme === 'light' ? 'Switch to Midnight Velvet' : 'Switch to Light Mode'}
+              className="p-2 rounded-full border border-brand-cocoa-border text-brand-cocoa cursor-pointer flex items-center justify-center bg-white"
+            >
+              {theme === 'light' ? (
+                <Moon className="w-5 h-5 text-brand-cocoa-light" />
+              ) : (
+                <Sun className="w-5 h-5 text-yellow-400" />
+              )}
+            </button>
+
             <button
               onClick={() => setActiveTab('shopping')}
-              className="relative p-2 rounded-full border border-brand-cocoa-border text-brand-cocoa mr-3 cursor-pointer"
+              className="relative p-2 rounded-full border border-brand-cocoa-border text-brand-cocoa mr-1 cursor-pointer"
             >
               <ShoppingBag className="w-5 h-5" />
               {shoppingItemsCount > 0 && (
@@ -237,27 +249,6 @@ export default function Navbar({
             }`}
           >
             Our Menu
-          </button>
-          <button
-            onClick={() => {
-              setActiveTab('favorites');
-              setIsOpen(false);
-            }}
-            className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center justify-between ${
-              activeTab === 'favorites'
-                ? 'text-brand-pink bg-brand-pink-light/30'
-                : 'text-brand-cocoa-light hover:text-brand-cocoa'
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              <Heart className="w-4 h-4" />
-              <span>Favorites</span>
-            </div>
-            {favoritesCount > 0 && (
-              <span className="bg-brand-pink text-white text-[10px] font-bold font-mono px-2 py-0.5 rounded-full">
-                {favoritesCount}
-              </span>
-            )}
           </button>
           <button
             onClick={() => {
@@ -339,6 +330,27 @@ export default function Navbar({
                 </a>
               </div>
             )}
+          </div>
+
+          {/* Mobile Theme Toggle footer inside drawer */}
+          <div className="border-t border-brand-cocoa-border/40 pt-3 flex items-center justify-between px-4">
+            <span className="text-xs font-semibold text-brand-cocoa-light">Theme</span>
+            <button
+              onClick={toggleTheme}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-brand-cocoa-border bg-white text-xs font-semibold text-brand-cocoa cursor-pointer"
+            >
+              {theme === 'light' ? (
+                <>
+                  <Moon className="w-3.5 h-3.5 text-brand-cocoa-light" />
+                  <span>Midnight Velvet</span>
+                </>
+              ) : (
+                <>
+                  <Sun className="w-3.5 h-3.5 text-yellow-400" />
+                  <span>Light Theme</span>
+                </>
+              )}
+            </button>
           </div>
         </div>
       )}

@@ -23,6 +23,8 @@ const getCategoryIcon = (name: string, isActive: boolean) => {
       return <Sparkles className={iconClass} />;
     case 'Bombolonis':
       return <ChefHat className={iconClass} />;
+    case 'Favorites':
+      return <Heart className={iconClass} />;
     case 'New Additions':
       return <Sparkles className={iconClass} />;
     default:
@@ -183,6 +185,7 @@ export default function Dashboard({
   // Categories matching the image categories
   const categories = [
     { name: 'All', emoji: '✨' },
+    { name: 'Favorites', emoji: '❤️' },
     { name: 'Signature Cakes', emoji: '🎂' },
     { name: 'Cupcakes', emoji: '🧁' },
     { name: 'Brownies', emoji: '🍫' },
@@ -195,11 +198,14 @@ export default function Dashboard({
   // Filter recipes based on category and search query
   const filteredRecipes = useMemo(() => {
     return recipes.filter((recipe) => {
-      const matchesCategory = activeCategory === 'All' || recipe.category === activeCategory;
+      const matchesCategory =
+        activeCategory === 'All' ||
+        (activeCategory === 'Favorites' ? recipe.isFavorite : recipe.category === activeCategory);
       const matchesSearch =
         recipe.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         recipe.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        recipe.tags.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase()));
+        recipe.tags.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (recipe.ingredients && recipe.ingredients.some((ing) => ing.name.toLowerCase().includes(searchQuery.toLowerCase())));
       return matchesCategory && matchesSearch;
     });
   }, [recipes, activeCategory, searchQuery]);

@@ -46,6 +46,7 @@ interface ShoppingListProps {
   }) => void;
   upiId?: string;
   upiQrCode?: string;
+  cashOnDeliveryEnabled?: boolean;
 }
 
 export default function ShoppingList({
@@ -55,6 +56,7 @@ export default function ShoppingList({
   onCheckout,
   upiId: propUpiId = 'thefrostingfairy@okaxis',
   upiQrCode = '',
+  cashOnDeliveryEnabled = true,
 }: ShoppingListProps) {
   // --- FORM STATE ---
   const [customerName, setCustomerName] = useState('');
@@ -88,6 +90,12 @@ export default function ShoppingList({
   useEffect(() => {
     setUpiId(propUpiId);
   }, [propUpiId]);
+
+  useEffect(() => {
+    if (!cashOnDeliveryEnabled && paymentMethod === 'COD') {
+      setPaymentMethod('Card');
+    }
+  }, [cashOnDeliveryEnabled, paymentMethod]);
   const [showQR, setShowQR] = useState(false);
 
   // Cart totals calculation
@@ -554,7 +562,7 @@ export default function ShoppingList({
                 <label className="text-[10px] font-bold font-mono uppercase tracking-widest text-brand-cocoa-light">
                   Select Payment Option
                 </label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className={`grid ${cashOnDeliveryEnabled ? 'grid-cols-3' : 'grid-cols-2'} gap-2`}>
                   <button
                     type="button"
                     onClick={() => setPaymentMethod('Card')}
@@ -581,18 +589,20 @@ export default function ShoppingList({
                     <span className="text-[10px] font-bold font-mono uppercase">UPI / QR</span>
                   </button>
 
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('COD')}
-                    className={`py-3 border rounded-xl flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                      paymentMethod === 'COD'
-                        ? 'border-brand-pink bg-brand-pink-light/20 text-brand-pink'
-                        : 'border-brand-cocoa-border bg-white text-brand-cocoa hover:border-brand-pink-accent/50'
-                    }`}
-                  >
-                    <DollarSign className="w-4 h-4" />
-                    <span className="text-[10px] font-bold font-mono uppercase">COD</span>
-                  </button>
+                  {cashOnDeliveryEnabled && (
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('COD')}
+                      className={`py-3 border rounded-xl flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                        paymentMethod === 'COD'
+                          ? 'border-brand-pink bg-brand-pink-light/20 text-brand-pink'
+                          : 'border-brand-cocoa-border bg-white text-brand-cocoa hover:border-brand-pink-accent/50'
+                      }`}
+                    >
+                      <DollarSign className="w-4 h-4" />
+                      <span className="text-[10px] font-bold font-mono uppercase">COD</span>
+                    </button>
+                  )}
                 </div>
 
                 {/* Visible warning note for demo payment */}
