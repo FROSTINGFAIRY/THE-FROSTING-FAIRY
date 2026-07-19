@@ -1,12 +1,130 @@
 import { Recipe } from './types';
 
+import imgCakeVanilla from './assets/images/classic_vanilla_cake_1784434668508.jpg';
+import imgCakeChocolate from './assets/images/chocolate_cake_1784434686481.jpg';
+import imgCakeStrawberry from './assets/images/strawberry_cake_1784434701070.jpg';
+import imgCakePineapple from './assets/images/pineapple_swirl_cake_1784434715973.jpg';
+import imgCakeButterscotch from './assets/images/butterscotch_cake_1784434731944.jpg';
+import imgCakeCaramel from './assets/images/whipped_caramel_cake_1784434744053.jpg';
+import imgCakeTruffle from './assets/images/choco_truffle_cake_1784434756904.jpg';
+import imgCakeLemonCream from './assets/images/lemon_cream_cheese_cake_1784434770151.jpg';
+
+import imgCupcakeVanilla from './assets/images/classic_vanilla_cupcakes_1784434789514.jpg';
+import imgCupcakeStrawberry from './assets/images/strawberry_cupcakes_1784434803989.jpg';
+import imgCupcakeLemon from './assets/images/lemon_cupcakes_1784434818689.jpg';
+import imgCupcakeRedVelvet from './assets/images/red_velvet_cupcakes_1784434833154.jpg';
+import imgCupcakeOreo from './assets/images/oreo_cupcakes_1784434847600.jpg';
+import imgCupcakeNutella from './assets/images/choco_nutella_cupcakes_1784434862619.jpg';
+
+import imgBrownieClassic from './assets/images/classic_brownie_1784434884868.jpg';
+import imgBrownieOreo from './assets/images/oreo_brownie_1784434897494.jpg';
+import imgBrownieNutella from './assets/images/nutella_brownie_1784434912033.jpg';
+import imgBrownieKitkat from './assets/images/kitkat_brownie_1784434926370.jpg';
+import imgBrownieTriple from './assets/images/triple_chocolate_brownie_1784434940621.jpg';
+import imgBrownieBiscoff from './assets/images/biscoff_brownie_1784434954807.jpg';
+import imgBrowniePistachio from './assets/images/pistachio_brownie_1784434968825.jpg';
+
+import imgCookieChocoChip from './assets/images/classic_choco_chip_cookies_1784434986464.jpg';
+import imgCookieDoubleChoco from './assets/images/double_chocolate_cookies_1784435001156.jpg';
+import imgCookieDarkChunks from './assets/images/dark_chocolate_chunks_cookies_1784435017492.jpg';
+import imgCookieMm from './assets/images/mm_cookies_1784435031411.jpg';
+import imgCookieRedVelvet from './assets/images/red_velvet_white_choco_cookies_1784435046208.jpg';
+
+import imgBomboloniVanilla from './assets/images/classic_vanilla_custard_bombolonies_1784435060933.jpg';
+import imgBomboloniHazelnut from './assets/images/choco_hazelnut_bombolonies_1784435074139.jpg';
+import imgBomboloniStrawberry from './assets/images/strawberry_burst_bombolonies_1784435088155.jpg';
+
+import imgDonutGlazed from './assets/images/classic_glazed_donuts_1784435107615.jpg';
+
+const makeSvgUrl = (svgContent: string) => `data:image/svg+xml;utf8,${encodeURIComponent(svgContent.trim())}`;
+
+const svgCaramelDonut = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <rect width="100%" height="100%" fill="#F7F5F0"/>
+  <circle cx="100" cy="80" r="120" fill="#EBF1EB" opacity="0.6"/>
+  <circle cx="320" cy="220" r="100" fill="#FCECEF" opacity="0.6"/>
+  <ellipse cx="200" cy="210" rx="90" ry="25" fill="#E5D9C4" opacity="0.5"/>
+  <path d="M200,80 A70,70 0 1,0 200,220 A70,70 0 1,0 200,80 M200,120 A30,30 0 1,1 200,180 A30,30 0 1,1 200,120" fill="#E8B878"/>
+  <path d="M200,85 C240,85 265,110 265,150 C265,165 255,170 250,180 C240,200 220,215 200,215 C180,215 160,200 150,180 C145,170 135,165 135,150 C135,110 160,85 200,85 Z M200,125 A25,25 0 1,0 200,175 A25,25 0 1,0 200,125" fill="#C07A34"/>
+  <path d="M160,110 Q180,100 200,110 T240,110" stroke="#FFF" stroke-width="3" fill="none" opacity="0.4" stroke-linecap="round"/>
+  <circle cx="170" cy="115" r="3" fill="#FFF" opacity="0.6"/>
+  <circle cx="230" cy="125" r="4" fill="#FFF" opacity="0.6"/>
+  <text x="200" y="270" font-family="'Inter', sans-serif" font-weight="600" font-size="14" fill="#5C4738" text-anchor="middle">Caramel Glazed Donut</text>
+  <text x="200" y="285" font-family="'Inter', sans-serif" font-size="10" fill="#8C7662" text-anchor="middle">Buttery Salted Caramel Glaze</text>
+</svg>`;
+
+const svgOreoDonut = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <rect width="100%" height="100%" fill="#F7F5F0"/>
+  <circle cx="80" cy="220" r="100" fill="#EBF1EB" opacity="0.6"/>
+  <circle cx="300" cy="70" r="110" fill="#FCECEF" opacity="0.6"/>
+  <ellipse cx="200" cy="210" rx="90" ry="25" fill="#E5D9C4" opacity="0.5"/>
+  <path d="M200,80 A70,70 0 1,0 200,220 A70,70 0 1,0 200,80 M200,120 A30,30 0 1,1 200,180 A30,30 0 1,1 200,120" fill="#E8B878"/>
+  <path d="M200,85 C240,85 265,110 265,150 C265,165 255,170 250,180 C240,200 220,215 200,215 C180,215 160,200 150,180 C145,170 135,165 135,150 C135,110 160,85 200,85 Z M200,125 A25,25 0 1,0 200,175 A25,25 0 1,0 200,125" fill="#F9F6F0"/>
+  <circle cx="155" cy="115" r="4" fill="#3D2B1F"/>
+  <circle cx="165" cy="105" r="3" fill="#3D2B1F"/>
+  <circle cx="230" cy="115" r="5" fill="#3D2B1F"/>
+  <circle cx="240" cy="135" r="4" fill="#3D2B1F"/>
+  <circle cx="145" cy="155" r="3" fill="#3D2B1F"/>
+  <circle cx="155" cy="175" r="4" fill="#3D2B1F"/>
+  <circle cx="225" cy="175" r="5" fill="#3D2B1F"/>
+  <circle cx="180" cy="200" r="3" fill="#3D2B1F"/>
+  <circle cx="210" cy="200" r="4" fill="#3D2B1F"/>
+  <path d="M150,130 Q170,120 190,135 T240,125" stroke="#FFF" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <text x="200" y="270" font-family="'Inter', sans-serif" font-weight="600" font-size="14" fill="#5C4738" text-anchor="middle">Cookies &amp; Cream Donut</text>
+  <text x="200" y="285" font-family="'Inter', sans-serif" font-size="10" fill="#8C7662" text-anchor="middle">White Chocolate &amp; Oreo Crumbs</text>
+</svg>`;
+
+const svgSugarRoll = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <rect width="100%" height="100%" fill="#F7F5F0"/>
+  <circle cx="310" cy="90" r="120" fill="#EBF1EB" opacity="0.6"/>
+  <circle cx="90" cy="210" r="100" fill="#FCECEF" opacity="0.6"/>
+  <ellipse cx="200" cy="215" rx="85" ry="22" fill="#E5D9C4" opacity="0.5"/>
+  <path d="M200,70 C270,70 280,120 280,150 C280,210 250,220 200,220 C150,220 120,210 120,150 C120,120 130,70 200,70 Z" fill="#E5AC67"/>
+  <path d="M200,85 Q250,85 255,125 T215,185 T155,165 T175,125 T200,135" stroke="#7A4F30" stroke-width="8" fill="none" stroke-linecap="round"/>
+  <path d="M200,95 Q235,95 240,125 T205,170 T165,150 T185,125" stroke="#E5AC67" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <path d="M140,110 Q200,130 260,110" stroke="#FFF" stroke-width="5" fill="none" opacity="0.7" stroke-linecap="round"/>
+  <path d="M130,150 Q200,170 270,140" stroke="#FFF" stroke-width="4" fill="none" opacity="0.7" stroke-linecap="round"/>
+  <path d="M150,180 Q200,195 250,175" stroke="#FFF" stroke-width="6" fill="none" opacity="0.7" stroke-linecap="round"/>
+  <text x="200" y="270" font-family="'Inter', sans-serif" font-weight="600" font-size="14" fill="#5C4738" text-anchor="middle">Classic Cinnamon Roll</text>
+  <text x="200" y="285" font-family="'Inter', sans-serif" font-size="10" fill="#8C7662" text-anchor="middle">Cassia Cinnamon &amp; Sugar Glaze</text>
+</svg>`;
+
+const svgMilkRoll = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <rect width="100%" height="100%" fill="#F7F5F0"/>
+  <circle cx="100" cy="90" r="110" fill="#EBF1EB" opacity="0.6"/>
+  <circle cx="300" cy="210" r="110" fill="#FCECEF" opacity="0.6"/>
+  <ellipse cx="200" cy="215" rx="85" ry="22" fill="#E5D9C4" opacity="0.5"/>
+  <path d="M200,70 C270,70 280,120 280,150 C280,210 250,220 200,220 C150,220 120,210 120,150 C120,120 130,70 200,70 Z" fill="#E5AC67"/>
+  <path d="M200,85 Q250,85 255,125 T215,185 T155,165 T175,125 T200,135" stroke="#7A4F30" stroke-width="8" fill="none" stroke-linecap="round"/>
+  <path d="M140,100 C180,90 220,110 250,95 C265,115 270,140 260,165 C240,195 210,210 180,205 C150,200 135,170 135,140 C135,120 138,110 140,100 Z" fill="#F6F0DD" opacity="0.95"/>
+  <path d="M175,125 T200,135" stroke="#7A4F30" stroke-width="4" fill="none" stroke-linecap="round" opacity="0.3"/>
+  <path d="M140,135 Q145,155 140,160 Q135,165 140,170" stroke="#F6F0DD" stroke-width="5" fill="none" stroke-linecap="round"/>
+  <path d="M255,135 Q250,155 255,165" stroke="#F6F0DD" stroke-width="6" fill="none" stroke-linecap="round"/>
+  <path d="M160,110 C180,105 210,115 230,110" stroke="#FFF" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <text x="200" y="270" font-family="'Inter', sans-serif" font-weight="600" font-size="14" fill="#5C4738" text-anchor="middle">Condensed Milk Cinnamon Roll</text>
+  <text x="200" y="285" font-family="'Inter', sans-serif" font-size="10" fill="#8C7662" text-anchor="middle">Sweet Silk Condensed Milk Glaze</text>
+</svg>`;
+
+const svgCreamCheeseRoll = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <rect width="100%" height="100%" fill="#F7F5F0"/>
+  <circle cx="200" cy="150" r="140" fill="#FCECEF" opacity="0.4"/>
+  <circle cx="80" cy="80" r="90" fill="#EBF1EB" opacity="0.6"/>
+  <ellipse cx="200" cy="215" rx="85" ry="22" fill="#E5D9C4" opacity="0.5"/>
+  <path d="M200,70 C270,70 280,120 280,150 C280,210 250,220 200,220 C150,220 120,210 120,150 C120,120 130,70 200,70 Z" fill="#E5AC67"/>
+  <path d="M200,85 Q250,85 255,125 T215,185 T155,165 T175,125 T200,135" stroke="#7A4F30" stroke-width="8" fill="none" stroke-linecap="round"/>
+  <path d="M130,120 C130,90 270,90 270,120 C275,140 270,170 260,185 C240,205 160,205 140,185 C130,165 130,140 130,120 Z" fill="#FFFBF5"/>
+  <path d="M150,120 Q200,105 250,120 Q230,150 200,140 T160,160" stroke="#EBE5D8" stroke-width="6" fill="none" stroke-linecap="round"/>
+  <path d="M160,110 A40,30 0 0,1 240,110" stroke="#FFF" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <text x="200" y="270" font-family="'Inter', sans-serif" font-weight="600" font-size="14" fill="#5C4738" text-anchor="middle">Cream Cheese Cinnamon Roll</text>
+  <text x="200" y="285" font-family="'Inter', sans-serif" font-size="10" fill="#8C7662" text-anchor="middle">Velvety Tangy Cream Cheese Frosting</text>
+</svg>`;
+
 export const INITIAL_RECIPES: Recipe[] = [
   // --- SIGNATURE CAKES (BY WEIGHT) ---
   {
     id: 'cake-vanilla',
     name: 'Classic Vanilla Cake',
     description: 'Freshly baked premium vanilla bean sponge, delicately layered with smooth whipped vanilla buttercream. Simple, elegant, and timeless.',
-    image: 'https://images.unsplash.com/photo-1535141192574-5d4897c13636?auto=format&fit=crop&w=800&q=80',
+    image: imgCakeVanilla,
     prepTime: 20,
     cookTime: 35,
     difficulty: 'Easy',
@@ -43,7 +161,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     id: 'cake-chocolate',
     name: 'Chocolate Cake',
     description: 'Rich cocoa sponge paired with luxurious Belgian chocolate cream. A deep, heavenly experience for chocolate purists.',
-    image: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=800&q=80',
+    image: imgCakeChocolate,
     prepTime: 15,
     cookTime: 30,
     difficulty: 'Medium',
@@ -80,7 +198,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     id: 'cake-strawberry',
     name: 'Strawberry Cake',
     description: 'Fresh strawberry cream paired with light, moist sponge layers. Filled with real, house-simmered strawberry jam.',
-    image: 'https://images.unsplash.com/photo-1565958011703-44f9829ba187?auto=format&fit=crop&w=800&q=80',
+    image: imgCakeStrawberry,
     prepTime: 20,
     cookTime: 28,
     difficulty: 'Medium',
@@ -117,7 +235,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     id: 'cake-pineapple',
     name: 'Pineapple Swirl Cake',
     description: 'A light, refreshing vanilla sponge cake layered with juicy pineapple pieces and delicate whipped pineapple fresh cream.',
-    image: 'https://images.unsplash.com/photo-1621303837174-89787a7d4729?auto=format&fit=crop&w=800&q=80',
+    image: imgCakePineapple,
     prepTime: 15,
     cookTime: 30,
     difficulty: 'Medium',
@@ -153,7 +271,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     id: 'cake-butterscotch',
     name: 'Butterscotch Cake',
     description: 'A luscious sponge cake infused with home-brewed butterscotch sauce and crunchy, handmade butterscotch praline caramel pieces.',
-    image: 'https://images.unsplash.com/photo-1606890737304-57a1ca8a5b62?auto=format&fit=crop&w=800&q=80',
+    image: imgCakeButterscotch,
     prepTime: 20,
     cookTime: 30,
     difficulty: 'Medium',
@@ -189,7 +307,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     id: 'cake-caramel',
     name: 'Whipped Caramel Cake',
     description: 'A light-as-air vanilla bean sponge cake smothered in silky, slow-cooked whipped caramel cream and topped with buttery caramel drizzles.',
-    image: 'https://images.unsplash.com/photo-1588195538326-c5b1e9f80a1b?auto=format&fit=crop&w=800&q=80',
+    image: imgCakeCaramel,
     prepTime: 18,
     cookTime: 32,
     difficulty: 'Medium',
@@ -224,7 +342,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     id: 'cake-truffle',
     name: 'Choco Truffle Cake',
     description: 'An absolute masterpiece. Decadent chocolate cake loaded with dense chocolate ganache truffle layers and coated in dark chocolate glaze.',
-    image: 'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=800&q=80',
+    image: imgCakeTruffle,
     prepTime: 25,
     cookTime: 30,
     difficulty: 'Hard',
@@ -260,7 +378,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     id: 'cake-lemon-cream',
     name: 'Lemon Cream Cheese Cake',
     description: 'Bright, zesty lemon-infused sponge cake perfectly matched with a velvety, tangy cream cheese frosting. A refreshing, premium balance of sweet and tart.',
-    image: 'https://images.unsplash.com/photo-1534766555764-ce878a5e3a2b?auto=format&fit=crop&w=800&q=80',
+    image: imgCakeLemonCream,
     prepTime: 20,
     cookTime: 35,
     difficulty: 'Hard',
@@ -298,7 +416,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     id: 'cupcake-vanilla',
     name: 'Classic Vanilla Cupcakes',
     description: 'Super soft, fluffy vanilla cupcakes decorated with a swirl of rich Madagascar vanilla bean buttercream. Classic indulgence.',
-    image: 'https://images.unsplash.com/photo-1519915028121-7d3463d20b13?auto=format&fit=crop&w=800&q=80',
+    image: imgCupcakeVanilla,
     prepTime: 15,
     cookTime: 18,
     difficulty: 'Easy',
@@ -332,7 +450,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     id: 'cupcake-strawberry',
     name: 'Strawberry Cupcakes',
     description: 'Lovely pink cupcakes made with real strawberry reduction, capped with a delicious swirl of fresh strawberry cream.',
-    image: 'https://images.unsplash.com/photo-1614707267537-b85acf00c4b8?auto=format&fit=crop&w=800&q=80',
+    image: imgCupcakeStrawberry,
     prepTime: 15,
     cookTime: 20,
     difficulty: 'Easy',
@@ -366,7 +484,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     id: 'cupcake-lemon',
     name: 'Lemon Cupcakes',
     description: 'Bright citrus cupcakes stuffed with a secret center of rich, tangy housemade lemon curd and topped with lemon zest cream.',
-    image: 'https://images.unsplash.com/photo-1550617931-e17a7b70dce2?auto=format&fit=crop&w=800&q=80',
+    image: imgCupcakeLemon,
     prepTime: 20,
     cookTime: 18,
     difficulty: 'Medium',
@@ -400,7 +518,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     id: 'cupcake-red-velvet',
     name: 'Red Velvet Cupcakes',
     description: 'Soft crimson cocoa cupcakes frosted with high-swirl tangy cream cheese icing. Fluffy, authentic, and delightfully balanced.',
-    image: 'https://images.unsplash.com/photo-1576618148400-f54bed99fcfd?auto=format&fit=crop&w=800&q=80',
+    image: imgCupcakeRedVelvet,
     prepTime: 15,
     cookTime: 18,
     difficulty: 'Easy',
@@ -434,7 +552,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     id: 'cupcake-oreo',
     name: 'Oreo Cupcakes',
     description: 'Cookies & cream cupcakes stuffed with chopped Oreos, finished with a generous peak of Oreo-crumb buttercream and a mini Oreo.',
-    image: 'https://images.unsplash.com/photo-1587314168485-3236d6710814?auto=format&fit=crop&w=800&q=80',
+    image: imgCupcakeOreo,
     prepTime: 15,
     cookTime: 18,
     difficulty: 'Easy',
@@ -468,7 +586,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     id: 'cupcake-nutella',
     name: 'Choco Nutella Cupcakes',
     description: 'Intense cocoa cupcakes hollowed out and packed with oozing, pure Nutella. Frosted with rich chocolate Hazelnut buttercream.',
-    image: 'https://images.unsplash.com/photo-1574085733277-851d9d856a3a?auto=format&fit=crop&w=800&q=80',
+    image: imgCupcakeNutella,
     prepTime: 20,
     cookTime: 18,
     difficulty: 'Medium',
@@ -504,7 +622,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     id: 'brownie-classic',
     name: 'Classic Brownie',
     description: 'Fudgy, incredibly dense chocolate brownies baked to perfection with premium butter and dark chocolate. Beautiful crinkly shiny top.',
-    image: 'https://images.unsplash.com/photo-1564355808539-22fda35bed7e?auto=format&fit=crop&w=800&q=80',
+    image: imgBrownieClassic,
     prepTime: 10,
     cookTime: 22,
     difficulty: 'Easy',
@@ -539,7 +657,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     id: 'brownie-oreo',
     name: 'Oreo Brownie',
     description: 'Double chocolate fudgy brownies studded with crushed Oreo cookies both inside the batter and pressed on the top crust.',
-    image: 'https://images.unsplash.com/photo-1624353365286-3f8d62dade37?auto=format&fit=crop&w=800&q=80',
+    image: imgBrownieOreo,
     prepTime: 12,
     cookTime: 22,
     difficulty: 'Easy',
@@ -572,7 +690,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     id: 'brownie-nutella',
     name: 'Nutella Brownie',
     description: 'Fudgy Belgian chocolate brownies swirled with thick ribbons of Nutella spread, creating gooey chocolate pockets throughout.',
-    image: 'https://images.unsplash.com/photo-1606312440196-41a4188b8e62?auto=format&fit=crop&w=800&q=80',
+    image: imgBrownieNutella,
     prepTime: 10,
     cookTime: 23,
     difficulty: 'Easy',
@@ -605,7 +723,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     id: 'brownie-kitkat',
     name: 'KitKat Brownie',
     description: 'Decadent chocolate brownie topped with crunchy, baked KitKat wafer fingers for an amazing combination of fudge and crispy wafer.',
-    image: 'https://images.unsplash.com/photo-1564936281291-291556940a83?auto=format&fit=crop&w=800&q=80',
+    image: imgBrownieKitkat,
     prepTime: 10,
     cookTime: 22,
     difficulty: 'Easy',
@@ -638,7 +756,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     id: 'brownie-triple',
     name: 'Triple Chocolate Brownie',
     description: 'The ultimate triple threat. Rich dark chocolate brownie loaded with chunks of dark, milk, and white Belgian chocolate chip pools.',
-    image: 'https://images.unsplash.com/photo-1564355808539-22fda35bed7e?auto=format&fit=crop&w=800&q=80',
+    image: imgBrownieTriple,
     prepTime: 12,
     cookTime: 22,
     difficulty: 'Medium',
@@ -673,7 +791,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     id: 'brownie-biscoff',
     name: 'Biscoff Brownie',
     description: 'Fudgy chocolate brownies swirled with decadent caramelized Lotus Biscoff cookie spread and topped with crispy Biscoff biscuits.',
-    image: 'https://images.unsplash.com/photo-1517433456452-f9633a875f6f?auto=format&fit=crop&w=800&q=80',
+    image: imgBrownieBiscoff,
     prepTime: 12,
     cookTime: 24,
     difficulty: 'Medium',
@@ -707,7 +825,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     id: 'brownie-pistachio',
     name: 'Pistachio Brownie',
     description: 'Rich, luxurious dark chocolate brownie swirled with gourmet pistachio cream butter and loaded with crunchy roasted pistachio crumbs.',
-    image: 'https://images.unsplash.com/photo-1562440499-64c9a111f713?auto=format&fit=crop&w=800&q=80',
+    image: imgBrowniePistachio,
     prepTime: 15,
     cookTime: 23,
     difficulty: 'Hard',
@@ -743,7 +861,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     id: 'cookie-choco-chip',
     name: 'Classic Choco Chip Cookies',
     description: 'Thick, soft-baked cookies with crispy golden borders and a gooey, chewy core loaded with melting dark chocolate puddles.',
-    image: 'https://images.unsplash.com/photo-1499636136210-6f4ee915583e?auto=format&fit=crop&w=800&q=80',
+    image: imgCookieChocoChip,
     prepTime: 10,
     cookTime: 10,
     difficulty: 'Easy',
@@ -778,7 +896,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     id: 'cookie-double-choco',
     name: 'Double Chocolate Cookies',
     description: 'Rich dark cocoa cookie dough loaded with melting Belgian white and milk chocolate chunks. Incredibly deep chocolate flavor.',
-    image: 'https://images.unsplash.com/photo-1618963372282-5d7026845341?auto=format&fit=crop&w=800&q=80',
+    image: imgCookieDoubleChoco,
     prepTime: 10,
     cookTime: 11,
     difficulty: 'Easy',
@@ -811,7 +929,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     id: 'cookie-dark-chunks',
     name: 'Dark Chocolate Chunks Cookies',
     description: 'Thick, heavy bakery-style cookies packed with huge chunks of intense 70% dark chocolate couverture. A sophisticated, semi-sweet bite.',
-    image: 'https://images.unsplash.com/photo-1499636136210-6f4ee915583e?auto=format&fit=crop&w=800&q=80',
+    image: imgCookieDarkChunks,
     prepTime: 12,
     cookTime: 10,
     difficulty: 'Easy',
@@ -844,7 +962,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     id: 'cookie-mm',
     name: 'M&M Cookies',
     description: 'Fun, colorful cookies loaded with crunchy and melting M&M chocolate candies. A delightful crispy-shell chocolate bite.',
-    image: 'https://images.unsplash.com/photo-1600431521340-491eca880813?auto=format&fit=crop&w=800&q=80',
+    image: imgCookieMm,
     prepTime: 10,
     cookTime: 10,
     difficulty: 'Easy',
@@ -877,7 +995,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     id: 'cookie-red-velvet',
     name: 'Red Velvet + White Choco Cookies',
     description: 'Vibrant red velvet cookie dough mixed with sweet, melting white chocolate chips. Soft, cake-like, and beautiful.',
-    image: 'https://images.unsplash.com/photo-1558961309-dbdf71799f5a?auto=format&fit=crop&w=800&q=80',
+    image: imgCookieRedVelvet,
     prepTime: 12,
     cookTime: 11,
     difficulty: 'Easy',
@@ -912,7 +1030,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     id: 'add-bomboloni-vanilla',
     name: 'Classic Vanilla Custard Bombolonies',
     description: 'Pillowy, soft Italian yeast donuts rolled in fine granulated sugar and piped with rich, velvety vanilla bean custard filling.',
-    image: 'https://images.unsplash.com/photo-1557827983-012eb6ea8dc1?auto=format&fit=crop&w=800&q=80',
+    image: imgBomboloniVanilla,
     prepTime: 30,
     cookTime: 15,
     difficulty: 'Hard',
@@ -921,7 +1039,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     votes: 167,
     nutrients: { calories: 310, protein: '5g', carbs: '39g', fat: '14g' },
     tags: ['Bomboloni', 'Custard', 'Italian Donuts', 'Vanilla'],
-    category: 'New Additions',
+    category: 'Bombolonis',
     priceOptions: [
       { label: 'Box of 6', price: 420 }
     ],
@@ -946,7 +1064,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     id: 'add-bomboloni-hazelnut',
     name: 'Choco Hazelnut Bombolonies',
     description: 'Sugared brioche bomboloni donuts stuffed with a velvety, rich chocolate hazelnut Nutella filling. An absolute dream.',
-    image: 'https://images.unsplash.com/photo-1579372786545-d24232daf58c?auto=format&fit=crop&w=800&q=80',
+    image: imgBomboloniHazelnut,
     prepTime: 30,
     cookTime: 15,
     difficulty: 'Hard',
@@ -955,7 +1073,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     votes: 142,
     nutrients: { calories: 330, protein: '5g', carbs: '41g', fat: '16g' },
     tags: ['Bomboloni', 'Nutella', 'Hazelnut', 'Chocolate'],
-    category: 'New Additions',
+    category: 'Bombolonis',
     priceOptions: [
       { label: 'Box of 6', price: 460 }
     ],
@@ -979,7 +1097,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     id: 'add-bomboloni-strawberry',
     name: 'Strawberry Burst Bombolonies',
     description: 'Sugar-rolled yeast-raised Italian donuts bursting with gooey, tart, and sweet homemade strawberry jam filling.',
-    image: 'https://images.unsplash.com/photo-1579372786545-d24232daf58c?auto=format&fit=crop&w=800&q=80',
+    image: imgBomboloniStrawberry,
     prepTime: 30,
     cookTime: 15,
     difficulty: 'Hard',
@@ -988,7 +1106,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     votes: 95,
     nutrients: { calories: 290, protein: '4.5g', carbs: '42g', fat: '12g' },
     tags: ['Bomboloni', 'Strawberry Jam', 'Fruity', 'Italian'],
-    category: 'New Additions',
+    category: 'Bombolonis',
     priceOptions: [
       { label: 'Box of 6', price: 480 }
     ],
@@ -1012,7 +1130,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     id: 'add-donut-glazed',
     name: 'Classic Glazed Donuts',
     description: 'Pillowy ring donuts glazed with a beautiful, translucent vanilla sugar shell that crackles with every bite. Melt-in-the-mouth soft.',
-    image: 'https://images.unsplash.com/photo-1551024601-bec78aea704b?auto=format&fit=crop&w=800&q=80',
+    image: imgDonutGlazed,
     prepTime: 25,
     cookTime: 10,
     difficulty: 'Medium',
@@ -1021,7 +1139,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     votes: 110,
     nutrients: { calories: 270, protein: '4g', carbs: '38g', fat: '12g' },
     tags: ['Donut', 'Glazed', 'Soft', 'Classic'],
-    category: 'New Additions',
+    category: 'Donuts',
     priceOptions: [
       { label: 'Box of 6', price: 420 }
     ],
@@ -1045,7 +1163,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     id: 'add-donut-caramel',
     name: 'Caramel Glazed Donuts',
     description: 'Light, soft yeast-raised ring donuts covered in a thick, buttery house-cooked salted caramel glaze. Perfectly rich and sweet.',
-    image: 'https://images.unsplash.com/photo-1551024601-bec78aea704b?auto=format&fit=crop&w=800&q=80',
+    image: makeSvgUrl(svgCaramelDonut),
     prepTime: 25,
     cookTime: 10,
     difficulty: 'Medium',
@@ -1054,7 +1172,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     votes: 89,
     nutrients: { calories: 295, protein: '4g', carbs: '40g', fat: '14g' },
     tags: ['Donut', 'Caramel', 'Salted Caramel', 'Sweet'],
-    category: 'New Additions',
+    category: 'Donuts',
     priceOptions: [
       { label: 'Box of 6', price: 460 }
     ],
@@ -1078,7 +1196,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     id: 'add-donut-oreos',
     name: 'Cookies & Cream Donuts',
     description: 'Fluffy ring donuts glazed with creamy white chocolate and loaded with crushed Oreo cookies. The ultimate sweet confection.',
-    image: 'https://images.unsplash.com/photo-1612240498936-65f5101365d2?auto=format&fit=crop&w=800&q=80',
+    image: makeSvgUrl(svgOreoDonut),
     prepTime: 25,
     cookTime: 12,
     difficulty: 'Medium',
@@ -1087,7 +1205,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     votes: 112,
     nutrients: { calories: 310, protein: '4.5g', carbs: '43g', fat: '15g' },
     tags: ['Donut', 'Oreo', 'Cookies & Cream', 'White Chocolate'],
-    category: 'New Additions',
+    category: 'Donuts',
     priceOptions: [
       { label: 'Box of 6', price: 500 }
     ],
@@ -1112,7 +1230,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     id: 'add-roll-sugar',
     name: 'Classic Sugar Glaze Cinnamon Rolls',
     description: 'Warm, soft, pillowy rolls swirled with sweet cassia cinnamon butter and covered with a crackly, clear glaze drizzle. Pure comfort.',
-    image: 'https://images.unsplash.com/photo-1544982503-9f984c14501a?auto=format&fit=crop&w=800&q=80',
+    image: makeSvgUrl(svgSugarRoll),
     prepTime: 30,
     cookTime: 20,
     difficulty: 'Medium',
@@ -1146,7 +1264,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     id: 'add-roll-milk',
     name: 'Condensed Milk Glaze Cinnamon Rolls',
     description: 'Gooey cinnamon-spiced rolls drizzled with a rich, silky sweet condensed milk glaze. Incredibly moist and rich flavor.',
-    image: 'https://images.unsplash.com/photo-1544982503-9f984c14501a?auto=format&fit=crop&w=800&q=80',
+    image: makeSvgUrl(svgMilkRoll),
     prepTime: 30,
     cookTime: 20,
     difficulty: 'Medium',
@@ -1179,7 +1297,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     id: 'add-roll-cream-cheese',
     name: 'Cream Cheese Glaze Cinnamon Rolls',
     description: 'Our absolute bestseller. Soft cinnamon rolls smothered in a thick, velvety layer of sweet and tangy gourmet cream cheese frosting.',
-    image: 'https://images.unsplash.com/photo-1608039829572-78524f79c4c7?auto=format&fit=crop&w=800&q=80',
+    image: makeSvgUrl(svgCreamCheeseRoll),
     prepTime: 30,
     cookTime: 20,
     difficulty: 'Hard',

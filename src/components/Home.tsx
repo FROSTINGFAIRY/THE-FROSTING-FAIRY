@@ -99,12 +99,28 @@ const CATEGORY_INFOS = [
     startingPrice: 90,
   },
   {
-    name: 'New Additions',
+    name: 'Donuts',
     emoji: '🍩',
-    description: 'Exciting daily specials, fluffy custard bombolonis, soft-glazed bakes, and gourmet cinnamon rolls.',
-    image: 'https://images.unsplash.com/photo-1544982503-9f984c14501a?auto=format&fit=crop&w=600&q=80',
-    itemCountText: 'Artisanal Bakes & Specials',
-    startingPrice: 150,
+    description: 'Pillowy yeast-raised ring donuts coated with glossy vanilla, rich caramel, or white chocolate Oreo glazes.',
+    image: 'https://images.unsplash.com/photo-1614088685112-0a760b71a3c8?auto=format&fit=crop&w=600&q=80',
+    itemCountText: 'Box of 6 Fluffy Ring Donuts',
+    startingPrice: 420,
+  },
+  {
+    name: 'Bombolonis',
+    emoji: '🥯',
+    description: 'Pillowy, soft Italian yeast donuts rolled in fine sugar and piping-stuffed with custard, strawberry, or Nutella.',
+    image: 'https://images.unsplash.com/photo-1557827983-012eb6ea8dc1?auto=format&fit=crop&w=600&q=80',
+    itemCountText: 'Box of 6 Filled Bombolonis',
+    startingPrice: 420,
+  },
+  {
+    name: 'New Additions',
+    emoji: '✨',
+    description: 'Warm, soft, pillowy rolls swirled with sweet cassia cinnamon butter and covered with gourmet glazes.',
+    image: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=600&q=80',
+    itemCountText: 'Warm Cinnamon Rolls & Specials',
+    startingPrice: 400,
   }
 ];
 
@@ -121,6 +137,10 @@ const getCategoryIcon = (name: string) => {
       return <Flame className={iconClass} />;
     case 'Cookies':
       return <Cookie className={iconClass} />;
+    case 'Donuts':
+      return <Sparkles className={iconClass} />;
+    case 'Bombolonis':
+      return <ChefHat className={iconClass} />;
     case 'New Additions':
       return <Sparkles className={iconClass} />;
     default:
@@ -161,6 +181,8 @@ export default function Home({
   }, [testimonials]);
 
   // Handle Review Submission
+  // NOTE: Testimonials are saved locally to this browser's localStorage.
+  // Until a real backend database is connected, reviews are local-only and not shared with other users.
   const handleAddReview = (e: React.FormEvent) => {
     e.preventDefault();
     if (!reviewName.trim() || !reviewComment.trim()) return;
@@ -180,7 +202,7 @@ export default function Home({
     setReviewRating(5);
     setReviewComment('');
     setShowReviewForm(false);
-    setSuccessMsg('✨ Thank you for your magical words! Your review is published instantly.');
+    setSuccessMsg("✨ Thank you for your magical words! Your review is saved locally on this device.");
     setTimeout(() => setSuccessMsg(''), 5000);
     setActiveTestimonialIdx(0); // View the newly added review
   };
@@ -283,7 +305,7 @@ export default function Home({
 
               <div className="relative z-10 pt-6">
                 <button className="inline-flex items-center gap-2.5 px-8 py-4 bg-brand-pink hover:bg-brand-pink-dark text-white text-xs font-extrabold uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-brand-pink/20 cursor-pointer group-hover:scale-[1.05]">
-                  <span>Sift The Entire Menu</span>
+                  <span>See What's Baking</span>
                   <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1.5" />
                 </button>
               </div>
@@ -348,14 +370,14 @@ export default function Home({
           </p>
         </div>
 
-        {/* Premium horizontal interactive pills */}
-        <div className="flex flex-wrap justify-center gap-3 mb-10">
+        {/* Premium quick category filters: vertical stack on mobile, horizontal row on larger screens */}
+        <div className="flex flex-col sm:flex-row sm:flex-wrap justify-center gap-3 mb-10 w-full max-w-sm sm:max-w-none mx-auto px-4 sm:px-0">
           {['All', ...CATEGORY_INFOS.map(c => c.name)].map((catName) => {
             return (
               <button
                 key={catName}
                 onClick={() => onNavigateToTab('discover', catName)}
-                className="group px-4 py-2.5 rounded-full border border-brand-cocoa-border/60 hover:border-brand-pink bg-white hover:bg-brand-pink text-brand-cocoa hover:text-white transition-all cursor-pointer shadow-2xs hover:shadow-md flex items-center gap-2 text-xs font-semibold"
+                className="group w-full sm:w-auto px-5 py-3 sm:py-2.5 rounded-full border border-brand-cocoa-border/60 hover:border-brand-pink bg-white hover:bg-brand-pink text-brand-cocoa hover:text-white transition-all cursor-pointer shadow-2xs hover:shadow-md flex items-center justify-center sm:justify-start gap-2.5 text-xs font-semibold"
               >
                 {getCategoryIcon(catName)}
                 <span className="font-sans tracking-tight">{catName}</span>
@@ -404,7 +426,7 @@ export default function Home({
                 </p>
                 <div className="flex items-center justify-between pt-3 border-t border-brand-cocoa-border/30">
                   <span className="text-[9px] font-mono text-brand-cocoa-light/70 uppercase">Starting From</span>
-                  <span className="text-sm font-display font-black text-brand-pink">
+                  <span className="text-sm font-sans font-semibold text-brand-pink">
                     ₹{cat.startingPrice}
                   </span>
                 </div>

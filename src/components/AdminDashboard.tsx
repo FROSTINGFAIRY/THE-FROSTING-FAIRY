@@ -19,10 +19,8 @@ import {
   Lock,
   Unlock,
   Shield,
-  ShieldAlert,
   Users,
   Activity,
-  Key,
   Upload,
   Calendar,
   Phone,
@@ -208,13 +206,22 @@ export default function AdminDashboard({
   const [authorizedEmails, setAuthorizedEmails] = useState<string[]>(() => {
     const saved = localStorage.getItem('gusto_authorized_emails');
     if (saved) return JSON.parse(saved);
-    return ['kiddepressed03@gmail.com']; // default authorized admin email
+    return ['kiddepressed03@gmail.com', 'hellofrostingfairy@gmail.com'];
   });
 
   const [newEmailInput, setNewEmailInput] = useState('');
+  const [signInError, setSignInError] = useState('');
 
   const isUnlocked = googleUser !== null && authorizedEmails.map(e => e.toLowerCase()).includes(googleUser.email.toLowerCase());
 
+  // ====================================================================================
+  // SECURITY NOTICE / DISCLAIMER:
+  // Role-based capabilities ('admin' | 'chef' | 'viewer') and the corresponding UI checks
+  // (such as conditionally rendered buttons, disabled fields, etc.) are implemented
+  // purely on the client-side for sandbox demonstration purposes. Because there is currently
+  // no authenticated server-side database validation/backend check enforcing these, they
+  // are UI-ONLY limits and NOT a secure permission/security boundary.
+  // ====================================================================================
   // Authority role: 'admin' | 'chef' | 'viewer'
   const [currentRole, setCurrentRole] = useState<'admin' | 'chef' | 'viewer'>(() => {
     return (localStorage.getItem('gusto_current_role') as 'admin' | 'chef' | 'viewer') || 'admin';
@@ -272,11 +279,13 @@ export default function AdminDashboard({
                   name: decoded.name || decoded.email.split('@')[0],
                   picture: decoded.picture || '',
                 };
+                setSignInError('');
                 setGoogleUser(userObj);
                 localStorage.setItem('gusto_google_user', JSON.stringify(userObj));
                 addAuditLog(`Admin signed in via Google: ${decoded.email}`, 'success');
                 triggerToast(`👑 Welcome, ${decoded.name || 'Admin'}!`);
               } else {
+                setSignInError(`❌ Access Denied: The Google account (${decoded.email}) is not authorized.`);
                 addAuditLog(`Access denied for Google account: ${decoded.email}`, 'warning');
                 triggerToast('❌ Unauthorized: This Google Account does not have admin privileges.');
               }
@@ -320,24 +329,6 @@ export default function AdminDashboard({
     triggerToast('🔒 Admin session secured and logged out.');
   };
 
-  const handleSimulateLogin = (email: string, name: string) => {
-    const isAuth = authorizedEmails.map(e => e.toLowerCase()).includes(email.toLowerCase());
-    if (isAuth) {
-      const userObj = {
-        email,
-        name,
-        picture: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=150',
-      };
-      setGoogleUser(userObj);
-      localStorage.setItem('gusto_google_user', JSON.stringify(userObj));
-      addAuditLog(`Simulated Google sign-in: ${email}`, 'success');
-      triggerToast(`👑 Welcome, ${name}!`);
-    } else {
-      addAuditLog(`Denied simulated access: ${email}`, 'warning');
-      triggerToast('❌ Unauthorized: This Google Account email is not on the admin list.');
-    }
-  };
-  
   // Selected recipe to edit details
   const [selectedProductId, setSelectedProductId] = useState<string>(recipes[0]?.id || '');
   const activeProduct = recipes.find((r) => r.id === selectedProductId) || recipes[0];
@@ -827,38 +818,24 @@ export default function AdminDashboard({
                 <p className="text-[10px] text-brand-cocoa-light font-mono">
                   Using secure Google Identity Services
                 </p>
+                {signInError && (
+                  <div className="w-full bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl p-3 mt-2 text-left font-sans">
+                    {signInError}
+                  </div>
+                )}
               </div>
             ) : (
               <div className="w-full bg-brand-cream-light/40 border border-brand-cocoa-border/40 p-4.5 rounded-2xl text-left space-y-3.5">
                 <div className="flex items-center gap-2">
-                  <span className="p-1.5 rounded-lg bg-yellow-50 text-yellow-800 border border-yellow-200 font-bold text-xs">⚠️</span>
+                  <span className="p-1.5 rounded-lg bg-red-50 text-red-800 border border-red-200 font-bold text-xs">⚠️</span>
                   <div>
-                    <span className="font-sans font-bold text-xs text-brand-cocoa block">No Google Client ID Found</span>
-                    <span className="text-[9px] text-brand-cocoa-light leading-none block">Needs client-side config</span>
+                    <span className="font-sans font-bold text-xs text-brand-cocoa block">Admin Sign-In Not Configured</span>
+                    <span className="text-[9px] text-brand-cocoa-light leading-none block">Missing Google Client ID</span>
                   </div>
                 </div>
                 <p className="text-[10px] text-brand-cocoa-light font-sans leading-relaxed">
-                  Real Google Sign-In requires declaring <code className="bg-white px-1 py-0.5 rounded border font-mono font-semibold text-brand-pink-dark">VITE_GOOGLE_CLIENT_ID</code> in your <code className="bg-white px-1 py-0.5 rounded border font-mono">.env</code> file.
+                  Google Account administrative sign-in is not configured yet. To enable administrative access, please declare the <code className="bg-white px-1 py-0.5 rounded border font-mono font-semibold text-brand-pink-dark">VITE_GOOGLE_CLIENT_ID</code> variable in your configuration.
                 </p>
-                <div className="border-t border-brand-cocoa-border/30 pt-3">
-                  <span className="font-sans font-bold text-[10px] text-brand-cocoa block mb-1.5">Instant Developer Sandbox Simulator:</span>
-                  <div className="grid grid-cols-1 gap-2">
-                    <button
-                      onClick={() => handleSimulateLogin('kiddepressed03@gmail.com', 'Fairy Owner')}
-                      className="w-full py-2 bg-brand-cocoa text-white font-mono text-[10px] font-bold rounded-lg hover:bg-brand-cocoa-light transition-all flex items-center justify-center gap-1.5 cursor-pointer uppercase tracking-wider"
-                    >
-                      <Shield className="w-3.5 h-3.5 text-brand-pink" />
-                      <span>Log in as kiddepressed03@gmail.com</span>
-                    </button>
-                    <button
-                      onClick={() => handleSimulateLogin('guest@gmail.com', 'Guest User')}
-                      className="w-full py-2 bg-white text-brand-cocoa border border-brand-cocoa-border font-mono text-[10px] font-bold rounded-lg hover:bg-brand-cream transition-all flex items-center justify-center gap-1.5 cursor-pointer uppercase tracking-wider"
-                    >
-                      <ShieldAlert className="w-3.5 h-3.5 text-red-500" />
-                      <span>Log in as guest@gmail.com</span>
-                    </button>
-                  </div>
-                </div>
               </div>
             )}
           </div>
@@ -1302,6 +1279,8 @@ export default function AdminDashboard({
                         <option value="Cupcakes">Cupcakes</option>
                         <option value="Brownies">Brownies</option>
                         <option value="Cookies">Cookies</option>
+                        <option value="Donuts">Donuts</option>
+                        <option value="Bombolonis">Bombolonis</option>
                         <option value="New Additions">New Additions</option>
                       </select>
                     </div>
@@ -1552,6 +1531,8 @@ export default function AdminDashboard({
                         <option value="Cupcakes">Cupcakes</option>
                         <option value="Brownies">Brownies</option>
                         <option value="Cookies">Cookies</option>
+                        <option value="Donuts">Donuts</option>
+                        <option value="Bombolonis">Bombolonis</option>
                         <option value="New Additions">New Additions</option>
                       </select>
                     </div>
@@ -2418,6 +2399,8 @@ export default function AdminDashboard({
               </div>
             </div>
 
+
+
             {/* Quick Sign Out Session Card */}
             <div className="mt-8 pt-4 border-t border-brand-cocoa-border/30">
               <button
@@ -2572,6 +2555,14 @@ export default function AdminDashboard({
                 <p className="text-[11px] text-brand-cocoa-light leading-relaxed">
                   Provide your Meta Developer App access tokens to transmit messages using the official Facebook Graph endpoints directly to your authorized Instagram accounts.
                 </p>
+
+                {/* Secure warning note for browser token storage */}
+                <div className="text-[10px] text-red-700 bg-red-50 border border-red-200 px-3.5 py-2.5 rounded-xl flex items-start gap-2 leading-relaxed">
+                  <span className="font-bold text-xs">⚠️</span>
+                  <span>
+                    <strong>Security Warning:</strong> This access token is stored in the browser's localStorage and is used in a client-side fetch, making it visible to anyone opening DevTools. This is insecure. <strong>Only use low-privilege test tokens for testing; never input a production token here.</strong>
+                  </span>
+                </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">

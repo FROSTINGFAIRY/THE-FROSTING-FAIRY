@@ -243,6 +243,10 @@ export default function ShoppingList({
       }
     }
 
+    const cleanCard = cardNumber.replace(/\s/g, '');
+    const last4 = cleanCard.slice(-4);
+    const maskedCard = `•••• •••• •••• ${last4}`;
+
     onCheckout({
       customerName: customerName.trim(),
       customerPhone: customerPhone.trim(),
@@ -255,10 +259,14 @@ export default function ShoppingList({
       paymentMethod,
       paymentDetails: {
         cardHolder: paymentMethod === 'Card' ? cardHolder : undefined,
-        cardNumber: paymentMethod === 'Card' ? cardNumber : undefined,
+        cardNumber: paymentMethod === 'Card' ? maskedCard : undefined,
         upiId: paymentMethod === 'UPI' ? upiId : undefined,
       },
     });
+
+    // Security: Clear CVV right after submit and set the card number to the masked version
+    setCardCvv('');
+    setCardNumber(maskedCard);
   };
 
   return (
@@ -585,6 +593,14 @@ export default function ShoppingList({
                     <DollarSign className="w-4 h-4" />
                     <span className="text-[10px] font-bold font-mono uppercase">COD</span>
                   </button>
+                </div>
+
+                {/* Visible warning note for demo payment */}
+                <div className="text-[10px] text-brand-pink-dark bg-brand-pink-light/30 border border-brand-pink-accent/20 px-3.5 py-2.5 rounded-xl flex items-start gap-2 leading-relaxed">
+                  <span className="font-bold text-xs">⚠️</span>
+                  <span>
+                    <strong>Demo Checkout Note:</strong> This is a simulation playground. No real payment processing occurs and no financial details are transmitted or securely stored. Do not use your real production card numbers.
+                  </span>
                 </div>
 
                 {/* Sub-fields for Card */}

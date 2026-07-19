@@ -19,6 +19,10 @@ const getCategoryIcon = (name: string, isActive: boolean) => {
       return <Flame className={iconClass} />;
     case 'Cookies':
       return <Cookie className={iconClass} />;
+    case 'Donuts':
+      return <Sparkles className={iconClass} />;
+    case 'Bombolonis':
+      return <ChefHat className={iconClass} />;
     case 'New Additions':
       return <Sparkles className={iconClass} />;
     default:
@@ -54,11 +58,20 @@ export function getRecipeImages(recipe: { id: string; category: string; image: s
       'https://images.unsplash.com/photo-1590080875515-8a3a8dc5735e?auto=format&fit=crop&w=800&q=80',
       'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=800&q=80',
     ],
-    'New Additions': [
-      'https://images.unsplash.com/photo-1557827983-012eb6ea8dc1?auto=format&fit=crop&w=800&q=80',
+    'Donuts': [
       'https://images.unsplash.com/photo-1551024601-bec78aea704b?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1614088685112-0a760b71a3c8?auto=format&fit=crop&w=800&q=80',
       'https://images.unsplash.com/photo-1612240498936-65f5101365d2?auto=format&fit=crop&w=800&q=80',
+    ],
+    'Bombolonis': [
+      'https://images.unsplash.com/photo-1557827983-012eb6ea8dc1?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1579372786545-d24232daf58c?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1530631673369-bc20fdb3228d?auto=format&fit=crop&w=800&q=80',
+    ],
+    'New Additions': [
       'https://images.unsplash.com/photo-1544982503-9f984c14501a?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1608039829572-78524f79c4c7?auto=format&fit=crop&w=800&q=80',
     ]
   };
 
@@ -113,12 +126,28 @@ const CATEGORY_INFOS = [
     startingPrice: 90,
   },
   {
-    name: 'New Additions',
+    name: 'Donuts',
     emoji: '🍩',
-    description: 'Exciting daily specials, fluffy custard bombolonis, soft-glazed bakes, and gourmet cinnamon rolls.',
-    image: 'https://images.unsplash.com/photo-1544982503-9f984c14501a?auto=format&fit=crop&w=600&q=80',
-    itemCountText: 'Artisanal Bakes & Specials',
-    startingPrice: 150,
+    description: 'Pillowy yeast-raised ring donuts coated with glossy vanilla, rich caramel, or white chocolate Oreo glazes.',
+    image: 'https://images.unsplash.com/photo-1614088685112-0a760b71a3c8?auto=format&fit=crop&w=600&q=80',
+    itemCountText: 'Box of 6 Fluffy Ring Donuts',
+    startingPrice: 420,
+  },
+  {
+    name: 'Bombolonis',
+    emoji: '🥯',
+    description: 'Pillowy, soft Italian yeast donuts rolled in fine sugar and piping-stuffed with custard, strawberry, or Nutella.',
+    image: 'https://images.unsplash.com/photo-1557827983-012eb6ea8dc1?auto=format&fit=crop&w=600&q=80',
+    itemCountText: 'Box of 6 Filled Bombolonis',
+    startingPrice: 420,
+  },
+  {
+    name: 'New Additions',
+    emoji: '✨',
+    description: 'Warm, soft, pillowy rolls swirled with sweet cassia cinnamon butter and covered with gourmet glazes.',
+    image: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=600&q=80',
+    itemCountText: 'Warm Cinnamon Rolls & Specials',
+    startingPrice: 400,
   }
 ];
 
@@ -158,7 +187,9 @@ export default function Dashboard({
     { name: 'Cupcakes', emoji: '🧁' },
     { name: 'Brownies', emoji: '🍫' },
     { name: 'Cookies', emoji: '🍪' },
-    { name: 'New Additions', emoji: '🍩' },
+    { name: 'Donuts', emoji: '🍩' },
+    { name: 'Bombolonis', emoji: '🥯' },
+    { name: 'New Additions', emoji: '✨' },
   ];
 
   // Filter recipes based on category and search query
@@ -261,7 +292,7 @@ export default function Dashboard({
               <div id="hero-quick-stats" className="flex items-center gap-4 mt-6 border-y border-dashed border-brand-cocoa-border py-3.5">
                 <div id="hero-stat-time" className="flex flex-col justify-center">
                   <span className="text-[10px] font-mono text-brand-cocoa-light uppercase tracking-wider">Starting at</span>
-                  <span id="hero-time-value" className="text-lg font-display font-bold text-brand-pink">
+                  <span id="hero-time-value" className="text-base font-sans font-semibold text-brand-pink">
                     ₹{heroRecipe.priceOptions?.[0]?.price || 0}
                   </span>
                 </div>
@@ -315,7 +346,7 @@ export default function Dashboard({
         <h4 id="categories-title" className="text-xs font-bold font-mono uppercase tracking-widest text-brand-cocoa-light mb-4">
           Quick Category Filter
         </h4>
-        <div id="categories-tabs-wrapper" className="flex gap-3.5 overflow-x-auto pb-3 pt-1 scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
+        <div id="categories-tabs-wrapper" className="flex flex-col sm:flex-row gap-3 pb-3 pt-1 w-full max-w-sm sm:max-w-none">
           {categories.map((cat) => {
             const isActive = activeCategory === cat.name;
             return (
@@ -323,7 +354,7 @@ export default function Dashboard({
                 key={cat.name}
                 id={`category-tab-${cat.name}`}
                 onClick={() => setActiveCategory(cat.name)}
-                className={`group flex items-center gap-2.5 px-6 py-3.5 rounded-2xl text-sm md:text-base font-sans font-extrabold border-2 transition-all duration-300 shrink-0 cursor-pointer ${
+                className={`group flex items-center justify-center sm:justify-start gap-2.5 px-6 py-3.5 rounded-2xl text-sm md:text-base font-sans font-extrabold border-2 transition-all duration-300 w-full sm:w-auto cursor-pointer ${
                   isActive
                     ? 'bg-brand-pink border-brand-pink text-white shadow-md shadow-brand-pink/20 scale-[1.03]'
                     : 'bg-white border-brand-cocoa-border text-brand-cocoa-light hover:border-brand-pink hover:text-brand-cocoa hover:shadow-sm'
@@ -392,7 +423,7 @@ export default function Dashboard({
                   </p>
                   <div className="flex items-center justify-between pt-3 border-t border-brand-cocoa-border/30">
                     <span className="text-[9px] font-mono text-brand-cocoa-light/70 uppercase">Starting From</span>
-                    <span className="text-sm font-display font-black text-brand-pink">
+                    <span className="text-sm font-sans font-semibold text-brand-pink">
                       ₹{cat.startingPrice}
                     </span>
                   </div>
@@ -607,7 +638,7 @@ export default function Dashboard({
                       <div id={`recipe-card-bottom-${recipe.id}`} className="mt-4 pt-4 border-t border-brand-cocoa-border/60 flex items-center justify-between">
                         <div id={`recipe-card-stats-${recipe.id}`} className="flex flex-col text-left">
                           <span className="text-[9px] font-mono uppercase tracking-wider text-brand-cocoa-light/70">starting price</span>
-                          <span id={`recipe-card-price-${recipe.id}`} className="text-base font-display font-black text-brand-pink">
+                          <span id={`recipe-card-price-${recipe.id}`} className="text-base font-sans font-semibold text-brand-pink">
                             ₹{recipe.priceOptions?.[0]?.price || 0}
                           </span>
                         </div>

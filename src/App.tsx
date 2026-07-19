@@ -24,26 +24,25 @@ const PLAN_STORAGE_KEY = 'gusto_meal_plan';
 const SHOPPING_STORAGE_KEY = 'gusto_shopping_list';
 
 export default function App() {
+  // --- SCHEMA VERSIONING HEURISTIC ---
+  // Store "gusto_data_version" in localStorage and reset when the version doesn't match,
+  // preventing fragile guessing based on recipe names or fields.
+  const CURRENT_DATA_VERSION = '2';
+  
+  // Run schema migration check on load before initializing states
+  const storedVersion = localStorage.getItem('gusto_data_version');
+  if (storedVersion !== CURRENT_DATA_VERSION) {
+    localStorage.removeItem(RECIPES_STORAGE_KEY);
+    localStorage.removeItem(PLAN_STORAGE_KEY);
+    localStorage.setItem('gusto_data_version', CURRENT_DATA_VERSION);
+  }
+
   // --- CORE STATE ---
   const [recipes, setRecipes] = useState<Recipe[]>(() => {
     const saved = localStorage.getItem(RECIPES_STORAGE_KEY);
     if (saved) {
       try {
-        const parsed = JSON.parse(saved);
-        // Reset if saved data belongs to the old set or is missing new custom bakery fields
-        const isOldSet = parsed.length > 0 && (
-          parsed.some((r: any) => 
-            !r.priceOptions || 
-            r.priceOptions.length === 0 || 
-            r.name === 'Spaghetti Carbonara' ||
-            r.name === 'Avocado Toast with Poached Eggs'
-          )
-        );
-        if (isOldSet) {
-          localStorage.removeItem(RECIPES_STORAGE_KEY);
-          return INITIAL_RECIPES;
-        }
-        return parsed;
+        return JSON.parse(saved);
       } catch (e) {
         return INITIAL_RECIPES;
       }
@@ -82,13 +81,7 @@ export default function App() {
     const saved = localStorage.getItem(PLAN_STORAGE_KEY);
     if (saved) {
       try {
-        const parsed = JSON.parse(saved);
-        // If the parsed item references old spaghetti recipes, clear or reset
-        if (parsed.length > 0 && parsed.some((e: any) => e.recipe && (e.recipe.name === 'Spaghetti Carbonara' || e.recipe.name === 'Avocado Toast with Poached Eggs' || !e.estimatedPrice))) {
-          localStorage.removeItem(PLAN_STORAGE_KEY);
-        } else {
-          return parsed;
-        }
+        return JSON.parse(saved);
       } catch (e) {
         // Fallback
       }
@@ -362,6 +355,8 @@ export default function App() {
   };
 
   // Checkout and place custom orders instantly
+  // NOTE: Orders are stored locally in the browser's localStorage and are only visible on this device.
+  // Until a real backend database/service is connected, orders are local-only.
   const handleCheckout = (checkoutData: {
     customerName: string;
     customerPhone: string;
@@ -378,10 +373,10 @@ export default function App() {
       upiId?: string;
     };
   }) => {
+    const deliveryFee = checkoutData.deliveryType === 'Delivery' ? (shoppingList.reduce((sum, s) => sum + (s.price || 0) * s.amount, 0) >= 600 ? 0 : 50) : 0;
+
     const newEntries: MealPlanEntry[] = shoppingList.map((item, idx) => {
-      const recipe = recipes.find((r) => r.id === item.productId) || INITIAL_RECIPES[0];
-      const deliveryFee = checkoutData.deliveryType === 'Delivery' ? (shoppingList.reduce((sum, s) => sum + (s.price || 0) * s.amount, 0) >= 600 ? 0 : 50) : 0;
-      // Proportional distribution of delivery charge or simply apply direct base price
+      const recipe = recipes.find((r) => r.id === item.productId); // Keep undefined if not found
       const itemPrice = (item.price || 0) * item.amount;
       
       return {
@@ -395,7 +390,7 @@ export default function App() {
         pickupTime: checkoutData.pickupTime,
         contactName: checkoutData.customerName,
         contactPhone: checkoutData.customerPhone,
-        estimatedPrice: itemPrice + (idx === 0 ? deliveryFee : 0), // add delivery charge to the first item for simplicity
+        estimatedPrice: itemPrice, // Base price only, no delivery fee attached here
         status: 'Pending',
         recipe: recipe,
         customerName: checkoutData.customerName,
@@ -408,6 +403,33 @@ export default function App() {
         paymentDetails: checkoutData.paymentDetails,
       };
     });
+
+    // If there is a delivery fee, create a single separate "Delivery Fee" line-item order entry
+    if (deliveryFee > 0) {
+      newEntries.push({
+        id: `ord-delivery-${Date.now()}-${Math.random().toString(36).substr(2, 3)}`,
+        cakeType: 'Delivery Fee',
+        flavor: 'N/A',
+        weight: 'Standard',
+        message: '',
+        instructions: 'Delivery fee for hand-crafted cake delivery',
+        pickupDate: checkoutData.pickupDate,
+        pickupTime: checkoutData.pickupTime,
+        contactName: checkoutData.customerName,
+        contactPhone: checkoutData.customerPhone,
+        estimatedPrice: deliveryFee,
+        status: 'Pending',
+        recipe: undefined,
+        customerName: checkoutData.customerName,
+        customerPhone: checkoutData.customerPhone,
+        specialInstructions: checkoutData.specialInstructions,
+        deliveryType: checkoutData.deliveryType,
+        deliveryAddress: checkoutData.deliveryAddress,
+        gpsCoordinates: checkoutData.gpsCoordinates,
+        paymentMethod: checkoutData.paymentMethod,
+        paymentDetails: checkoutData.paymentDetails,
+      });
+    }
 
     setMealPlan((prev) => [...prev, ...newEntries]);
     setShoppingList([]); // Clear the cart
