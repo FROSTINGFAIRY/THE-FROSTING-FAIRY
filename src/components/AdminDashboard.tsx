@@ -31,7 +31,8 @@ import {
   Send,
   Bell,
   Mail,
-  Loader2
+  Loader2,
+  CreditCard
 } from 'lucide-react';
 import { Recipe, PriceOption, MealPlanEntry } from '../types';
 import { motion } from 'motion/react';
@@ -127,6 +128,14 @@ export default function AdminDashboard({
   const [instaBusinessId, setInstaBusinessId] = useState(() => localStorage.getItem('gusto_insta_business_id') || '');
   const [instaWebhook, setInstaWebhook] = useState(() => localStorage.getItem('gusto_insta_webhook') || '');
 
+  // --- WHATSAPP CONFIGURATION ---
+  const [twilioSid, setTwilioSid] = useState(() => localStorage.getItem('gusto_twilio_sid') || '');
+  const [twilioToken, setTwilioToken] = useState(() => localStorage.getItem('gusto_twilio_token') || '');
+  const [twilioFrom, setTwilioFrom] = useState(() => localStorage.getItem('gusto_twilio_from') || 'whatsapp:+14155238886');
+  const [twilioRecipient, setTwilioRecipient] = useState(() => localStorage.getItem('gusto_twilio_recipient') || 'whatsapp:+9665XXXXXXX');
+  const [whatsappEnabled, setWhatsappEnabled] = useState(() => localStorage.getItem('gusto_whatsapp_enabled') === 'true');
+  const [isOrderNotificationsExpanded, setIsOrderNotificationsExpanded] = useState(true);
+
   // Orders filters state
   const [orderSearch, setOrderSearch] = useState('');
   const [orderStatusFilter, setOrderStatusFilter] = useState<'all' | 'Pending' | 'Confirmed' | 'Baking' | 'Ready for Pickup' | 'Out for Delivery' | 'Completed'>('all');
@@ -217,6 +226,76 @@ export default function AdminDashboard({
     } else {
       addAuditLog(`❌ [Instagram DM Fail] ${detail}`, 'warning');
     }
+  };
+
+  // Async sender for WhatsApp alerts via Twilio
+  const dispatchWhatsAppAlert = async (orderId: string, cakeType: string, customerName: string, status: string) => {
+    const textMessage = `🔔 [THE FROSTING FAIRY] Order #${orderId} for "${customerName}" is now "${status}"! 🎂 (${cakeType})`;
+    addAuditLog(`Triggered WhatsApp dispatch for status: ${status}`, 'info');
+
+    let success = false;
+    let detail = "";
+
+    if (twilioSid.trim() && twilioToken.trim() && twilioFrom.trim() && twilioRecipient.trim()) {
+      try {
+        const formData = new URLSearchParams();
+        formData.append('To', twilioRecipient.trim());
+        formData.append('From', twilioFrom.trim());
+        formData.append('Body', textMessage);
+
+        const basicAuth = btoa(`${twilioSid.trim()}:${twilioToken.trim()}`);
+        const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${twilioSid.trim()}/Messages.json`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Authorization': `Basic ${basicAuth}`
+          },
+          body: formData.toString()
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+          success = true;
+          detail = `Sent via Twilio WhatsApp API (Message SID: ${data.sid})`;
+        } else {
+          detail = `Twilio API error response: ${data.message || 'Unknown'}`;
+        }
+      } catch (err: any) {
+        detail = `Twilio connection failure: ${err.message}`;
+      }
+    } else {
+      detail = "Simulated successfully (Configure Twilio credentials in 'Order Notifications' settings to route to live endpoints)";
+      success = true;
+    }
+
+    if (success) {
+      addAuditLog(`📱 [WhatsApp Dispatched] ${detail}`, 'success');
+      addAuditLog(`WhatsApp Content: "${textMessage}"`, 'success');
+    } else {
+      addAuditLog(`❌ [WhatsApp Fail] ${detail}`, 'warning');
+    }
+  };
+
+  // Shared Test Notification sender
+  const handleSendTestNotification = async () => {
+    addAuditLog(`Initiating test suite for enabled notification channels...`, 'info');
+    
+    const orderId = 'TEST-ALERT-01';
+    const cakeType = 'Signature Fudge Blossom';
+    const customerName = 'Jane Doe';
+    const status = 'Ready for Pickup';
+
+    // 1. Instagram DM
+    await dispatchInstagramDM(orderId, cakeType, customerName, status);
+
+    // 2. WhatsApp
+    if (whatsappEnabled || (twilioSid.trim() && twilioToken.trim())) {
+      await dispatchWhatsAppAlert(orderId, cakeType, customerName, status);
+    } else {
+      addAuditLog(`WhatsApp notifications are disabled (or Twilio credentials omitted). Skipping WhatsApp test dispatch.`, 'info');
+    }
+
+    addAuditLog(`Test notifications complete! Check above statuses for Webhook, Meta API, and/or WhatsApp execution states.`, 'success');
   };
 
   // --- GOOGLE SIGN IN & ACCESS CONTROL ---
@@ -455,6 +534,7 @@ export default function AdminDashboard({
   const [upiQrInput, setUpiQrInput] = useState(upiQrCode);
   const [isDraggingQr, setIsDraggingQr] = useState(false);
   const [cashOnDeliveryInput, setCashOnDeliveryInput] = useState(cashOnDeliveryEnabled);
+  const [isPaymentConfigExpanded, setIsPaymentConfigExpanded] = useState(true);
 
   React.useEffect(() => {
     setUpiIdInput(upiId);
@@ -521,9 +601,12 @@ export default function AdminDashboard({
           const oldStatus = o.status || 'Pending';
           addAuditLog(`Transitioned Order #${orderId} status from "${oldStatus}" to "${newStatus}"`);
           
-          // Trigger Instagram DM if transitioning to 'Ready for Pickup' or 'Out for Delivery'
+          // Trigger Instagram DM / WhatsApp if transitioning to 'Ready for Pickup' or 'Out for Delivery'
           if (newStatus === 'Ready for Pickup' || newStatus === 'Out for Delivery') {
             dispatchInstagramDM(orderId, o.cakeType, o.customerName || o.contactName || 'Valued Customer', newStatus);
+            if (whatsappEnabled) {
+              dispatchWhatsAppAlert(orderId, o.cakeType, o.customerName || o.contactName || 'Valued Customer', newStatus);
+            }
             addToast(
               `🔔 Order Notification Sent!`, 
               `Alerted customer ${o.customerName || o.contactName || 'Valued Customer'} that order #${orderId} is ${newStatus}.`, 
@@ -2868,303 +2951,500 @@ export default function AdminDashboard({
             </div>
           </div>
 
-          {/* Instagram Notification Settings (Full Width) */}
-          <div className="lg:col-span-12 bg-white p-6 md:p-8 rounded-2xl border border-brand-cocoa-border shadow-2xs space-y-6">
-            <div className="border-b border-brand-cocoa-border/40 pb-4">
-              <h3 className="font-display font-bold text-base text-brand-cocoa flex items-center gap-2">
-                <Bell className="w-5 h-5 text-brand-pink" />
-                <span>Instagram DM Notification Gateway Hub</span>
-              </h3>
-              <p className="text-xs text-brand-cocoa-light mt-1">
-                Configure your Instagram Professional Messaging credentials or third-party webhooks (Zapier/Make/n8n) to dispatch real-time DM alerts to your admin account when custom orders are marked as Ready/Out for Delivery.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <h4 className="font-sans font-bold text-xs text-brand-cocoa uppercase tracking-wide">
-                  Option A: Custom Integration Webhook (Zapier / Make)
-                </h4>
-                <p className="text-[11px] text-brand-cocoa-light leading-relaxed">
-                  Enter an automated webhook endpoint URL. When an order status updates to <strong className="text-emerald-600">Ready for Pickup</strong> or <strong className="text-indigo-600">Out for Delivery</strong>, we will POST JSON payloads containing complete order records and direct message copy.
-                </p>
-
-                <div className="space-y-2 text-left">
-                  <label className="font-mono text-[9px] uppercase tracking-wider text-brand-cocoa-light block font-bold">
-                    Automator Webhook URL
-                  </label>
-                  <input
-                    type="url"
-                    placeholder="https://hooks.zapier.com/hooks/catch/..."
-                    value={instaWebhook}
-                    onChange={(e) => {
-                      setInstaWebhook(e.target.value);
-                      localStorage.setItem('gusto_insta_webhook', e.target.value);
-                    }}
-                    className="w-full px-3.5 py-2 text-xs font-semibold text-brand-cocoa border border-brand-cocoa-border rounded-xl focus:outline-none focus:ring-1 focus:ring-brand-pink bg-white"
-                  />
-                  <span className="text-[9px] font-mono text-brand-cocoa-light/60 block">
-                    {instaWebhook.trim() ? "✅ Live Webhook posting active." : "ℹ️ Leave empty to use simulation logs or Meta API below."}
-                  </span>
+          {/* Collapsible Order Notifications Folder */}
+          <div className="lg:col-span-12 bg-white rounded-2xl border border-brand-cocoa-border shadow-2xs overflow-hidden">
+            {/* Header / Toggle Button */}
+            <button
+              onClick={() => setIsOrderNotificationsExpanded(!isOrderNotificationsExpanded)}
+              className="w-full px-6 md:px-8 py-5 flex items-center justify-between text-left bg-gradient-to-r from-brand-cream-light/30 to-brand-pink-light/10 hover:from-brand-cream-light/50 hover:to-brand-pink-light/20 transition-all cursor-pointer border-b border-brand-cocoa-border/30 focus:outline-none"
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-brand-pink/10 text-brand-pink rounded-xl">
+                  <Bell className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-display font-bold text-base text-brand-cocoa flex items-center gap-2">
+                    <span>🔔 Order Notifications</span>
+                  </h3>
+                  <p className="text-[11px] text-brand-cocoa-light mt-0.5">
+                    Configure your Instagram Professional Messaging, webhook targets, and Twilio WhatsApp alert credentials.
+                  </p>
                 </div>
               </div>
-
-              <div className="space-y-4 border-t md:border-t-0 md:border-l border-brand-cocoa-border/30 pt-4 md:pt-0 md:pl-6 text-left">
-                <h4 className="font-sans font-bold text-xs text-brand-cocoa uppercase tracking-wide">
-                  Option B: Official Meta Graph API Credentials
-                </h4>
-                <p className="text-[11px] text-brand-cocoa-light leading-relaxed">
-                  Provide your Meta Developer App access tokens to transmit messages using the official Facebook Graph endpoints directly to your authorized Instagram accounts.
-                </p>
-
-                {/* Secure warning note for browser token storage */}
-                <div className="text-[10px] text-red-700 bg-red-50 border border-red-200 px-3.5 py-2.5 rounded-xl flex items-start gap-2 leading-relaxed">
-                  <span className="font-bold text-xs">⚠️</span>
-                  <span>
-                    <strong>Security Warning:</strong> This access token is stored in the browser's localStorage and is used in a client-side fetch, making it visible to anyone opening DevTools. This is insecure. <strong>Only use low-privilege test tokens for testing; never input a production token here.</strong>
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="font-mono text-[8px] uppercase tracking-wider text-brand-cocoa-light block font-bold">
-                      Instagram User Access Token
-                    </label>
-                    <input
-                      type="password"
-                      placeholder="EAAGy..."
-                      value={instaToken}
-                      onChange={(e) => {
-                        setInstaToken(e.target.value);
-                        localStorage.setItem('gusto_insta_token', e.target.value);
-                      }}
-                      className="w-full px-3 py-1.5 text-xs font-semibold text-brand-cocoa border border-brand-cocoa-border rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-pink bg-white"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="font-mono text-[8px] uppercase tracking-wider text-brand-cocoa-light block font-bold">
-                      Instagram Professional ID
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="178414..."
-                      value={instaBusinessId}
-                      onChange={(e) => {
-                        setInstaBusinessId(e.target.value);
-                        localStorage.setItem('gusto_insta_business_id', e.target.value);
-                      }}
-                      className="w-full px-3 py-1.5 text-xs font-semibold text-brand-cocoa border border-brand-cocoa-border rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-pink bg-white"
-                    />
-                  </div>
-                  <div className="space-y-1 sm:col-span-2">
-                    <label className="font-mono text-[8px] uppercase tracking-wider text-brand-cocoa-light block font-bold">
-                      Admin Instagram Recipient ID (Thread / User ID)
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="849204321..."
-                      value={instaRecipient}
-                      onChange={(e) => {
-                        setInstaRecipient(e.target.value);
-                        localStorage.setItem('gusto_insta_recipient', e.target.value);
-                      }}
-                      className="w-full px-3 py-1.5 text-xs font-semibold text-brand-cocoa border border-brand-cocoa-border rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-pink bg-white"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Test Connection Actions */}
-            <div className="flex flex-col sm:flex-row items-center justify-between p-4 bg-brand-pink-light/20 border border-brand-pink-accent/15 rounded-xl gap-3 text-left">
-              <div className="flex-1">
-                <span className="font-sans font-bold text-xs text-brand-cocoa block">
-                  Verify Instagram DM Gateway
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-mono uppercase bg-brand-pink/5 text-brand-pink px-2.5 py-1 rounded-full border border-brand-pink-accent/10 font-bold">
+                  {whatsappEnabled || instaWebhook.trim() || (instaToken.trim() && instaRecipient.trim()) ? "Active" : "Inactive"}
                 </span>
-                <span className="text-[10px] text-brand-cocoa-light block leading-normal mt-0.5 max-w-xl">
-                  Dispatches a simulated status transition alert. This hits your custom configured API endpoint or automator webhook instantly. Review dispatch success or failure diagnostics in the real-time Security Audit Logs below!
+                <span className="text-brand-cocoa-light text-xs font-bold font-mono">
+                  {isOrderNotificationsExpanded ? '▲ COLLAPSE' : '▼ EXPAND'}
                 </span>
               </div>
-              <button
-                onClick={() => {
-                  dispatchInstagramDM('TEST-ALERT-01', 'Signature Fudge Blossom', 'Jane Doe', 'Ready for Pickup');
-                  triggerToast('🚀 Instagram DM Test Dispatched! Review Audit Logs below.');
-                }}
-                className="px-4 py-2 bg-brand-cocoa text-brand-cream hover:bg-brand-cocoa-light text-xs font-bold rounded-xl transition-all shadow-sm shrink-0 uppercase tracking-wider cursor-pointer"
-              >
-                Send Test DM Alert
-              </button>
-            </div>
-          </div>
+            </button>
 
-          {/* relocated PAYMENT SETTINGS SECTION */}
-          <div className="lg:col-span-12 bg-white p-6 md:p-8 rounded-2xl border border-brand-cocoa-border shadow-2xs space-y-6">
-            <div className="border-b border-brand-cocoa-border/40 pb-4">
-              <h3 className="font-display font-bold text-base text-brand-cocoa flex items-center gap-2">
-                <span>💳 Shop Payment Configuration</span>
-              </h3>
-              <p className="text-xs text-brand-cocoa-light mt-1">
-                Configure the merchant UPI ID, instant payment QR Code, and payment options used by customers during checkout.
-              </p>
-            </div>
+            {isOrderNotificationsExpanded && (
+              <div className="p-6 md:p-8 space-y-8 text-left">
+                {/* 1. Instagram DM Notifications Section */}
+                <div className="space-y-6">
+                  <div className="border-b border-brand-cocoa-border/40 pb-3">
+                    <h4 className="font-sans font-extrabold text-xs text-brand-pink uppercase tracking-widest flex items-center gap-2">
+                      <span>📸 Instagram DM Notification Gateway</span>
+                    </h4>
+                    <p className="text-[11px] text-brand-cocoa-light mt-1 leading-relaxed">
+                      Configure custom webhooks or Meta Developer Graph API credentials to transmit order ready/delivery direct messages to Instagram accounts automatically.
+                    </p>
+                  </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* Left Column: Form */}
-              <div className="space-y-5 text-left">
-                <h4 className="font-sans font-extrabold text-xs text-brand-cocoa uppercase tracking-wider">
-                  Payment Attributes
-                </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Option A */}
+                    <div className="space-y-4">
+                      <h5 className="font-sans font-bold text-xs text-brand-cocoa uppercase tracking-wide">
+                        Option A: Custom Integration Webhook (Zapier / Make)
+                      </h5>
+                      <p className="text-[11px] text-brand-cocoa-light leading-relaxed">
+                        Provide a custom POST webhook. On status update, we will dispatch order payloads and message text directly to this URL.
+                      </p>
 
-                {/* Merchant UPI ID */}
-                <div className="space-y-1.5">
-                  <label className="font-mono text-[9px] uppercase tracking-wider text-brand-cocoa-light block">
-                    Merchant UPI ID / VPA
-                  </label>
-                  <input
-                    type="text"
-                    value={upiIdInput}
-                    onChange={(e) => setUpiIdInput(e.target.value)}
-                    className="w-full px-3.5 py-2 text-xs font-mono font-bold text-brand-cocoa border border-brand-cocoa-border rounded-xl focus:outline-none focus:ring-1 focus:ring-brand-pink bg-brand-cream-light/10"
-                    placeholder="E.g. thefrostingfairy@okaxis"
-                  />
+                      <div className="space-y-2 text-left">
+                        <label className="font-mono text-[9px] uppercase tracking-wider text-brand-cocoa-light block font-bold">
+                          Automator Webhook URL
+                        </label>
+                        <input
+                          type="url"
+                          placeholder="https://hooks.zapier.com/hooks/catch/..."
+                          value={instaWebhook}
+                          onChange={(e) => {
+                            setInstaWebhook(e.target.value);
+                            localStorage.setItem('gusto_insta_webhook', e.target.value);
+                          }}
+                          className="w-full px-3.5 py-2 text-xs font-semibold text-brand-cocoa border border-brand-cocoa-border rounded-xl focus:outline-none focus:ring-1 focus:ring-brand-pink bg-white"
+                        />
+                        <span className="text-[9px] font-mono text-brand-cocoa-light/60 block">
+                          {instaWebhook.trim() ? "✅ Live Webhook posting active." : "ℹ️ Leave empty to use simulation logs or Meta API below."}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Option B */}
+                    <div className="space-y-4 border-t md:border-t-0 md:border-l border-brand-cocoa-border/30 pt-4 md:pt-0 md:pl-6 text-left">
+                      <h5 className="font-sans font-bold text-xs text-brand-cocoa uppercase tracking-wide">
+                        Option B: Official Meta Graph API Credentials
+                      </h5>
+                      <p className="text-[11px] text-brand-cocoa-light leading-relaxed">
+                        Transmits messages using official Meta API Graph endpoints directly to authorized Instagram professional accounts.
+                      </p>
+
+                      {/* Secure warning note for browser token storage */}
+                      <div className="text-[10px] text-red-700 bg-red-50 border border-red-200 px-3.5 py-2.5 rounded-xl flex items-start gap-2 leading-relaxed">
+                        <span className="font-bold text-xs">⚠️</span>
+                        <span>
+                          <strong>Security Warning:</strong> This access token is stored in the browser's localStorage and is used in a client-side fetch, making it visible to anyone opening DevTools. This is insecure. <strong>Only use low-privilege test tokens for testing; never input a production token here.</strong>
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <label className="font-mono text-[8px] uppercase tracking-wider text-brand-cocoa-light block font-bold">
+                            Instagram User Access Token
+                          </label>
+                          <input
+                            type="password"
+                            placeholder="EAAGy..."
+                            value={instaToken}
+                            onChange={(e) => {
+                              setInstaToken(e.target.value);
+                              localStorage.setItem('gusto_insta_token', e.target.value);
+                            }}
+                            className="w-full px-3 py-1.5 text-xs font-semibold text-brand-cocoa border border-brand-cocoa-border rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-pink bg-white"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="font-mono text-[8px] uppercase tracking-wider text-brand-cocoa-light block font-bold">
+                            Instagram Professional ID
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="178414..."
+                            value={instaBusinessId}
+                            onChange={(e) => {
+                              setInstaBusinessId(e.target.value);
+                              localStorage.setItem('gusto_insta_business_id', e.target.value);
+                            }}
+                            className="w-full px-3 py-1.5 text-xs font-semibold text-brand-cocoa border border-brand-cocoa-border rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-pink bg-white"
+                          />
+                        </div>
+                        <div className="space-y-1 sm:col-span-2">
+                          <label className="font-mono text-[8px] uppercase tracking-wider text-brand-cocoa-light block font-bold">
+                            Admin Instagram Recipient ID (Thread / User ID)
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="849204321..."
+                            value={instaRecipient}
+                            onChange={(e) => {
+                              setInstaRecipient(e.target.value);
+                              localStorage.setItem('gusto_insta_recipient', e.target.value);
+                            }}
+                            className="w-full px-3 py-1.5 text-xs font-semibold text-brand-cocoa border border-brand-cocoa-border rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-pink bg-white"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                {/* Custom QR Code Image URL */}
-                <div className="space-y-1.5">
-                  <label className="font-mono text-[9px] uppercase tracking-wider text-brand-cocoa-light block">
-                    Custom QR Code Image URL
-                  </label>
-                  <textarea
-                    rows={2}
-                    value={upiQrInput}
-                    onChange={(e) => setUpiQrInput(e.target.value)}
-                    className="w-full px-3.5 py-2 text-xs font-mono text-brand-cocoa border border-brand-cocoa-border rounded-xl focus:outline-none focus:ring-1 focus:ring-brand-pink resize-none bg-brand-cream-light/10"
-                    placeholder="Paste custom QR code image URL here, or upload an image below..."
-                  />
-                </div>
+                {/* 2. WhatsApp Notifications Section */}
+                <div className="space-y-6 pt-6 border-t border-brand-cocoa-border/30">
+                  <div className="border-b border-brand-cocoa-border/40 pb-3">
+                    <h4 className="font-sans font-extrabold text-xs text-brand-pink uppercase tracking-widest flex items-center gap-2">
+                      <span>💬 WhatsApp Notification Gateway</span>
+                    </h4>
+                    <p className="text-[11px] text-brand-cocoa-light mt-1 leading-relaxed">
+                      Configure your Twilio account credentials to transmit real-time customer status alerts to WhatsApp.
+                    </p>
+                  </div>
 
-                {/* Cash on Delivery Toggle Setting */}
-                <div className="pt-4 border-t border-brand-cocoa-border/20 flex items-center justify-between gap-4">
-                  <div className="space-y-0.5">
-                    <span className="font-sans font-bold text-xs text-brand-cocoa block">
-                      Cash on Delivery
+                  {/* Security warning identical to Meta warning */}
+                  <div className="text-[10px] text-red-700 bg-red-50 border border-red-200 px-3.5 py-2.5 rounded-xl flex items-start gap-2 leading-relaxed">
+                    <span className="font-bold text-xs">⚠️</span>
+                    <span>
+                      Security Warning: Your Twilio credentials are stored in the browser's localStorage and are used in a client-side fetch, making them visible to anyone inspecting network traffic or DevTools. This is highly insecure. We recommend routing this through a Supabase Edge Function instead of storing tokens in localStorage. Only use test/developer credentials here.
                     </span>
-                    <span className="text-[10px] text-brand-cocoa-light leading-relaxed block max-w-xs">
-                      Allow customers to pay with cash on delivery.
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
+                    <div className="space-y-1.5">
+                      <label className="font-mono text-[8px] uppercase tracking-wider text-brand-cocoa-light block font-bold">
+                        Twilio Account SID
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="AC..."
+                        value={twilioSid}
+                        onChange={(e) => {
+                          setTwilioSid(e.target.value);
+                          localStorage.setItem('gusto_twilio_sid', e.target.value);
+                        }}
+                        className="w-full px-3.5 py-2 text-xs font-semibold text-brand-cocoa border border-brand-cocoa-border rounded-xl focus:outline-none focus:ring-1 focus:ring-brand-pink bg-white"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="font-mono text-[8px] uppercase tracking-wider text-brand-cocoa-light block font-bold">
+                        Twilio Auth Token
+                      </label>
+                      <input
+                        type="password"
+                        placeholder="Token..."
+                        value={twilioToken}
+                        onChange={(e) => {
+                          setTwilioToken(e.target.value);
+                          localStorage.setItem('gusto_twilio_token', e.target.value);
+                        }}
+                        className="w-full px-3.5 py-2 text-xs font-semibold text-brand-cocoa border border-brand-cocoa-border rounded-xl focus:outline-none focus:ring-1 focus:ring-brand-pink bg-white"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="font-mono text-[8px] uppercase tracking-wider text-brand-cocoa-light block font-bold">
+                        Twilio WhatsApp From Number
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="whatsapp:+14155238886"
+                        value={twilioFrom}
+                        onChange={(e) => {
+                          setTwilioFrom(e.target.value);
+                          localStorage.setItem('gusto_twilio_from', e.target.value);
+                        }}
+                        className="w-full px-3.5 py-2 text-xs font-semibold text-brand-cocoa border border-brand-cocoa-border rounded-xl focus:outline-none focus:ring-1 focus:ring-brand-pink bg-white"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="font-mono text-[8px] uppercase tracking-wider text-brand-cocoa-light block font-bold">
+                        Admin WhatsApp Recipient Number
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="whatsapp:+9665XXXXXXX"
+                        value={twilioRecipient}
+                        onChange={(e) => {
+                          setTwilioRecipient(e.target.value);
+                          localStorage.setItem('gusto_twilio_recipient', e.target.value);
+                        }}
+                        className="w-full px-3.5 py-2 text-xs font-semibold text-brand-cocoa border border-brand-cocoa-border rounded-xl focus:outline-none focus:ring-1 focus:ring-brand-pink bg-white"
+                      />
+                    </div>
+
+                    {/* Toggle: Enable WhatsApp alerts on status change */}
+                    <div className="sm:col-span-2 pt-4 border-t border-brand-cocoa-border/20 flex items-center justify-between gap-4">
+                      <div className="space-y-0.5">
+                        <span className="font-sans font-bold text-xs text-brand-cocoa block">
+                          Enable WhatsApp Alerts on Status Change
+                        </span>
+                        <span className="text-[10px] text-brand-cocoa-light leading-relaxed block max-w-lg">
+                          Dispatches WhatsApp alerts using your Twilio credentials to the configured admin number whenever an order changes status.
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (currentRole === 'viewer') {
+                            triggerToast('❌ Permission Denied: Read-only role cannot toggle settings.');
+                            return;
+                          }
+                          const nextVal = !whatsappEnabled;
+                          setWhatsappEnabled(nextVal);
+                          localStorage.setItem('gusto_whatsapp_enabled', nextVal.toString());
+                        }}
+                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                          whatsappEnabled ? 'bg-brand-pink' : 'bg-brand-cocoa-border'
+                        }`}
+                        title="Toggle WhatsApp Alerts"
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                            whatsappEnabled ? 'translate-x-5' : 'translate-x-0'
+                          }`}
+                        />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Shared Test Connection Actions */}
+                <div className="pt-6 border-t border-brand-cocoa-border/30 flex flex-col sm:flex-row items-center justify-between p-5 bg-brand-pink-light/10 border border-brand-pink-accent/15 rounded-xl gap-4 text-left">
+                  <div className="flex-1">
+                    <span className="font-sans font-bold text-xs text-brand-cocoa block">
+                      Verify Notification Gateway Dispatchers
+                    </span>
+                    <span className="text-[10px] text-brand-cocoa-light block leading-normal mt-0.5 max-w-xl">
+                      Dispatches a simulated status transition alert. This fires all active channels that you have configured (webhooks, Instagram Meta Graph, and/or WhatsApp) instantly. Check the Security Audit Log below to verify!
                     </span>
                   </div>
                   <button
-                    type="button"
-                    onClick={() => {
-                      if (currentRole === 'viewer') {
-                        triggerToast('❌ Permission Denied: Read-only role cannot toggle settings.');
-                        return;
-                      }
-                      setCashOnDeliveryInput(!cashOnDeliveryInput);
-                    }}
-                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                      cashOnDeliveryInput ? 'bg-brand-pink' : 'bg-brand-cocoa-border'
-                    }`}
-                    title="Allow customers to pay with cash on delivery."
+                    onClick={handleSendTestNotification}
+                    className="px-5 py-2.5 bg-brand-cocoa text-brand-cream hover:bg-brand-cocoa-light text-xs font-bold rounded-xl transition-all shadow-sm shrink-0 uppercase tracking-wider cursor-pointer"
                   >
-                    <span
-                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
-                        cashOnDeliveryInput ? 'translate-x-5' : 'translate-x-0'
-                      }`}
-                    />
+                    Send Test Alerts
                   </button>
                 </div>
+              </div>
+            )}
+          </div>
 
-                <div className="pt-2">
+          {/* Collapsible Payment Configuration Folder */}
+          <div className="lg:col-span-12 bg-white rounded-2xl border border-brand-cocoa-border shadow-2xs overflow-hidden">
+            {/* Header / Toggle Button */}
+            <button
+              onClick={() => setIsPaymentConfigExpanded(!isPaymentConfigExpanded)}
+              className="w-full px-6 md:px-8 py-5 flex items-center justify-between text-left bg-gradient-to-r from-brand-cream-light/30 to-brand-pink-light/10 hover:from-brand-cream-light/50 hover:to-brand-pink-light/20 transition-all cursor-pointer border-b border-brand-cocoa-border/30 focus:outline-none"
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-brand-pink/10 text-brand-pink rounded-xl">
+                  <CreditCard className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-display font-bold text-base text-brand-cocoa flex items-center gap-2">
+                    <span>💳 Payment Configuration</span>
+                  </h3>
+                  <p className="text-[11px] text-brand-cocoa-light mt-0.5">
+                    Configure the merchant UPI ID, instant payment QR Code, and Cash on Delivery option used by customers during checkout.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-mono uppercase bg-brand-pink/5 text-brand-pink px-2.5 py-1 rounded-full border border-brand-pink-accent/10 font-bold">
+                  {upiIdInput || cashOnDeliveryInput ? "Active" : "Inactive"}
+                </span>
+                <span className="text-brand-cocoa-light text-xs font-bold font-mono">
+                  {isPaymentConfigExpanded ? '▲ COLLAPSE' : '▼ EXPAND'}
+                </span>
+              </div>
+            </button>
+
+            {isPaymentConfigExpanded && (
+              <div className="p-6 md:p-8 space-y-8 text-left">
+                {/* Subsection A: Instant Online Payments (UPI) */}
+                <div className="space-y-6">
+                  <div className="border-b border-brand-cocoa-border/40 pb-3">
+                    <h4 className="font-sans font-extrabold text-xs text-brand-pink uppercase tracking-widest flex items-center gap-2">
+                      <span>⚡ Instant Online Payments (UPI)</span>
+                    </h4>
+                    <p className="text-[11px] text-brand-cocoa-light mt-1 leading-relaxed">
+                      Configure your primary merchant UPI virtual payment address and custom QR code for instant, zero-fee direct transfers.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {/* Left Column: Form */}
+                    <div className="space-y-5 text-left">
+                      <h5 className="font-sans font-extrabold text-xs text-brand-cocoa uppercase tracking-wider">
+                        Payment Attributes
+                      </h5>
+
+                      {/* Merchant UPI ID */}
+                      <div className="space-y-1.5">
+                        <label className="font-mono text-[9px] uppercase tracking-wider text-brand-cocoa-light block">
+                          Merchant UPI ID / VPA
+                        </label>
+                        <input
+                          type="text"
+                          value={upiIdInput}
+                          onChange={(e) => setUpiIdInput(e.target.value)}
+                          className="w-full px-3.5 py-2 text-xs font-mono font-bold text-brand-cocoa border border-brand-cocoa-border rounded-xl focus:outline-none focus:ring-1 focus:ring-brand-pink bg-brand-cream-light/10"
+                          placeholder="E.g. thefrostingfairy@okaxis"
+                        />
+                      </div>
+
+                      {/* Custom QR Code Image URL */}
+                      <div className="space-y-1.5">
+                        <label className="font-mono text-[9px] uppercase tracking-wider text-brand-cocoa-light block">
+                          Custom QR Code Image URL
+                        </label>
+                        <textarea
+                          rows={2}
+                          value={upiQrInput}
+                          onChange={(e) => setUpiQrInput(e.target.value)}
+                          className="w-full px-3.5 py-2 text-xs font-mono text-brand-cocoa border border-brand-cocoa-border rounded-xl focus:outline-none focus:ring-1 focus:ring-brand-pink resize-none bg-brand-cream-light/10"
+                          placeholder="Paste custom QR code image URL here, or upload an image below..."
+                        />
+                      </div>
+                    </div>
+
+                    {/* Right Column: Checkout QR Code Live Preview & Drag Zone */}
+                    <div className="space-y-4">
+                      <h5 className="font-sans font-extrabold text-xs text-brand-cocoa uppercase tracking-wider flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-brand-pink fill-brand-pink" />
+                        <span>Instant Checkout Card Preview</span>
+                      </h5>
+                      <p className="text-xs text-brand-cocoa-light leading-relaxed">
+                        Below is a live preview of the payment option card that your customers see at checkout:
+                      </p>
+
+                      {/* Live Checkout Payment Card Mockup */}
+                      <div className="flex flex-col items-center justify-center bg-brand-cream-light/40 p-4 rounded-2xl border border-brand-cocoa-border/40">
+                        <div className="bg-white p-3.5 border border-brand-cocoa-border rounded-xl flex flex-col items-center shadow-2xs max-w-[190px] w-full">
+                          <div className="w-28 h-28 bg-gray-100 border border-brand-cocoa-border/60 flex flex-col items-center justify-center rounded-lg relative overflow-hidden p-1">
+                            {upiQrInput ? (
+                              <img src={upiQrInput} alt="Payment QR Preview" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                            ) : (
+                              <div className="w-full h-full border border-dashed border-brand-pink/50 flex flex-col justify-center items-center text-center p-1 bg-brand-cream-light/40">
+                                <span className="font-mono text-[7px] text-brand-cocoa-light font-bold">THE FROSTING FAIRY</span>
+                                <div className="w-12 h-12 bg-brand-cocoa mt-1 rounded relative flex items-center justify-center">
+                                  <span className="text-[6.5px] text-white font-black font-mono">UPI QR</span>
+                                </div>
+                                <span className="font-mono text-[5px] text-brand-pink-dark mt-1 truncate max-w-full">
+                                  {upiIdInput || 'No UPI ID'}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                          <span className="text-[8px] font-mono uppercase tracking-wider text-brand-cocoa-light mt-2 text-center block">
+                            Pay ₹Grand_Total instantly
+                          </span>
+                          <span className="text-[7.5px] font-mono text-brand-cocoa-light/85 text-center block select-all mt-0.5 max-w-full truncate">
+                            UPI ID: {upiIdInput || 'None'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Drag-and-drop QR Upload Zone */}
+                      <div
+                        onDragOver={(e) => { e.preventDefault(); setIsDraggingQr(true); }}
+                        onDragLeave={() => setIsDraggingQr(false)}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          setIsDraggingQr(false);
+                          if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                            handleQrFile(e.dataTransfer.files[0]);
+                          }
+                        }}
+                        onClick={() => document.getElementById('qr-file-upload')?.click()}
+                        className={`relative border-2 border-dashed rounded-2xl p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-200 ${
+                          isDraggingQr
+                            ? 'border-brand-pink bg-brand-pink-light/25 scale-[0.98]'
+                            : 'border-brand-cocoa-border/65 bg-brand-cream-light/10 hover:border-brand-pink hover:bg-brand-cream-light/40'
+                        }`}
+                      >
+                        <input
+                          type="file"
+                          id="qr-file-upload"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            if (e.target.files && e.target.files[0]) {
+                              handleQrFile(e.target.files[0]);
+                            }
+                          }}
+                        />
+                        <div className={`p-2 rounded-full mb-1.5 transition-transform ${isDraggingQr ? 'scale-110 bg-brand-pink text-white' : 'bg-white text-brand-cocoa-light border border-brand-cocoa-border/40'}`}>
+                          <Upload className="w-4 h-4" />
+                        </div>
+                        <span className="font-sans font-bold text-[11px] text-brand-cocoa block">
+                          Drag Custom QR Code Image
+                        </span>
+                        <span className="text-[9px] text-brand-cocoa-light/90 mt-0.5 leading-tight block">
+                          Drag QR file here, or <span className="text-brand-pink font-semibold hover:underline">browse files</span>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Subsection B: Cash on Delivery Settings */}
+                <div className="space-y-6 pt-6 border-t border-brand-cocoa-border/30">
+                  <div className="border-b border-brand-cocoa-border/40 pb-3">
+                    <h4 className="font-sans font-extrabold text-xs text-brand-pink uppercase tracking-widest flex items-center gap-2">
+                      <span>💵 Cash on Delivery (COD)</span>
+                    </h4>
+                    <p className="text-[11px] text-brand-cocoa-light mt-1 leading-relaxed">
+                      Enable or disable cash-based manual billing on checkout for customers picking up orders or receiving deliveries.
+                    </p>
+                  </div>
+
+                  {/* Cash on Delivery Toggle Setting */}
+                  <div className="flex items-center justify-between gap-4 p-4.5 bg-brand-cream-light/25 border border-brand-cocoa-border/20 rounded-2xl text-left">
+                    <div className="space-y-0.5">
+                      <span className="font-sans font-bold text-xs text-brand-cocoa block">
+                        Allow Cash on Delivery Payment Option
+                      </span>
+                      <span className="text-[10px] text-brand-cocoa-light leading-relaxed block max-w-xl">
+                        Allow customers to complete checkout and pay in-person with cash on pickup or delivery.
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (currentRole === 'viewer') {
+                          triggerToast('❌ Permission Denied: Read-only role cannot toggle settings.');
+                          return;
+                        }
+                        setCashOnDeliveryInput(!cashOnDeliveryInput);
+                      }}
+                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                        cashOnDeliveryInput ? 'bg-brand-pink' : 'bg-brand-cocoa-border'
+                      }`}
+                      title="Allow customers to pay with cash on delivery."
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                          cashOnDeliveryInput ? 'translate-x-5' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Shared Action: Update Payment Settings */}
+                <div className="pt-6 border-t border-brand-cocoa-border/30">
                   <button
                     onClick={handleSavePayments}
-                    className="w-full flex items-center justify-center gap-2 py-3 bg-brand-cocoa text-brand-cream text-xs font-bold rounded-xl hover:bg-brand-cocoa-light transition-all cursor-pointer shadow-md uppercase tracking-wider"
+                    className="w-full flex items-center justify-center gap-2 py-3.5 bg-brand-cocoa text-brand-cream text-xs font-bold rounded-xl hover:bg-brand-cocoa-light transition-all cursor-pointer shadow-md uppercase tracking-wider"
                   >
                     <CheckCircle className="w-4 h-4 text-brand-pink" />
                     <span>Update Payment Settings</span>
                   </button>
                 </div>
               </div>
-
-              {/* Right Column: Checkout QR Code Live Preview & Drag Zone */}
-              <div className="space-y-4">
-                <h4 className="font-sans font-extrabold text-xs text-brand-cocoa uppercase tracking-wider flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-brand-pink fill-brand-pink" />
-                  <span>Instant Checkout Card Preview</span>
-                </h4>
-                <p className="text-xs text-brand-cocoa-light leading-relaxed">
-                  Below is a live preview of the payment option card that your customers see at checkout:
-                </p>
-
-                {/* Live Checkout Payment Card Mockup */}
-                <div className="flex flex-col items-center justify-center bg-brand-cream-light/40 p-4 rounded-2xl border border-brand-cocoa-border/40">
-                  <div className="bg-white p-3.5 border border-brand-cocoa-border rounded-xl flex flex-col items-center shadow-2xs max-w-[190px] w-full">
-                    <div className="w-28 h-28 bg-gray-100 border border-brand-cocoa-border/60 flex flex-col items-center justify-center rounded-lg relative overflow-hidden p-1">
-                      {upiQrInput ? (
-                        <img src={upiQrInput} alt="Payment QR Preview" className="w-full h-full object-contain" />
-                      ) : (
-                        <div className="w-full h-full border border-dashed border-brand-pink/50 flex flex-col justify-center items-center text-center p-1 bg-brand-cream-light/40">
-                          <span className="font-mono text-[7px] text-brand-cocoa-light font-bold">THE FROSTING FAIRY</span>
-                          <div className="w-12 h-12 bg-brand-cocoa mt-1 rounded relative flex items-center justify-center">
-                            <span className="text-[6.5px] text-white font-black font-mono">UPI QR</span>
-                          </div>
-                          <span className="font-mono text-[5px] text-brand-pink-dark mt-1 truncate max-w-full">
-                            {upiIdInput || 'No UPI ID'}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    <span className="text-[8px] font-mono uppercase tracking-wider text-brand-cocoa-light mt-2 text-center block">
-                      Pay ₹Grand_Total instantly
-                    </span>
-                    <span className="text-[7.5px] font-mono text-brand-cocoa-light/85 text-center block select-all mt-0.5 max-w-full truncate">
-                      UPI ID: {upiIdInput || 'None'}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Drag-and-drop QR Upload Zone */}
-                <div
-                  onDragOver={(e) => { e.preventDefault(); setIsDraggingQr(true); }}
-                  onDragLeave={() => setIsDraggingQr(false)}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    setIsDraggingQr(false);
-                    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                      handleQrFile(e.dataTransfer.files[0]);
-                    }
-                  }}
-                  onClick={() => document.getElementById('qr-file-upload')?.click()}
-                  className={`relative border-2 border-dashed rounded-2xl p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-200 ${
-                    isDraggingQr
-                      ? 'border-brand-pink bg-brand-pink-light/25 scale-[0.98]'
-                      : 'border-brand-cocoa-border/65 bg-brand-cream-light/10 hover:border-brand-pink hover:bg-brand-cream-light/40'
-                  }`}
-                >
-                  <input
-                    type="file"
-                    id="qr-file-upload"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => {
-                      if (e.target.files && e.target.files[0]) {
-                        handleQrFile(e.target.files[0]);
-                      }
-                    }}
-                  />
-                  <div className={`p-2 rounded-full mb-1.5 transition-transform ${isDraggingQr ? 'scale-110 bg-brand-pink text-white' : 'bg-white text-brand-cocoa-light border border-brand-cocoa-border/40'}`}>
-                    <Upload className="w-4 h-4" />
-                  </div>
-                  <span className="font-sans font-bold text-[11px] text-brand-cocoa block">
-                    Drag Custom QR Code Image
-                  </span>
-                  <span className="text-[9px] text-brand-cocoa-light/90 mt-0.5 leading-tight block">
-                    Drag QR file here, or <span className="text-brand-pink font-semibold hover:underline">browse files</span>
-                  </span>
-                </div>
-
-              </div>
-            </div>
+            )}
           </div>
 
           {/* Bottom Panel: Dynamic Administrative Audit Log */}
