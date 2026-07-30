@@ -32,12 +32,17 @@ import {
   Bell,
   Mail,
   Loader2,
-  CreditCard
+  CreditCard,
+  StickyNote,
+  FileText,
+  AlertTriangle,
+  X
 } from 'lucide-react';
 import { Recipe, PriceOption, MealPlanEntry } from '../types';
 import { motion } from 'motion/react';
 import { INITIAL_RECIPES } from '../data';
 import defaultLogoImg from '../assets/images/frosting_fairy_logo_1784129178255.jpg';
+import { PerformanceDashboard } from './PerformanceDashboard';
 
 // Helper to decode Google JWT token client-side
 const decodeJwt = (token: string) => {
@@ -159,6 +164,97 @@ export default function AdminDashboard({
   }, [sentEmails]);
 
   const [isEmailCenterExpanded, setIsEmailCenterExpanded] = useState(true);
+
+  // --- INTERNAL ORDER NOTES STATE & HANDLERS ---
+  const [orderNoteInputs, setOrderNoteInputs] = useState<Record<string, string>>({});
+  const [openNoteOrderId, setOpenNoteOrderId] = useState<string | null>(null);
+
+  const handleSaveNote = (orderId: string) => {
+    if (currentRole === 'viewer') {
+      triggerToast('❌ Permission Denied: Read-only role cannot add notes.');
+      return;
+    }
+
+    const noteText = orderNoteInputs[orderId]?.trim();
+    if (!noteText) {
+      triggerToast('⚠️ Note cannot be empty.');
+      return;
+    }
+
+    setMealPlan((prevPlan) =>
+      prevPlan.map((order) => {
+        if (order.id === orderId) {
+          const existingNotes = order.adminNotes || [];
+          return {
+            ...order,
+            adminNotes: [...existingNotes, noteText],
+          };
+        }
+        return order;
+      })
+    );
+
+    setOrderNoteInputs((prev) => ({ ...prev, [orderId]: '' }));
+    setOpenNoteOrderId(null);
+
+    addAuditLog(`Added internal note to Order #${orderId}: "${noteText.length > 30 ? noteText.substring(0, 30) + '...' : noteText}"`, 'success');
+    addToast('Note Saved', `Internal note added to Order #${orderId}`, 'success');
+  };
+
+  const handleDeleteNote = (orderId: string, noteIndex: number) => {
+    if (currentRole === 'viewer') {
+      triggerToast('❌ Permission Denied: Read-only role cannot delete notes.');
+      return;
+    }
+
+    setMealPlan((prevPlan) =>
+      prevPlan.map((order) => {
+        if (order.id === orderId) {
+          const existingNotes = order.adminNotes || [];
+          return {
+            ...order,
+            adminNotes: existingNotes.filter((_, idx) => idx !== noteIndex),
+          };
+        }
+        return order;
+      })
+    );
+
+    addAuditLog(`Deleted internal note from Order #${orderId}`, 'info');
+    addToast('Note Removed', `Internal note deleted from Order #${orderId}`, 'info');
+  };
+
+  // --- ORDER DELETION WITH CONFIRMATION DIALOG ---
+  const [orderToDelete, setOrderToDelete] = useState<MealPlanEntry | null>(null);
+
+  const handleDeleteOrderClick = (order: MealPlanEntry) => {
+    if (currentRole === 'viewer') {
+      addAuditLog(`Attempted to delete Order #${order.id} (Blocked)`, 'warning');
+      triggerToast('❌ Permission Denied: Cashier/Viewer role is read-only.');
+      return;
+    }
+    setOrderToDelete(order);
+  };
+
+  const handleConfirmDeleteOrder = () => {
+    if (!orderToDelete) return;
+
+    if (currentRole === 'viewer') {
+      triggerToast('❌ Permission Denied: Read-only role cannot delete orders.');
+      setOrderToDelete(null);
+      return;
+    }
+
+    const deletedId = orderToDelete.id;
+    const customerName = orderToDelete.customerName || orderToDelete.contactName || 'Valued Customer';
+    const cakeType = orderToDelete.cakeType;
+
+    setMealPlan((prevPlan) => prevPlan.filter((o) => o.id !== deletedId));
+
+    addAuditLog(`Permanently deleted Order #${deletedId} for "${customerName}" (${cakeType})`, 'warning');
+    addToast('Order Deleted', `Order #${deletedId} has been removed from the order queue.`, 'info');
+    setOrderToDelete(null);
+  };
 
   // Async sender for Instagram DM Webhooks or Meta API
   const dispatchInstagramDM = async (orderId: string, cakeType: string, customerName: string, status: string) => {
@@ -1451,6 +1547,9 @@ export default function AdminDashboard({
               </div>
             </div>
           </div>
+
+          {/* Performance Dashboard Card with Recharts */}
+          <PerformanceDashboard orders={mealPlan} />
         </div>
       )}
 
@@ -2607,26 +2706,37 @@ export default function AdminDashboard({
 
                     <div className="flex-1 space-y-4">
                       {/* Order Metadata and Header */}
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-mono text-[10px] font-bold text-brand-pink bg-brand-pink-light/60 px-2 py-0.5 rounded uppercase tracking-wider">
-                          Order #{order.id}
-                        </span>
-                        {order.pickupDate && (
-                          <span className="font-mono text-[9px] text-brand-cocoa-light/90 flex items-center gap-1">
-                            <Calendar className="w-3.5 h-3.5 text-brand-cocoa-light" />
-                            {order.pickupDate} {order.pickupTime && `@ ${order.pickupTime}`}
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-brand-cream-light/80 pb-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-mono text-[10px] font-bold text-brand-pink bg-brand-pink-light/60 px-2 py-0.5 rounded uppercase tracking-wider">
+                            Order #{order.id}
                           </span>
-                        )}
-                        <span className={`font-sans font-bold text-[9px] border px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
-                          currentStatus === 'Pending' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                          currentStatus === 'Confirmed' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                          currentStatus === 'Baking' ? 'bg-pink-50 text-brand-pink border-brand-pink/20' :
-                          currentStatus === 'Ready for Pickup' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                          currentStatus === 'Out for Delivery' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' :
-                          'bg-gray-50 text-gray-500 border-gray-200'
-                        }`}>
-                          {currentStatus}
-                        </span>
+                          {order.pickupDate && (
+                            <span className="font-mono text-[9px] text-brand-cocoa-light/90 flex items-center gap-1">
+                              <Calendar className="w-3.5 h-3.5 text-brand-cocoa-light" />
+                              {order.pickupDate} {order.pickupTime && `@ ${order.pickupTime}`}
+                            </span>
+                          )}
+                          <span className={`font-sans font-bold text-[9px] border px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
+                            currentStatus === 'Pending' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                            currentStatus === 'Confirmed' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                            currentStatus === 'Baking' ? 'bg-pink-50 text-brand-pink border-brand-pink/20' :
+                            currentStatus === 'Ready for Pickup' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                            currentStatus === 'Out for Delivery' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' :
+                            'bg-gray-50 text-gray-500 border-gray-200'
+                          }`}>
+                            {currentStatus}
+                          </span>
+                        </div>
+
+                        <button
+                          onClick={() => handleDeleteOrderClick(order)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-sans font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200/80 rounded-lg transition-all cursor-pointer shadow-3xs"
+                          title="Delete order card"
+                        >
+                          <Trash2 className="w-3 h-3 text-red-500" />
+                          <span>Delete Order</span>
+                        </button>
                       </div>
 
                       {/* Cake details info layout */}
@@ -2672,16 +2782,119 @@ export default function AdminDashboard({
                           </p>
                         </div>
                       </div>
+
+                      {/* Internal Staff Notes Section */}
+                      <div className="pt-3 border-t border-brand-cocoa-border/30 space-y-2 text-left">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5">
+                            <StickyNote className="w-3.5 h-3.5 text-brand-pink shrink-0" />
+                            <span className="font-mono text-[9px] uppercase tracking-wider font-bold text-brand-cocoa">
+                              Internal Kitchen & Staff Notes
+                            </span>
+                            {order.adminNotes && order.adminNotes.length > 0 && (
+                              <span className="font-mono text-[8.5px] font-bold bg-brand-pink-light/70 text-brand-pink px-1.5 py-0.2 rounded-full border border-brand-pink/20">
+                                {order.adminNotes.length}
+                              </span>
+                            )}
+                          </div>
+
+                          <button
+                            onClick={() => {
+                              if (currentRole === 'viewer') {
+                                triggerToast('❌ Permission Denied: Read-only role cannot add notes.');
+                                return;
+                              }
+                              setOpenNoteOrderId(openNoteOrderId === order.id ? null : order.id);
+                            }}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-sans font-bold text-brand-cocoa hover:text-brand-pink bg-brand-cream-light/60 hover:bg-brand-pink-light/30 border border-brand-cocoa-border/40 rounded-lg transition-all cursor-pointer shadow-3xs"
+                          >
+                            <Plus className="w-3 h-3 text-brand-pink" />
+                            <span>Add Note</span>
+                          </button>
+                        </div>
+
+                        {/* Notes List */}
+                        {order.adminNotes && order.adminNotes.length > 0 ? (
+                          <div className="space-y-1.5 pt-1">
+                            {order.adminNotes.map((noteItem, idx) => (
+                              <div 
+                                key={idx} 
+                                className="group flex items-start justify-between gap-2 p-2 bg-amber-50/80 border border-amber-200/90 rounded-xl text-xs text-brand-cocoa shadow-3xs font-sans"
+                              >
+                                <div className="flex items-start gap-2 flex-1">
+                                  <span className="text-[10px] text-amber-700 mt-0.5 shrink-0 font-bold">📌</span>
+                                  <span className="leading-snug text-brand-cocoa font-medium text-[11px]">{noteItem}</span>
+                                </div>
+                                <button
+                                  onClick={() => handleDeleteNote(order.id, idx)}
+                                  className="opacity-60 hover:opacity-100 text-brand-cocoa-light hover:text-red-600 transition-opacity p-0.5 rounded cursor-pointer shrink-0"
+                                  title="Delete this note"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          openNoteOrderId !== order.id && (
+                            <p className="text-[10px] text-brand-cocoa-light/70 italic">No internal notes added for this order yet.</p>
+                          )
+                        )}
+
+                        {/* Inline Input Box when Add Note is active */}
+                        {openNoteOrderId === order.id && (
+                          <div className="mt-2 p-3 bg-brand-cream-light/40 border border-brand-pink/30 rounded-xl space-y-2 text-left animate-fade-in shadow-2xs">
+                            <div className="flex items-center justify-between">
+                              <label className="font-mono text-[8.5px] uppercase font-bold text-brand-pink flex items-center gap-1">
+                                <FileText className="w-3 h-3" />
+                                <span>New Internal Note</span>
+                              </label>
+                              <span className="text-[9px] text-brand-cocoa-light font-mono">Visible to kitchen & staff</span>
+                            </div>
+                            <textarea
+                              rows={2}
+                              value={orderNoteInputs[order.id] || ''}
+                              onChange={(e) => setOrderNoteInputs(prev => ({ ...prev, [order.id]: e.target.value }))}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                  e.preventDefault();
+                                  handleSaveNote(order.id);
+                                }
+                              }}
+                              placeholder="Type internal note (e.g. 'Customer confirmed 3 PM pickup', 'Eggless sponge verified')..."
+                              className="w-full p-2 text-xs text-brand-cocoa bg-white border border-brand-cocoa-border rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-pink resize-none font-sans"
+                            />
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                onClick={() => {
+                                  setOpenNoteOrderId(null);
+                                  setOrderNoteInputs(prev => ({ ...prev, [order.id]: '' }));
+                                }}
+                                className="px-2.5 py-1 text-[10px] font-sans font-bold text-brand-cocoa-light hover:text-brand-cocoa cursor-pointer"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                onClick={() => handleSaveNote(order.id)}
+                                className="px-3 py-1 bg-brand-pink hover:bg-brand-pink-dark text-white text-[10px] font-sans font-bold rounded-lg shadow-xs transition-all cursor-pointer flex items-center gap-1"
+                              >
+                                <Check className="w-3 h-3" />
+                                <span>Save Note</span>
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     {/* Right side: Action Panel */}
-                    <div className="flex flex-col justify-between items-stretch gap-4 shrink-0 min-w-[210px] bg-brand-cream-light/35 p-4 rounded-2xl border border-brand-cocoa-border/40 text-left">
+                    <div className="flex flex-col justify-between items-stretch gap-3 shrink-0 min-w-[210px] bg-brand-cream-light/35 p-4 rounded-2xl border border-brand-cocoa-border/40 text-left">
                       <div className="space-y-1">
                         <span className="font-mono text-[8px] uppercase tracking-wider text-brand-cocoa-light block font-bold">Order Value</span>
                         <span className="font-display font-black text-lg text-brand-pink block">{order.estimatedPrice || '$45.00'}</span>
                       </div>
 
-                      <div className="space-y-2">
+                      <div className="space-y-1.5">
                         <label className="font-mono text-[8px] uppercase tracking-wider text-brand-cocoa-light block font-bold">Update Order State</label>
                         <select
                           value={currentStatus}
@@ -2697,14 +2910,31 @@ export default function AdminDashboard({
                         </select>
                       </div>
 
-                      <button
-                        onClick={() => setSelectedEmailPreviewOrder(order)}
-                        className="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-brand-pink hover:bg-brand-pink-dark text-white font-sans font-bold text-xs rounded-xl transition-all cursor-pointer shadow-xs hover:shadow-sm"
-                        title="Open interactive email notification simulator for this customer"
-                      >
-                        <Mail className="w-3.5 h-3.5" />
-                        <span>Send Order Confirmation</span>
-                      </button>
+                      <div className="space-y-2 pt-1 border-t border-brand-cocoa-border/20">
+                        <button
+                          onClick={() => {
+                            if (currentRole === 'viewer') {
+                              triggerToast('❌ Permission Denied: Read-only role cannot add notes.');
+                              return;
+                            }
+                            setOpenNoteOrderId(openNoteOrderId === order.id ? null : order.id);
+                          }}
+                          className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white hover:bg-brand-cream-light text-brand-cocoa border border-brand-cocoa-border font-sans font-bold text-xs rounded-xl transition-all cursor-pointer shadow-3xs"
+                          title="Append an internal note to this order entry"
+                        >
+                          <StickyNote className="w-3.5 h-3.5 text-brand-pink" />
+                          <span>{openNoteOrderId === order.id ? 'Close Note Form' : '+ Add Internal Note'}</span>
+                        </button>
+
+                        <button
+                          onClick={() => setSelectedEmailPreviewOrder(order)}
+                          className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-brand-pink hover:bg-brand-pink-dark text-white font-sans font-bold text-xs rounded-xl transition-all cursor-pointer shadow-xs hover:shadow-sm"
+                          title="Open interactive email notification simulator for this customer"
+                        >
+                          <Mail className="w-3.5 h-3.5" />
+                          <span>Send Order Confirmation</span>
+                        </button>
+                      </div>
 
                       <div className="border-t border-brand-cocoa-border/40 pt-2 text-[9px] text-brand-cocoa-light/80 leading-normal flex items-start gap-1">
                         <Bell className="w-3.5 h-3.5 text-brand-pink shrink-0 mt-0.5 animate-pulse" />
@@ -3716,6 +3946,90 @@ export default function AdminDashboard({
                   )}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ORDER DELETION CONFIRMATION DIALOG MODAL OVERLAY */}
+      {orderToDelete && (
+        <div className="fixed inset-0 bg-brand-cocoa/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-white border border-brand-cocoa-border rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl text-left">
+            {/* Modal Header */}
+            <div className="bg-red-50/90 border-b border-red-100 px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-full bg-red-100 border border-red-200 flex items-center justify-center shrink-0">
+                  <AlertTriangle className="w-5 h-5 text-red-600" />
+                </div>
+                <div>
+                  <h4 className="font-display font-black text-sm text-red-950 uppercase tracking-wider">
+                    Confirm Order Deletion
+                  </h4>
+                  <p className="text-[10px] text-red-700 font-mono font-medium">
+                    Permanent removal from queue
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setOrderToDelete(null)}
+                className="p-1 rounded-full hover:bg-red-200/50 text-red-700 transition-colors cursor-pointer font-bold"
+                title="Cancel deletion"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body Content */}
+            <div className="p-6 space-y-4">
+              <p className="text-xs text-brand-cocoa leading-relaxed">
+                Are you sure you want to permanently delete <strong className="text-brand-pink font-mono">Order #{orderToDelete.id}</strong>? This action cannot be undone and will remove all custom specifications and internal staff notes.
+              </p>
+
+              {/* Order Summary Badge */}
+              <div className="p-3.5 bg-brand-cream-light/50 border border-brand-cocoa-border/40 rounded-2xl space-y-1.5 text-xs">
+                <div className="flex items-center justify-between text-brand-cocoa font-semibold">
+                  <span className="text-brand-cocoa-light font-medium">Customer Name:</span>
+                  <span>{orderToDelete.customerName || orderToDelete.contactName || 'Valued Customer'}</span>
+                </div>
+                <div className="flex items-center justify-between text-brand-cocoa font-semibold">
+                  <span className="text-brand-cocoa-light font-medium">Pastry / Cake:</span>
+                  <span>{orderToDelete.cakeType}</span>
+                </div>
+                <div className="flex items-center justify-between text-brand-cocoa font-semibold">
+                  <span className="text-brand-cocoa-light font-medium">Estimated Price:</span>
+                  <span className="text-brand-pink font-bold">{orderToDelete.estimatedPrice || 'N/A'}</span>
+                </div>
+                {orderToDelete.pickupDate && (
+                  <div className="flex items-center justify-between text-brand-cocoa font-semibold">
+                    <span className="text-brand-cocoa-light font-medium">Pickup / Delivery:</span>
+                    <span className="font-mono text-[11px]">{orderToDelete.pickupDate}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="p-3 bg-amber-50 border border-amber-200/80 rounded-xl flex items-start gap-2 text-[11px] text-amber-900 leading-normal">
+                <span className="text-xs">⚠️</span>
+                <span>
+                  This deletion will be logged in the <strong>Security & Activity Audit Log</strong> for administrative recordkeeping.
+                </span>
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="bg-brand-cream-light/30 px-6 py-4 border-t border-brand-cocoa-border/40 flex items-center justify-end gap-3">
+              <button
+                onClick={() => setOrderToDelete(null)}
+                className="px-4 py-2 text-xs font-bold text-brand-cocoa hover:text-brand-pink bg-white border border-brand-cocoa-border hover:bg-brand-cream-light rounded-xl transition-all cursor-pointer shadow-3xs"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDeleteOrder}
+                className="px-4 py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-all cursor-pointer shadow-xs flex items-center gap-1.5"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Permanently Delete Order</span>
+              </button>
             </div>
           </div>
         </div>

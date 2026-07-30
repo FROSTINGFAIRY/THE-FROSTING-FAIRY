@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Search, Flame, Clock, ChefHat, Star, Heart, ArrowRight, ChevronLeft, ChevronRight, ArrowLeft, Sparkles, LayoutGrid, Cake, Cookie } from 'lucide-react';
 import { Recipe } from '../types';
+import { imgBomboloniVanilla } from '../data';
 import { motion } from 'motion/react';
 
 // Custom helper to render premium SVG icons for categories instead of emojis
@@ -139,7 +140,7 @@ const CATEGORY_INFOS = [
     name: 'Bombolonis',
     emoji: '🥯',
     description: 'Pillowy, soft Italian yeast donuts rolled in fine sugar and piping-stuffed with custard, strawberry, or Nutella.',
-    image: 'https://images.unsplash.com/photo-1557827983-012eb6ea8dc1?auto=format&fit=crop&w=600&q=80',
+    image: imgBomboloniVanilla,
     itemCountText: 'Box of 6 Filled Bombolonis',
     startingPrice: 420,
   },

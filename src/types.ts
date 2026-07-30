@@ -92,5 +92,6 @@ export interface MealPlanEntry {
     cardNumber?: string;
     upiId?: string;
   };
+  adminNotes?: string[];
 }
 

@@ -41,7 +41,16 @@ export default function App() {
     const saved = localStorage.getItem(RECIPES_STORAGE_KEY);
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed: Recipe[] = JSON.parse(saved);
+        return parsed.map((item) => {
+          if (!item.image || item.image.includes('pixabay.com/get/')) {
+            const initialMatch = INITIAL_RECIPES.find((r) => r.id === item.id);
+            if (initialMatch) {
+              return { ...item, image: initialMatch.image };
+            }
+          }
+          return item;
+        });
       } catch (e) {
         return INITIAL_RECIPES;
       }
@@ -124,7 +133,11 @@ export default function App() {
         customerName: 'Sarah Jenkins',
         customerPhone: '+91 98765 43210',
         specialInstructions: 'Make it extra pink with floral piping and eggless sponge if possible!',
-        status: 'Baking'
+        status: 'Baking',
+        adminNotes: [
+          'Confirmed eggless sponge formulation with head baker.',
+          'Customer requested extra edible gold glitter dust on top piping.'
+        ]
       },
       {
         id: 'ord-2',
@@ -141,7 +154,10 @@ export default function App() {
         customerName: 'David Miller',
         customerPhone: '+91 91234 56789',
         specialInstructions: 'Please pack in a gift ribbon box, it is for a housewarming surprise!',
-        status: 'Confirmed'
+        status: 'Confirmed',
+        adminNotes: [
+          'Gift wrapping with satin pink ribbon prepped in front showcase.'
+        ]
       }
     ];
   });
