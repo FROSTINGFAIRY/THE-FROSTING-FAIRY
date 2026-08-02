@@ -168,7 +168,7 @@ export default function App() {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        // If it's a legacy ingredient list, clear or reset
+        // If it's a legacy ingredient list or initial sample cart item, clear or filter
         if (parsed.length > 0 && parsed.some((e: any) => e.category === 'Produce' || e.category === 'Dairy & Eggs' || e.category === 'Pantry & Grains')) {
           localStorage.removeItem(SHOPPING_STORAGE_KEY);
         } else {
@@ -179,22 +179,7 @@ export default function App() {
       }
     }
 
-    return [
-      {
-        id: 'cart-1',
-        productId: 'cake-strawberry',
-        name: 'Victoria Strawberry Sponge Cake',
-        category: 'Signature Cakes',
-        selectedOption: '1kg',
-        price: 1100,
-        amount: 1, // Quantity
-        unit: 'Cake',
-        image: 'https://images.unsplash.com/photo-1565958011703-44f9829ba187?auto=format&fit=crop&q=80&w=600',
-        customMessage: 'Happy Anniversary Mom & Dad!',
-        isBought: false,
-        recipeName: 'Madagascar Vanilla whipped cream with fresh strawberry compote layers'
-      }
-    ];
+    return [];
   });
 
   // --- LOCAL PERSISTENCE ---

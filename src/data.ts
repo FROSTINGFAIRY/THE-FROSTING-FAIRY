@@ -34,9 +34,12 @@ import imgBomboloniVanilla from './assets/images/classic_vanilla_custard_bombolo
 import imgBomboloniHazelnut from './assets/images/choco_hazelnut_bombolonies_1784435074139.jpg';
 import imgBomboloniStrawberry from './assets/images/strawberry_burst_bombolonies_1784435088155.jpg';
 
-export { imgBomboloniVanilla, imgBomboloniHazelnut, imgBomboloniStrawberry };
-
 import imgDonutGlazed from './assets/images/classic_glazed_donuts_1784435107615.jpg';
+import imgPinkFrostedDonut from './assets/images/pink_frosted_donut_1785428801914.jpg';
+import imgDonutCaramel from './assets/images/caramel_glazed_donuts_1785429045626.jpg';
+import imgDonutOreos from './assets/images/cookies_cream_donuts_1785429058056.jpg';
+
+export { imgBomboloniVanilla, imgBomboloniHazelnut, imgBomboloniStrawberry, imgPinkFrostedDonut, imgDonutGlazed, imgDonutCaramel, imgDonutOreos };
 
 const makeSvgUrl = (svgContent: string) => `data:image/svg+xml;utf8,${encodeURIComponent(svgContent.trim())}`;
 
@@ -1131,8 +1134,8 @@ export const INITIAL_RECIPES: Recipe[] = [
   {
     id: 'add-donut-glazed',
     name: 'Classic Glazed Donuts',
-    description: 'Pillowy ring donuts glazed with a beautiful, translucent vanilla sugar shell that crackles with every bite. Melt-in-the-mouth soft.',
-    image: 'https://pixabay.com/get/gd34178500e92fa92e3204a599389c052975b8e8a8a3507b92bb8a262b8520930866689b079d9363d55fce25d6ddfe9ecc5ca4c434eaa06f10a962a5d51d31a4a_1280.jpg',
+    description: 'Pillowy ring donuts glazed with a beautiful, translucent vanilla sugar shell and delicate pink frosting with sprinkles. Melt-in-the-mouth soft.',
+    image: imgPinkFrostedDonut,
     prepTime: 25,
     cookTime: 10,
     difficulty: 'Medium',
@@ -1165,7 +1168,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     id: 'add-donut-caramel',
     name: 'Caramel Glazed Donuts',
     description: 'Light, soft yeast-raised ring donuts covered in a thick, buttery house-cooked salted caramel glaze. Perfectly rich and sweet.',
-    image: 'https://pixabay.com/get/gb5453f39b5d880cef1fd2253905e7d7d277aa08d475aef1438bce578e10dd84ec7701a85c58fefd8ff2c38b1e950d78fef01eb9afeb276be1c21c1976bd9b894_1280.jpg',
+    image: imgDonutCaramel,
     prepTime: 25,
     cookTime: 10,
     difficulty: 'Medium',
@@ -1198,7 +1201,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     id: 'add-donut-oreos',
     name: 'Cookies & Cream Donuts',
     description: 'Fluffy ring donuts glazed with creamy white chocolate and loaded with crushed Oreo cookies. The ultimate sweet confection.',
-    image: 'https://pixabay.com/get/gc22dc95f6a9cb76b6bdb348649dc7758f1ce435a29a8c004223ddf12d0bb01cbe3c2b0cedc60f0153991eb3a4aafe2c3ae1e292337bbac093a26f524a90c5c95_1280.jpg',
+    image: imgDonutOreos,
     prepTime: 25,
     cookTime: 12,
     difficulty: 'Medium',

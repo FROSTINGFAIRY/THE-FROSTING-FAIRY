@@ -489,6 +489,7 @@ export default function RecipeDetail({
               </div>
 
               <button
+                type="button"
                 onClick={handleAddToCartClick}
                 className="w-full bg-brand-pink hover:bg-brand-pink-dark text-white font-sans font-bold py-4 rounded-xl transition-all shadow-md shadow-brand-pink/15 flex items-center justify-center gap-2 group cursor-pointer"
               >

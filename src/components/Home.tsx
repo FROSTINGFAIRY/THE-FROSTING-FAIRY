@@ -19,7 +19,7 @@ import {
   Cookie
 } from 'lucide-react';
 import { Recipe } from '../types';
-import { imgBomboloniVanilla } from '../data';
+import { imgBomboloniVanilla, imgPinkFrostedDonut } from '../data';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface HomeProps {
@@ -103,7 +103,7 @@ const CATEGORY_INFOS = [
     name: 'Donuts',
     emoji: '🍩',
     description: 'Pillowy yeast-raised ring donuts coated with glossy vanilla, rich caramel, or white chocolate Oreo glazes.',
-    image: 'https://images.unsplash.com/photo-1614088685112-0a760b71a3c8?auto=format&fit=crop&w=600&q=80',
+    image: imgPinkFrostedDonut,
     itemCountText: 'Box of 6 Fluffy Ring Donuts',
     startingPrice: 420,
   },
