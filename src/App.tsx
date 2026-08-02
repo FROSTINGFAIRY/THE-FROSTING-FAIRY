@@ -103,63 +103,20 @@ export default function App() {
     localStorage.setItem('gusto_theme', theme);
   }, [theme]);
 
-  // Default orders to populate the custom planner and make it feel alive immediately
   const [mealPlan, setMealPlan] = useState<MealPlanEntry[]>(() => {
     const saved = localStorage.getItem(PLAN_STORAGE_KEY);
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        // One-time cleanup: strip the old hardcoded demo orders ("ord-1"/"ord-2")
+        // in case they were already seeded into this browser before this fix.
+        return parsed.filter((o: MealPlanEntry) => o.id !== 'ord-1' && o.id !== 'ord-2');
       } catch (e) {
         // Fallback
       }
     }
 
-    const vanillaCake = INITIAL_RECIPES.find((r) => r.id === 'cake-vanilla') || INITIAL_RECIPES[0];
-    const cinnamonRolls = INITIAL_RECIPES.find((r) => r.id === 'add-roll-cream-cheese') || INITIAL_RECIPES[14];
-
-    return [
-      {
-        id: 'ord-1',
-        day: 'Today',
-        mealType: 'Baking',
-        recipe: vanillaCake,
-        cakeType: 'Classic Vanilla Cake',
-        flavor: 'Madagascar Vanilla Bean Buttercream',
-        weight: '1kg',
-        message: 'Happy Birthday Sarah!',
-        pickupDate: '2026-07-16',
-        pickupTime: '15:30',
-        estimatedPrice: 900,
-        customerName: 'Sarah Jenkins',
-        customerPhone: '+91 98765 43210',
-        specialInstructions: 'Make it extra pink with floral piping and eggless sponge if possible!',
-        status: 'Baking',
-        adminNotes: [
-          'Confirmed eggless sponge formulation with head baker.',
-          'Customer requested extra edible gold glitter dust on top piping.'
-        ]
-      },
-      {
-        id: 'ord-2',
-        day: 'Friday',
-        mealType: 'Confirmed',
-        recipe: cinnamonRolls,
-        cakeType: 'Cream Cheese Glaze Cinnamon Rolls',
-        flavor: 'Cream Cheese Glaze',
-        weight: 'Box of 6',
-        message: '',
-        pickupDate: '2026-07-18',
-        pickupTime: '10:00',
-        estimatedPrice: 480,
-        customerName: 'David Miller',
-        customerPhone: '+91 91234 56789',
-        specialInstructions: 'Please pack in a gift ribbon box, it is for a housewarming surprise!',
-        status: 'Confirmed',
-        adminNotes: [
-          'Gift wrapping with satin pink ribbon prepped in front showcase.'
-        ]
-      }
-    ];
+    return [];
   });
 
   // Default shopping list (repurposed as Shopping Cart in e-commerce)
