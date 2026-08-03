@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Search, Flame, Clock, ChefHat, Star, Heart, ArrowRight, ChevronLeft, ChevronRight, ArrowLeft, Sparkles, LayoutGrid, Cake, Cookie } from 'lucide-react';
-import { Recipe } from '../types';
-import { imgBomboloniVanilla, imgPinkFrostedDonut } from '../data';
+import { Recipe, CategoryInfo } from '../types';
+import { imgBomboloniVanilla, imgPinkFrostedDonut, INITIAL_CATEGORY_INFOS } from '../data';
 import { motion } from 'motion/react';
 
 // Custom helper to render premium SVG icons for categories instead of emojis
@@ -38,7 +38,7 @@ const getCategoryIcon = (name: string, isActive: boolean) => {
 export function getRecipeImages(recipe: { id: string; category: string; image: string }): string[] {
   const defaultImages = {
     'Signature Cakes': [
-      'https://images.unsplash.com/photo-1535141192574-5d4897c13636?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1535254973040-607b474cb50d?auto=format&fit=crop&w=800&q=80',
       'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=800&q=80',
       'https://images.unsplash.com/photo-1565958011703-44f9829ba187?auto=format&fit=crop&w=800&q=80',
       'https://images.unsplash.com/photo-1586985289688-ca9cf499150a?auto=format&fit=crop&w=800&q=80',
@@ -95,67 +95,9 @@ export function getRecipeImages(recipe: { id: string; category: string; image: s
   return result;
 }
 
-const CATEGORY_INFOS = [
-  {
-    name: 'Signature Cakes',
-    emoji: '🎂',
-    description: 'Bespoke layered sponge cakes whipped with silky buttercreams, premium chocolates, and fresh organic fruits.',
-    image: 'https://images.unsplash.com/photo-1535141192574-5d4897c13636?auto=format&fit=crop&w=600&q=80',
-    itemCountText: 'Premium Tiered Cakes',
-    startingPrice: 500,
-  },
-  {
-    name: 'Cupcakes',
-    emoji: '🧁',
-    description: 'Perfect, beautifully frosted individual treats topped with elegant piping and sprinkles of fairy dust.',
-    image: 'https://images.unsplash.com/photo-1576618148400-f54bed99fcfd?auto=format&fit=crop&w=600&q=80',
-    itemCountText: 'Fluffy Personal Swirls',
-    startingPrice: 120,
-  },
-  {
-    name: 'Brownies',
-    emoji: '🍫',
-    description: 'Deep, rich, fudgy squares featuring chocolate-crackle crusts and premium imported Belgian cocoa.',
-    image: 'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=600&q=80',
-    itemCountText: 'Belgian Chocolate Fudge',
-    startingPrice: 150,
-  },
-  {
-    name: 'Cookies',
-    emoji: '🍪',
-    description: 'Warm, crispy on the outside, and incredibly soft-chewy on the inside, stuffed with premium chocolate chunks.',
-    image: 'https://images.unsplash.com/photo-1499636136210-6f4ee915583e?auto=format&fit=crop&w=600&q=80',
-    itemCountText: 'Artisanal Chewy Cookies',
-    startingPrice: 90,
-  },
-  {
-    name: 'Donuts',
-    emoji: '🍩',
-    description: 'Pillowy yeast-raised ring donuts coated with glossy vanilla, rich caramel, or white chocolate Oreo glazes.',
-    image: imgPinkFrostedDonut,
-    itemCountText: 'Box of 6 Fluffy Ring Donuts',
-    startingPrice: 420,
-  },
-  {
-    name: 'Bombolonis',
-    emoji: '🥯',
-    description: 'Pillowy, soft Italian yeast donuts rolled in fine sugar and piping-stuffed with custard, strawberry, or Nutella.',
-    image: imgBomboloniVanilla,
-    itemCountText: 'Box of 6 Filled Bombolonis',
-    startingPrice: 420,
-  },
-  {
-    name: 'New Additions',
-    emoji: '✨',
-    description: 'Warm, soft, pillowy rolls swirled with sweet cassia cinnamon butter and covered with gourmet glazes.',
-    image: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=600&q=80',
-    itemCountText: 'Warm Cinnamon Rolls & Specials',
-    startingPrice: 400,
-  }
-];
-
 interface DashboardProps {
   recipes: Recipe[];
+  categoryInfos?: CategoryInfo[];
   onSelectRecipe: (recipe: Recipe) => void;
   onToggleFavorite: (recipeId: string) => void;
   activeCategory: string;
@@ -167,6 +109,7 @@ interface DashboardProps {
 
 export default function Dashboard({
   recipes,
+  categoryInfos: passedCategoryInfos,
   onSelectRecipe,
   onToggleFavorite,
   activeCategory,
@@ -175,6 +118,9 @@ export default function Dashboard({
   websiteName,
   websiteSlogan,
 }: DashboardProps) {
+  const categoryInfos = passedCategoryInfos && passedCategoryInfos.length > 0
+    ? passedCategoryInfos
+    : INITIAL_CATEGORY_INFOS;
   const [searchQuery, setSearchQuery] = useState('');
   const [recipeImageIndexes, setRecipeImageIndexes] = useState<Record<string, number>>({});
 
@@ -392,51 +338,89 @@ export default function Dashboard({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {CATEGORY_INFOS.map((cat, idx) => (
-              <motion.div
-                key={cat.name}
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: idx * 0.08 }}
-                onClick={() => setActiveCategory(cat.name)}
-                className="bg-white rounded-2xl border border-brand-cocoa-border overflow-hidden shadow-xs hover:shadow-md hover:border-brand-pink-accent/40 transition-all duration-350 cursor-pointer group flex flex-col"
-              >
-                {/* Visual Category Photo Overlay */}
-                <div className="h-56 overflow-hidden relative bg-brand-cream-light">
-                  <img
-                    src={cat.image}
-                    alt={cat.name}
-                    className="w-full h-full object-cover transition-transform duration-750 group-hover:scale-105"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent flex flex-col justify-end p-5 text-left">
-                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-brand-pink-light/90 flex items-center gap-1.5 mb-1">
-                      {getCategoryIcon(cat.name, false)}
-                      <span>{cat.itemCountText}</span>
-                    </span>
-                    <h4 className="font-display font-black text-xl text-white uppercase tracking-tight">
-                      {cat.name}
-                    </h4>
-                  </div>
-                  {/* Hover Floating action indicator */}
-                  <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-xs w-9 h-9 rounded-full border border-brand-cocoa-border/40 flex items-center justify-center text-brand-cocoa opacity-0 group-hover:opacity-100 transition-all shadow-sm">
-                    <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
-                  </div>
-                </div>
+            {categoryInfos.map((cat, idx) => {
+              const displayImg = cat.imageUrl || cat.image;
+              const hasImg = Boolean(displayImg && displayImg.trim() !== '');
 
-                {/* Info details */}
-                <div className="p-5 flex-1 flex flex-col justify-between text-left space-y-4">
-                  <p className="text-xs text-brand-cocoa-light leading-relaxed">
-                    {cat.description}
-                  </p>
-                  <div className="flex items-center justify-between pt-3 border-t border-brand-cocoa-border/30">
-                    <span className="text-[9px] font-mono text-brand-cocoa-light/70 uppercase">Starting From</span>
-                    <span className="text-sm font-sans font-semibold text-brand-pink">
-                      ₹{cat.startingPrice}
-                    </span>
+              return (
+                <motion.div
+                  key={cat.name}
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: idx * 0.08 }}
+                  onClick={() => setActiveCategory(cat.name)}
+                  className="bg-white rounded-2xl border border-brand-cocoa-border overflow-hidden shadow-xs hover:shadow-md hover:border-brand-pink-accent/40 transition-all duration-350 cursor-pointer group flex flex-col"
+                >
+                  {/* Visual Category Photo Overlay */}
+                  <div className="h-56 overflow-hidden relative bg-gradient-to-br from-brand-cream-light via-brand-pink-light/20 to-brand-cream">
+                    {hasImg ? (
+                      <>
+                        <img
+                          src={displayImg}
+                          alt={cat.name}
+                          onError={(e) => {
+                            (e.target as HTMLElement).style.display = 'none';
+                            const parent = (e.target as HTMLElement).parentElement;
+                            if (parent) {
+                              const placeholder = parent.querySelector('.dash-cat-fallback-ph');
+                              if (placeholder) (placeholder as HTMLElement).classList.remove('hidden');
+                            }
+                          }}
+                          className="w-full h-full object-cover transition-transform duration-750 group-hover:scale-105"
+                        />
+                        <div className="dash-cat-fallback-ph hidden absolute inset-0 bg-gradient-to-br from-brand-cream via-brand-pink-light/40 to-brand-cream-light flex flex-col items-center justify-center p-6 text-center">
+                          <div className="w-14 h-14 rounded-full bg-white/95 border border-brand-pink/30 flex items-center justify-center text-2xl shadow-sm mb-2">
+                            {cat.emoji || '✨'}
+                          </div>
+                          <span className="font-display font-bold text-sm text-brand-cocoa uppercase tracking-wide">
+                            {cat.name}
+                          </span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-brand-cream via-brand-pink-light/35 to-brand-cream-light flex flex-col items-center justify-center p-6 text-center">
+                        <div className="w-16 h-16 rounded-full bg-white/95 border border-brand-pink/30 flex items-center justify-center text-3xl shadow-sm mb-3 transition-transform group-hover:scale-110">
+                          {cat.emoji || '✨'}
+                        </div>
+                        <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-brand-pink mb-1">
+                          ✨ {cat.itemCountText}
+                        </span>
+                        <h4 className="font-display font-black text-lg text-brand-cocoa uppercase tracking-tight">
+                          {cat.name}
+                        </h4>
+                      </div>
+                    )}
+
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent flex flex-col justify-end p-5 text-left">
+                      <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-brand-pink-light/90 flex items-center gap-1.5 mb-1">
+                        {getCategoryIcon(cat.name, false)}
+                        <span>{cat.itemCountText}</span>
+                      </span>
+                      <h4 className="font-display font-black text-xl text-white uppercase tracking-tight">
+                        {cat.name}
+                      </h4>
+                    </div>
+                    {/* Hover Floating action indicator */}
+                    <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-xs w-9 h-9 rounded-full border border-brand-cocoa-border/40 flex items-center justify-center text-brand-cocoa opacity-0 group-hover:opacity-100 transition-all shadow-sm">
+                      <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+                    </div>
                   </div>
-                </div>
-              </motion.div>
-            ))}
+
+                  {/* Info details */}
+                  <div className="p-5 flex-1 flex flex-col justify-between text-left space-y-4">
+                    <p className="text-xs text-brand-cocoa-light leading-relaxed">
+                      {cat.description}
+                    </p>
+                    <div className="flex items-center justify-between pt-3 border-t border-brand-cocoa-border/30">
+                      <span className="text-[9px] font-mono text-brand-cocoa-light/70 uppercase">Starting From</span>
+                      <span className="text-sm font-sans font-semibold text-brand-pink">
+                        ₹{cat.startingPrice}
+                      </span>
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
           </div>
         </section>
       ) : (
@@ -462,7 +446,7 @@ export default function Dashboard({
           {/* Gorgeous Category Billboard Spotlight */}
           {activeCategory !== 'All' && (
             (() => {
-              const currentCatInfo = CATEGORY_INFOS.find(c => c.name === activeCategory);
+              const currentCatInfo = categoryInfos.find(c => c.name === activeCategory);
               if (!currentCatInfo) return null;
               return (
                 <motion.div

@@ -62,6 +62,16 @@ export interface ShoppingItem {
   recipeName?: string;
 }
 
+export interface CategoryInfo {
+  name: string;
+  emoji: string;
+  description: string;
+  image?: string;
+  imageUrl?: string;
+  itemCountText: string;
+  startingPrice: number;
+}
+
 export type MealType = 'Breakfast' | 'Lunch' | 'Dinner';
 
 export interface MealPlanEntry {

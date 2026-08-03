@@ -1,4 +1,4 @@
-import { Recipe } from './types';
+import { Recipe, CategoryInfo } from './types';
 
 import imgCakeVanilla from './assets/images/classic_vanilla_cake_1784434668508.jpg';
 import imgCakeChocolate from './assets/images/chocolate_cake_1784434686481.jpg';
@@ -40,6 +40,72 @@ import imgDonutCaramel from './assets/images/caramel_glazed_donuts_1785429045626
 import imgDonutOreos from './assets/images/cookies_cream_donuts_1785429058056.jpg';
 
 export { imgBomboloniVanilla, imgBomboloniHazelnut, imgBomboloniStrawberry, imgPinkFrostedDonut, imgDonutGlazed, imgDonutCaramel, imgDonutOreos };
+
+export const INITIAL_CATEGORY_INFOS: CategoryInfo[] = [
+  {
+    name: 'Signature Cakes',
+    emoji: '🎂',
+    description: 'Bespoke layered sponge cakes whipped with silky buttercreams, premium chocolates, and fresh organic fruits.',
+    image: 'https://images.unsplash.com/photo-1535254973040-607b474cb50d?auto=format&fit=crop&w=600&q=80',
+    imageUrl: 'https://images.unsplash.com/photo-1535254973040-607b474cb50d?auto=format&fit=crop&w=600&q=80',
+    itemCountText: 'Premium Tiered Cakes',
+    startingPrice: 500,
+  },
+  {
+    name: 'Cupcakes',
+    emoji: '🧁',
+    description: 'Perfect, beautifully frosted individual treats topped with elegant piping and sprinkles of fairy dust.',
+    image: 'https://images.unsplash.com/photo-1576618148400-f54bed99fcfd?auto=format&fit=crop&w=600&q=80',
+    imageUrl: 'https://images.unsplash.com/photo-1576618148400-f54bed99fcfd?auto=format&fit=crop&w=600&q=80',
+    itemCountText: 'Fluffy Personal Swirls',
+    startingPrice: 120,
+  },
+  {
+    name: 'Brownies',
+    emoji: '🍫',
+    description: 'Deep, rich, fudgy squares featuring chocolate-crackle crusts and premium imported Belgian cocoa.',
+    image: 'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=600&q=80',
+    imageUrl: 'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=600&q=80',
+    itemCountText: 'Belgian Chocolate Fudge',
+    startingPrice: 150,
+  },
+  {
+    name: 'Cookies',
+    emoji: '🍪',
+    description: 'Warm, crispy on the outside, and incredibly soft-chewy on the inside, stuffed with premium chocolate chunks.',
+    image: 'https://images.unsplash.com/photo-1499636136210-6f4ee915583e?auto=format&fit=crop&w=600&q=80',
+    imageUrl: 'https://images.unsplash.com/photo-1499636136210-6f4ee915583e?auto=format&fit=crop&w=600&q=80',
+    itemCountText: 'Artisanal Chewy Cookies',
+    startingPrice: 90,
+  },
+  {
+    name: 'Donuts',
+    emoji: '🍩',
+    description: 'Pillowy yeast-raised ring donuts coated with glossy vanilla, rich caramel, or white chocolate Oreo glazes.',
+    image: imgPinkFrostedDonut,
+    imageUrl: imgPinkFrostedDonut,
+    itemCountText: 'Box of 6 Fluffy Ring Donuts',
+    startingPrice: 420,
+  },
+  {
+    name: 'Bombolonis',
+    emoji: '🥯',
+    description: 'Pillowy, soft Italian yeast donuts rolled in fine sugar and piping-stuffed with custard, strawberry, or Nutella.',
+    image: imgBomboloniVanilla,
+    imageUrl: imgBomboloniVanilla,
+    itemCountText: 'Box of 6 Filled Bombolonis',
+    startingPrice: 420,
+  },
+  {
+    name: 'New Additions',
+    emoji: '✨',
+    description: 'Warm, soft, pillowy rolls swirled with sweet cassia cinnamon butter and covered with gourmet glazes.',
+    image: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=600&q=80',
+    imageUrl: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=600&q=80',
+    itemCountText: 'Warm Cinnamon Rolls & Specials',
+    startingPrice: 400,
+  }
+];
 
 const makeSvgUrl = (svgContent: string) => `data:image/svg+xml;utf8,${encodeURIComponent(svgContent.trim())}`;
 

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   DollarSign, 
-  Image, 
+  Image as ImageIcon, 
   Sparkles, 
   RotateCcw, 
   Save, 
@@ -39,9 +39,9 @@ import {
   AlertCircle,
   X
 } from 'lucide-react';
-import { Recipe, PriceOption, MealPlanEntry } from '../types';
+import { Recipe, PriceOption, MealPlanEntry, CategoryInfo } from '../types';
 import { motion } from 'motion/react';
-import { INITIAL_RECIPES } from '../data';
+import { INITIAL_RECIPES, INITIAL_CATEGORY_INFOS } from '../data';
 import defaultLogoImg from '../assets/images/frosting_fairy_logo_1784129178255.jpg';
 import { PerformanceDashboard } from './PerformanceDashboard';
 
@@ -67,6 +67,8 @@ const decodeJwt = (token: string) => {
 interface AdminDashboardProps {
   recipes: Recipe[];
   setRecipes: React.Dispatch<React.SetStateAction<Recipe[]>>;
+  categoryInfos?: CategoryInfo[];
+  setCategoryInfos?: React.Dispatch<React.SetStateAction<CategoryInfo[]>>;
   logo: string;
   setLogo: (logo: string) => void;
   websiteName: string;
@@ -95,7 +97,7 @@ const LOGO_PRESETS = [
 
 // Preset high-fidelity pastry display image presets for quick selection
 const PRODUCT_IMAGE_PRESETS = [
-  { name: 'Princess Pink Buttercream Cake', url: 'https://images.unsplash.com/photo-1535141192574-5d4897c13636?auto=format&fit=crop&w=600&q=80' },
+  { name: 'Princess Pink Buttercream Cake', url: 'https://images.unsplash.com/photo-1535254973040-607b474cb50d?auto=format&fit=crop&w=600&q=80' },
   { name: 'Silky Belgian Chocolate Cake', url: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=600&q=80' },
   { name: 'Artisanal Victoria Strawberry Sponge', url: 'https://images.unsplash.com/photo-1565958011703-44f9829ba187?auto=format&fit=crop&q=80&w=600' },
   { name: 'Red Velvet White Ganache Tower', url: 'https://images.unsplash.com/photo-1586985289688-ca9cf499150a?auto=format&fit=crop&w=600&q=80' },
@@ -109,6 +111,8 @@ const PRODUCT_IMAGE_PRESETS = [
 export default function AdminDashboard({
   recipes,
   setRecipes,
+  categoryInfos: passedCategoryInfos,
+  setCategoryInfos,
   logo,
   setLogo,
   websiteName,
@@ -125,8 +129,140 @@ export default function AdminDashboard({
   cashOnDeliveryEnabled,
   setCashOnDeliveryEnabled,
 }: AdminDashboardProps) {
-  const [adminTab, setAdminTab] = useState<'overview' | 'products' | 'branding' | 'authority' | 'orders'>('overview');
+  const [adminTab, setAdminTab] = useState<'overview' | 'products' | 'categories' | 'branding' | 'authority' | 'orders'>('overview');
   const [searchQuery, setSearchQuery] = useState('');
+
+  const categoryInfos = passedCategoryInfos && passedCategoryInfos.length > 0
+    ? passedCategoryInfos
+    : INITIAL_CATEGORY_INFOS;
+
+  // Category management states
+  const [categoryPreviews, setCategoryPreviews] = useState<Record<string, string>>({});
+  const [categoryInputs, setCategoryInputs] = useState<Record<string, { description?: string; itemCountText?: string; startingPrice?: number; imageUrl?: string }>>({});
+  const [categoryUploading, setCategoryUploading] = useState<Record<string, boolean>>({});
+  const [isCategoriesConfigExpanded, setIsCategoriesConfigExpanded] = useState(true);
+
+  const compressCategoryFile = (file: File, maxWidth = 800, quality = 0.8): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
+      if (!file.type || !allowedTypes.includes(file.type.toLowerCase())) {
+        return reject(new Error('Invalid image format. Please upload a JPG, PNG, or WEBP file.'));
+      }
+
+      if (file.size > 10 * 1024 * 1024) {
+        return reject(new Error('File is too large (>10MB). Please select a smaller file.'));
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new window.Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            return reject(new Error('Failed to get canvas context'));
+          }
+
+          ctx.drawImage(img, 0, 0, width, height);
+          const dataUrl = canvas.toDataURL('image/jpeg', quality);
+          resolve(dataUrl);
+        };
+
+        img.onerror = () => reject(new Error('Failed to load image for compression.'));
+        img.src = e.target?.result as string;
+      };
+
+      reader.onerror = () => reject(new Error('Failed to read image file.'));
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleCategoryFileSelect = async (catName: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setCategoryUploading((prev) => ({ ...prev, [catName]: true }));
+
+    try {
+      const compressedDataUrl = await compressCategoryFile(file, 800, 0.8);
+
+      // Show live preview immediately
+      setCategoryPreviews((prev) => ({
+        ...prev,
+        [catName]: compressedDataUrl,
+      }));
+
+      addToast('Live Preview Loaded', `Selected image for ${catName}. Click "Save Category" to apply.`, 'info');
+    } catch (err: any) {
+      addToast('Upload Error', err?.message || 'Failed to process image file.', 'warning');
+    } finally {
+      setCategoryUploading((prev) => ({ ...prev, [catName]: false }));
+      e.target.value = '';
+    }
+  };
+
+  const handleSaveCategory = (catName: string) => {
+    const newImageUrl = categoryPreviews[catName] !== undefined
+      ? categoryPreviews[catName]
+      : (categoryInputs[catName]?.imageUrl ?? categoryInfos.find((c) => c.name === catName)?.imageUrl);
+
+    const updatedCategories = categoryInfos.map((c) => {
+      if (c.name === catName) {
+        return {
+          ...c,
+          imageUrl: newImageUrl,
+          image: newImageUrl || c.image,
+          description: categoryInputs[catName]?.description ?? c.description,
+          startingPrice: categoryInputs[catName]?.startingPrice ?? c.startingPrice,
+          itemCountText: categoryInputs[catName]?.itemCountText ?? c.itemCountText,
+        };
+      }
+      return c;
+    });
+
+    if (setCategoryInfos) {
+      setCategoryInfos(updatedCategories);
+    }
+
+    setCategoryPreviews((prev) => {
+      const copy = { ...prev };
+      delete copy[catName];
+      return copy;
+    });
+
+    addToast('Category Saved', `Successfully updated "${catName}" cover image!`, 'success');
+  };
+
+  const handleRemoveCategoryImage = (catName: string) => {
+    setCategoryPreviews((prev) => ({
+      ...prev,
+      [catName]: '',
+    }));
+
+    const updatedCategories = categoryInfos.map((c) => {
+      if (c.name === catName) {
+        return { ...c, imageUrl: '', image: '' };
+      }
+      return c;
+    });
+
+    if (setCategoryInfos) {
+      setCategoryInfos(updatedCategories);
+    }
+
+    addToast('Image Cleared', `Removed image for "${catName}". Card will show a clean soft placeholder.`, 'info');
+  };
 
   // --- INSTAGRAM DM CONFIGURATION ---
   const [instaToken, setInstaToken] = useState(() => localStorage.getItem('gusto_insta_token') || '');
@@ -545,7 +681,7 @@ export default function AdminDashboard({
     }
     setIsAddingNewProduct(true);
     setEditName('');
-    setEditImage('https://images.unsplash.com/photo-1535141192574-5d4897c13636?auto=format&fit=crop&w=600&q=80'); // nice default
+    setEditImage('https://images.unsplash.com/photo-1535254973040-607b474cb50d?auto=format&fit=crop&w=600&q=80'); // nice default
     setEditDescription('');
     setEditCategory('Signature Cakes');
     setEditPriceOptions([{ label: 'Standard', price: 500 }]);
@@ -578,7 +714,7 @@ export default function AdminDashboard({
       id: newId,
       name: editName.trim(),
       description: editDescription.trim() || `${editName} - A delicious handcrafted pastry from The Frosting Fairy.`,
-      image: editImage.trim() || 'https://images.unsplash.com/photo-1535141192574-5d4897c13636?auto=format&fit=crop&w=600&q=80',
+      image: editImage.trim() || 'https://images.unsplash.com/photo-1535254973040-607b474cb50d?auto=format&fit=crop&w=600&q=80',
       prepTime: 15,
       cookTime: 20,
       difficulty: 'Easy',
@@ -1451,6 +1587,17 @@ export default function AdminDashboard({
             <span>Manage Product Prices & Pictures</span>
           </button>
           <button
+            onClick={() => setAdminTab('categories')}
+            className={`px-5 py-3 font-semibold text-sm transition-all border-b-2 flex items-center gap-2 cursor-pointer ${
+              adminTab === 'categories'
+                ? 'border-brand-pink text-brand-pink font-bold border-brand-pink'
+                : 'border-transparent text-brand-cocoa-light hover:text-brand-cocoa'
+            }`}
+          >
+            <Sparkles className="w-4 h-4 text-brand-pink fill-brand-pink/20" />
+            <span>Homepage Categories</span>
+          </button>
+          <button
             onClick={() => setAdminTab('branding')}
             className={`px-5 py-3 font-semibold text-sm transition-all border-b-2 flex items-center gap-2 cursor-pointer ${
               adminTab === 'branding'
@@ -1566,13 +1713,20 @@ export default function AdminDashboard({
                 <h4 className="font-sans font-bold text-xs uppercase tracking-wider text-brand-cocoa">
                   Quick Management Shortcuts
                 </h4>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                   <button
                     onClick={() => setAdminTab('products')}
                     className="p-3 bg-brand-cream-light/30 hover:bg-brand-pink-light/40 border border-brand-cocoa-border/40 rounded-xl text-center group cursor-pointer transition-all animate-none h-auto w-auto"
                   >
                     <span className="text-lg block group-hover:scale-110 transition-transform">🎂</span>
                     <span className="text-[11px] font-bold text-brand-cocoa block mt-1">Manage Menu</span>
+                  </button>
+                  <button
+                    onClick={() => setAdminTab('categories')}
+                    className="p-3 bg-brand-cream-light/30 hover:bg-brand-pink-light/40 border border-brand-cocoa-border/40 rounded-xl text-center group cursor-pointer transition-all animate-none h-auto w-auto"
+                  >
+                    <span className="text-lg block group-hover:scale-110 transition-transform">✨</span>
+                    <span className="text-[11px] font-bold text-brand-cocoa block mt-1">Categories</span>
                   </button>
                   <button
                     onClick={() => setAdminTab('branding')}
@@ -2015,7 +2169,7 @@ export default function AdminDashboard({
                   {/* DISPLAY PICTURE PRESETS */}
                   <div className="bg-white p-4.5 rounded-2xl border border-brand-cocoa-border shadow-2xs flex-1 flex flex-col">
                     <h4 className="font-display font-bold text-xs text-brand-cocoa uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                      <Image className="w-3.5 h-3.5 text-brand-pink" />
+                      <ImageIcon className="w-3.5 h-3.5 text-brand-pink" />
                       <span>Display Photo Library</span>
                     </h4>
                     <p className="text-[10px] text-brand-cocoa-light leading-relaxed mb-3">
@@ -2430,7 +2584,7 @@ export default function AdminDashboard({
                           <img src={editImage} alt="Card Preview" className="w-full h-full object-cover" />
                         ) : (
                           <div className="flex flex-col items-center justify-center p-4 text-center">
-                            <Image className="w-8 h-8 text-brand-cocoa-light/60 mb-1" />
+                            <ImageIcon className="w-8 h-8 text-brand-cocoa-light/60 mb-1" />
                             <span className="font-mono text-[10px] text-brand-cocoa-light">No photo provided</span>
                           </div>
                         )}
@@ -2461,7 +2615,7 @@ export default function AdminDashboard({
                   {/* PICTURE OF DISPLAY PRODUCT CHANGER PRESETS */}
                   <div className="bg-white p-4.5 rounded-2xl border border-brand-cocoa-border shadow-2xs flex-1 flex flex-col">
                     <h4 className="font-display font-bold text-xs text-brand-cocoa uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                      <Image className="w-3.5 h-3.5 text-brand-pink" />
+                      <ImageIcon className="w-3.5 h-3.5 text-brand-pink" />
                       <span>Display Photo Library</span>
                     </h4>
                     <p className="text-[10px] text-brand-cocoa-light leading-relaxed mb-3">
@@ -2499,6 +2653,236 @@ export default function AdminDashboard({
             )}
           </div>
 
+        </div>
+      )}
+
+      {/* TAB CONTENT: SIGNATURE CATEGORIES MANAGEMENT */}
+      {adminTab === 'categories' && (
+        <div className="bg-white rounded-2xl border border-brand-cocoa-border shadow-2xs overflow-hidden">
+          {/* Header */}
+          <div className="w-full px-6 md:px-8 py-5 flex flex-col md:flex-row md:items-center justify-between gap-4 text-left bg-gradient-to-r from-brand-cream-light/40 via-brand-pink-light/20 to-brand-cream-light/40 border-b border-brand-cocoa-border/30">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-brand-pink/15 text-brand-pink rounded-xl shadow-3xs">
+                <Sparkles className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-display font-bold text-base text-brand-cocoa flex items-center gap-2">
+                  <span>✨ Homepage Categories</span>
+                </h3>
+                <p className="text-[11px] text-brand-cocoa-light mt-0.5">
+                  Manage cover images, descriptions, starting prices, and badges for each category card on the Home Page and Discover catalog.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 self-start md:self-auto">
+              <span className="text-[10px] font-mono uppercase bg-brand-pink/10 text-brand-pink px-3 py-1 rounded-full border border-brand-pink-accent/20 font-bold">
+                {categoryInfos.length} Categories Configured
+              </span>
+            </div>
+          </div>
+
+          <div className="p-6 md:p-8 space-y-8 text-left">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {categoryInfos.map((cat) => {
+                const preview = categoryPreviews[cat.name];
+                const currentImg = cat.imageUrl || cat.image;
+                const displayImg = preview !== undefined ? preview : currentImg;
+                const hasImg = Boolean(displayImg && displayImg.trim() !== '');
+                const isUploading = Boolean(categoryUploading[cat.name]);
+                const inputState = categoryInputs[cat.name] || {};
+
+                return (
+                  <div
+                    key={cat.name}
+                    className="bg-brand-cream-light/20 rounded-2xl border border-brand-cocoa-border/60 p-5 space-y-4 hover:border-brand-pink/50 transition-all flex flex-col justify-between"
+                  >
+                    {/* Category Header */}
+                    <div className="flex items-center justify-between border-b border-brand-cocoa-border/30 pb-3">
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-2xl p-1.5 bg-white rounded-xl border border-brand-cocoa-border/40 shadow-3xs">
+                          {cat.emoji || '✨'}
+                        </span>
+                        <div>
+                          <h4 className="font-display font-extrabold text-sm text-brand-cocoa uppercase tracking-tight">
+                            {cat.name}
+                          </h4>
+                          <span className="text-[9px] font-mono text-brand-cocoa-light/80 block">
+                            {inputState.itemCountText ?? cat.itemCountText}
+                          </span>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-mono font-bold text-brand-pink bg-brand-pink/10 px-2.5 py-1 rounded-full border border-brand-pink/20">
+                        From ₹{inputState.startingPrice ?? cat.startingPrice}
+                      </span>
+                    </div>
+
+                    {/* Cover Image Preview Box */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="font-mono text-[9px] uppercase tracking-wider text-brand-cocoa-light/90 font-bold">
+                          Cover Photo
+                        </label>
+                        {preview !== undefined && (
+                          <span className="text-[9px] font-mono text-brand-pink font-extrabold animate-pulse">
+                            ⚡ LIVE PREVIEW (UNSAVED)
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="relative h-44 rounded-xl border border-brand-cocoa-border overflow-hidden bg-brand-cream-light/60 group">
+                        {hasImg ? (
+                          <img
+                            src={displayImg}
+                            alt={cat.name}
+                            className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-brand-cream via-brand-pink-light/30 to-brand-cream-light flex flex-col items-center justify-center p-4 text-center">
+                            <div className="w-12 h-12 rounded-full bg-white/90 border border-brand-pink/30 flex items-center justify-center text-2xl shadow-sm mb-1.5">
+                              {cat.emoji || '✨'}
+                            </div>
+                            <span className="text-[10px] font-mono text-brand-cocoa-light font-bold">
+                              Clean Soft Placeholder
+                            </span>
+                            <span className="text-[9px] text-brand-cocoa-light/60 font-mono">
+                              (No custom image uploaded)
+                            </span>
+                          </div>
+                        )}
+
+                        {isUploading && (
+                          <div className="absolute inset-0 bg-black/60 backdrop-blur-xs flex flex-col items-center justify-center text-white text-xs font-bold gap-2">
+                            <Loader2 className="w-6 h-6 animate-spin text-brand-pink" />
+                            <span>Compressing Image...</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Description & Price inputs */}
+                    <div className="space-y-3">
+                      <div>
+                        <label className="font-mono text-[9px] uppercase tracking-wider text-brand-cocoa-light/90 block font-bold mb-1">
+                          Category Description
+                        </label>
+                        <textarea
+                          rows={2}
+                          value={inputState.description ?? cat.description}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setCategoryInputs((prev) => ({
+                              ...prev,
+                              [cat.name]: { ...prev[cat.name], description: val },
+                            }));
+                          }}
+                          className="w-full text-xs p-2 rounded-lg border border-brand-cocoa-border bg-white text-brand-cocoa focus:outline-none focus:ring-1 focus:ring-brand-pink"
+                          placeholder="Category description..."
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="font-mono text-[9px] uppercase tracking-wider text-brand-cocoa-light/90 block font-bold mb-1">
+                            Starting Price (₹)
+                          </label>
+                          <input
+                            type="number"
+                            value={inputState.startingPrice ?? cat.startingPrice}
+                            onChange={(e) => {
+                              const val = Number(e.target.value);
+                              setCategoryInputs((prev) => ({
+                                ...prev,
+                                [cat.name]: { ...prev[cat.name], startingPrice: val },
+                              }));
+                            }}
+                            className="w-full text-xs p-2 rounded-lg border border-brand-cocoa-border bg-white text-brand-cocoa focus:outline-none focus:ring-1 focus:ring-brand-pink font-mono"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="font-mono text-[9px] uppercase tracking-wider text-brand-cocoa-light/90 block font-bold mb-1">
+                            Badge Text
+                          </label>
+                          <input
+                            type="text"
+                            value={inputState.itemCountText ?? cat.itemCountText}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setCategoryInputs((prev) => ({
+                                ...prev,
+                                [cat.name]: { ...prev[cat.name], itemCountText: val },
+                              }));
+                            }}
+                            className="w-full text-xs p-2 rounded-lg border border-brand-cocoa-border bg-white text-brand-cocoa focus:outline-none focus:ring-1 focus:ring-brand-pink"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Upload & Action Controls */}
+                    <div className="space-y-2 pt-2 border-t border-brand-cocoa-border/30">
+                      <input
+                        type="file"
+                        id={`cat-file-upload-${cat.name.replace(/\s+/g, '-')}`}
+                        accept="image/jpeg,image/png,image/webp"
+                        className="hidden"
+                        onChange={(e) => handleCategoryFileSelect(cat.name, e)}
+                      />
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => document.getElementById(`cat-file-upload-${cat.name.replace(/\s+/g, '-')}`)?.click()}
+                          disabled={isUploading}
+                          className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-brand-pink hover:bg-brand-pink-dark text-white text-xs font-bold rounded-xl transition-all cursor-pointer shadow-3xs uppercase tracking-wider"
+                        >
+                          <Upload className="w-3.5 h-3.5" />
+                          <span>{hasImg ? 'Change Photo' : 'Upload Photo'}</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleSaveCategory(cat.name)}
+                          disabled={isUploading}
+                          className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-brand-cocoa hover:bg-brand-cocoa-light text-brand-cream text-xs font-bold rounded-xl transition-all cursor-pointer shadow-3xs uppercase tracking-wider"
+                        >
+                          <CheckCircle className="w-3.5 h-3.5 text-brand-pink" />
+                          <span>Save Category</span>
+                        </button>
+                      </div>
+
+                      {hasImg && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveCategoryImage(cat.name)}
+                          className="w-full text-center text-[10px] font-mono font-bold text-red-600 hover:text-red-700 hover:underline py-1 cursor-pointer block"
+                        >
+                          Remove Photo (Use Soft Placeholder)
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Global Action Footer */}
+            <div className="pt-4 border-t border-brand-cocoa-border/40 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <p className="text-xs text-brand-cocoa-light leading-relaxed">
+                ✨ Category cover photos are automatically resized and compressed to optimized dimensions, converting to lightweight data URLs stored locally.
+              </p>
+              <button
+                onClick={() => {
+                  categoryInfos.forEach((c) => handleSaveCategory(c.name));
+                  addToast('All Categories Saved', 'All category photos and configurations updated successfully!', 'success');
+                }}
+                className="px-6 py-3 bg-brand-cocoa text-brand-cream text-xs font-extrabold rounded-xl hover:bg-brand-cocoa-light transition-all cursor-pointer shadow-md uppercase tracking-wider shrink-0 flex items-center gap-2"
+              >
+                <Save className="w-4 h-4 text-brand-pink" />
+                <span>Save All Categories</span>
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

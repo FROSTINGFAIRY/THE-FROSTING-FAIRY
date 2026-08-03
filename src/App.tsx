@@ -12,8 +12,8 @@ import MealPlanner from './components/MealPlanner';
 import ShoppingList from './components/ShoppingList';
 import RecipeDetail from './components/RecipeDetail';
 import AdminDashboard from './components/AdminDashboard';
-import { INITIAL_RECIPES } from './data';
-import { Recipe, ShoppingItem, MealPlanEntry, MealType } from './types';
+import { INITIAL_RECIPES, INITIAL_CATEGORY_INFOS } from './data';
+import { Recipe, ShoppingItem, MealPlanEntry, MealType, CategoryInfo } from './types';
 import { AnimatePresence, motion } from 'motion/react';
 import { X, Instagram, ArrowLeft } from 'lucide-react';
 
@@ -21,6 +21,7 @@ import { X, Instagram, ArrowLeft } from 'lucide-react';
 const RECIPES_STORAGE_KEY = 'gusto_recipes';
 const PLAN_STORAGE_KEY = 'gusto_meal_plan';
 const SHOPPING_STORAGE_KEY = 'gusto_shopping_list';
+const CATEGORY_STORAGE_KEY = 'gusto_categories';
 
 export default function App() {
   // --- SCHEMA VERSIONING HEURISTIC ---
@@ -83,6 +84,38 @@ export default function App() {
     return saved !== null ? saved === 'true' : true;
   });
 
+  const [categoryInfos, setCategoryInfos] = useState<CategoryInfo[]>(() => {
+    const saved = localStorage.getItem(CATEGORY_STORAGE_KEY);
+    if (saved) {
+      try {
+        const parsed: CategoryInfo[] = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const OLD_DEFAULT = '1535141192574-5d4897c13636';
+          return parsed.map((cat) => {
+            if (cat.name === 'Signature Cakes') {
+              const isOldImage = cat.image && cat.image.includes(OLD_DEFAULT);
+              const isOldImageUrl = cat.imageUrl && cat.imageUrl.includes(OLD_DEFAULT);
+              if (isOldImage || isOldImageUrl) {
+                const initialMatch = INITIAL_CATEGORY_INFOS.find((c) => c.name === 'Signature Cakes');
+                if (initialMatch) {
+                  return {
+                    ...cat,
+                    image: isOldImage ? initialMatch.image : cat.image,
+                    imageUrl: isOldImageUrl ? initialMatch.imageUrl : cat.imageUrl,
+                  };
+                }
+              }
+            }
+            return cat;
+          });
+        }
+      } catch (e) {
+        // Fallback
+      }
+    }
+    return INITIAL_CATEGORY_INFOS;
+  });
+
   const [activeTab, setActiveTab] = useState<string>('home');
   const [activeCategory, setActiveCategory] = useState<string>('All');
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
@@ -103,20 +136,63 @@ export default function App() {
     localStorage.setItem('gusto_theme', theme);
   }, [theme]);
 
+  // Default orders to populate the custom planner and make it feel alive immediately
   const [mealPlan, setMealPlan] = useState<MealPlanEntry[]>(() => {
     const saved = localStorage.getItem(PLAN_STORAGE_KEY);
     if (saved) {
       try {
-        const parsed = JSON.parse(saved);
-        // One-time cleanup: strip the old hardcoded demo orders ("ord-1"/"ord-2")
-        // in case they were already seeded into this browser before this fix.
-        return parsed.filter((o: MealPlanEntry) => o.id !== 'ord-1' && o.id !== 'ord-2');
+        return JSON.parse(saved);
       } catch (e) {
         // Fallback
       }
     }
 
-    return [];
+    const vanillaCake = INITIAL_RECIPES.find((r) => r.id === 'cake-vanilla') || INITIAL_RECIPES[0];
+    const cinnamonRolls = INITIAL_RECIPES.find((r) => r.id === 'add-roll-cream-cheese') || INITIAL_RECIPES[14];
+
+    return [
+      {
+        id: 'ord-1',
+        day: 'Today',
+        mealType: 'Baking',
+        recipe: vanillaCake,
+        cakeType: 'Classic Vanilla Cake',
+        flavor: 'Madagascar Vanilla Bean Buttercream',
+        weight: '1kg',
+        message: 'Happy Birthday Sarah!',
+        pickupDate: '2026-07-16',
+        pickupTime: '15:30',
+        estimatedPrice: 900,
+        customerName: 'Sarah Jenkins',
+        customerPhone: '+91 98765 43210',
+        specialInstructions: 'Make it extra pink with floral piping and eggless sponge if possible!',
+        status: 'Baking',
+        adminNotes: [
+          'Confirmed eggless sponge formulation with head baker.',
+          'Customer requested extra edible gold glitter dust on top piping.'
+        ]
+      },
+      {
+        id: 'ord-2',
+        day: 'Friday',
+        mealType: 'Confirmed',
+        recipe: cinnamonRolls,
+        cakeType: 'Cream Cheese Glaze Cinnamon Rolls',
+        flavor: 'Cream Cheese Glaze',
+        weight: 'Box of 6',
+        message: '',
+        pickupDate: '2026-07-18',
+        pickupTime: '10:00',
+        estimatedPrice: 480,
+        customerName: 'David Miller',
+        customerPhone: '+91 91234 56789',
+        specialInstructions: 'Please pack in a gift ribbon box, it is for a housewarming surprise!',
+        status: 'Confirmed',
+        adminNotes: [
+          'Gift wrapping with satin pink ribbon prepped in front showcase.'
+        ]
+      }
+    ];
   });
 
   // Default shopping list (repurposed as Shopping Cart in e-commerce)
@@ -175,6 +251,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('gusto_cash_on_delivery_enabled', String(cashOnDeliveryEnabled));
   }, [cashOnDeliveryEnabled]);
+
+  useEffect(() => {
+    localStorage.setItem(CATEGORY_STORAGE_KEY, JSON.stringify(categoryInfos));
+  }, [categoryInfos]);
 
   // --- GLOBAL TOAST SYSTEM & STATUS CHANGE DETECTOR ---
   const [toasts, setToasts] = useState<{ id: string; title: string; message: string; type: 'success' | 'info' | 'warning' }[]>([]);
@@ -483,6 +563,7 @@ export default function App() {
         return (
           <Home
             recipes={recipes}
+            categoryInfos={categoryInfos}
             onNavigateToTab={(tab, category) => {
               setTabHistory((prev) => {
                 if (prev.length > 0 && prev[prev.length - 1] === activeTab) return prev;
@@ -502,6 +583,7 @@ export default function App() {
         return (
           <Dashboard
             recipes={recipes}
+            categoryInfos={categoryInfos}
             onSelectRecipe={handleSelectRecipe}
             onToggleFavorite={handleToggleFavorite}
             activeCategory={activeCategory}
@@ -544,6 +626,8 @@ export default function App() {
           <AdminDashboard
             recipes={recipes}
             setRecipes={setRecipes}
+            categoryInfos={categoryInfos}
+            setCategoryInfos={setCategoryInfos}
             logo={logo}
             setLogo={setLogo}
             websiteName={websiteName}
