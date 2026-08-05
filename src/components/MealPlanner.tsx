@@ -88,13 +88,13 @@ export default function MealPlanner({
         <AnimatePresence mode="wait">
           {mealPlan.length > 0 ? (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-12">
-              {mealPlan.map((order) => {
+              {mealPlan.map((order, orderIdx) => {
                 const orderStatus = order.status || 'Pending';
                 const statusTag = getStatusStyle(orderStatus);
 
                 return (
                   <div
-                    key={order.id}
+                    key={`meal-plan-order-${order.id}-${orderIdx}`}
                     id={`order-card-${order.id}`}
                     className="bg-white border border-brand-cocoa-border rounded-2xl overflow-hidden shadow-sm flex flex-col justify-between hover:border-brand-pink-accent/35 transition-all text-left"
                   >

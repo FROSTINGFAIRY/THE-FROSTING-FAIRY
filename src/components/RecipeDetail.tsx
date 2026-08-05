@@ -227,7 +227,7 @@ export default function RecipeDetail({
           <div className="flex gap-2.5 overflow-x-auto pb-2 scrollbar-none justify-start">
             {images.map((imgUrl, idx) => (
               <button
-                key={idx}
+                key={`recipe-thumb-${recipe.id}-${idx}`}
                 onClick={() => setActiveImgIdx(idx)}
                 className={`w-20 h-16 rounded-xl border-2 overflow-hidden transition-all shrink-0 cursor-pointer ${
                   activeImgIdx === idx
@@ -315,7 +315,7 @@ export default function RecipeDetail({
                   const isSelected = selectedOptionIndex === idx;
                   return (
                     <button
-                      key={opt.label}
+                      key={`recipe-opt-${opt.label}-${idx}`}
                       onClick={() => setSelectedOptionIndex(idx)}
                       className={`p-3.5 border rounded-xl text-left transition-all cursor-pointer flex flex-col justify-between ${
                         isSelected

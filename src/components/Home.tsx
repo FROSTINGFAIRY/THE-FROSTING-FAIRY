@@ -378,10 +378,10 @@ export default function Home({
 
         {/* Premium quick category filters: vertical stack on mobile, horizontal row on larger screens */}
         <div className="flex flex-col sm:flex-row sm:flex-wrap justify-center gap-3 mb-10 w-full max-w-sm sm:max-w-none mx-auto px-4 sm:px-0">
-          {['All', ...categoryInfos.map(c => c.name)].map((catName) => {
+          {['All', ...categoryInfos.map(c => c.name)].map((catName, cIdx) => {
             return (
               <button
-                key={catName}
+                key={`home-cat-filter-${catName}-${cIdx}`}
                 onClick={() => onNavigateToTab('discover', catName)}
                 className="group w-full sm:w-auto px-5 py-3 sm:py-2.5 rounded-full border border-brand-cocoa-border/60 hover:border-brand-pink bg-white hover:bg-brand-pink text-brand-cocoa hover:text-white transition-all cursor-pointer shadow-2xs hover:shadow-md flex items-center justify-center sm:justify-start gap-2.5 text-xs font-semibold"
               >
@@ -400,7 +400,7 @@ export default function Home({
 
             return (
               <motion.div
-                key={cat.name}
+                key={`home-cat-cover-${cat.name}-${idx}`}
                 initial={{ opacity: 0, y: 15 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
@@ -652,7 +652,7 @@ export default function Home({
                 {/* Rating Stars */}
                 <div className="flex items-center gap-1 text-amber-400">
                   {Array.from({ length: testimonials[activeTestimonialIdx].rating }).map((_, i) => (
-                    <Star key={i} className="w-4.5 h-4.5 fill-amber-400 text-amber-400" />
+                    <Star key={`testimonial-star-${activeTestimonialIdx}-${i}`} className="w-4.5 h-4.5 fill-amber-400 text-amber-400" />
                   ))}
                 </div>
 
@@ -680,7 +680,7 @@ export default function Home({
             <div className="flex justify-center gap-1.5 mt-6">
               {testimonials.map((_, idx) => (
                 <button
-                  key={idx}
+                  key={`testimonial-dot-${idx}`}
                   onClick={() => setActiveTestimonialIdx(idx)}
                   className={`w-2.5 h-2.5 rounded-full transition-all cursor-pointer ${
                     activeTestimonialIdx === idx 
@@ -751,7 +751,7 @@ export default function Home({
                     {[1, 2, 3, 4, 5].map((val) => (
                       <button
                         type="button"
-                        key={val}
+                        key={`review-rating-star-${val}`}
                         onClick={() => setReviewRating(val)}
                         className="p-1 hover:scale-110 transition-transform cursor-pointer"
                       >

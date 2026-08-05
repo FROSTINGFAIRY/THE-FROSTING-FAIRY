@@ -300,11 +300,11 @@ export default function Dashboard({
           Quick Category Filter
         </h4>
         <div id="categories-tabs-wrapper" className="flex flex-col sm:flex-row gap-3 pb-3 pt-1 w-full max-w-sm sm:max-w-none">
-          {categories.map((cat) => {
+          {categories.map((cat, catIdx) => {
             const isActive = activeCategory === cat.name;
             return (
               <button
-                key={cat.name}
+                key={`dash-cat-tab-${cat.name}-${catIdx}`}
                 id={`category-tab-${cat.name}`}
                 onClick={() => setActiveCategory(cat.name)}
                 className={`group flex items-center justify-center sm:justify-start gap-2.5 px-6 py-3.5 rounded-2xl text-sm md:text-base font-sans font-extrabold border-2 transition-all duration-300 w-full sm:w-auto cursor-pointer ${
@@ -344,7 +344,7 @@ export default function Dashboard({
 
               return (
                 <motion.div
-                  key={cat.name}
+                  key={`dash-cat-cover-${cat.name}-${idx}`}
                   initial={{ opacity: 0, y: 15 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.4, delay: idx * 0.08 }}
@@ -503,7 +503,7 @@ export default function Dashboard({
 
                 return (
                   <motion.div
-                    key={recipe.id}
+                    key={`dash-recipe-card-${recipe.id}-${index}`}
                     id={`recipe-card-${recipe.id}`}
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -549,7 +549,7 @@ export default function Dashboard({
                       <div className="absolute bottom-3 inset-x-0 flex items-center justify-center gap-1 z-10">
                         {images.map((_, dotIdx) => (
                           <button
-                            key={dotIdx}
+                            key={`dash-dot-${recipe.id}-${dotIdx}`}
                             onClick={(e) => {
                               e.stopPropagation();
                               setRecipeImageIndexes(prev => ({ ...prev, [recipe.id]: dotIdx }));
@@ -610,7 +610,7 @@ export default function Dashboard({
                         <div className="flex gap-1 mt-3 overflow-x-auto pb-1 scrollbar-none">
                           {images.map((thumbUrl, thumbIdx) => (
                             <button
-                              key={thumbIdx}
+                              key={`dash-thumb-${recipe.id}-${thumbIdx}`}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setRecipeImageIndexes(prev => ({ ...prev, [recipe.id]: thumbIdx }));

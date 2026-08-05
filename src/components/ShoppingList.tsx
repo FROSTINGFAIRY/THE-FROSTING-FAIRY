@@ -311,9 +311,9 @@ export default function ShoppingList({
               </h3>
 
               <div className="space-y-3.5 max-h-[480px] overflow-y-auto pr-2 border border-brand-cocoa-border/40 bg-brand-cream-light/10 p-2.5 rounded-2xl">
-                {shoppingList.map((item) => (
+                {shoppingList.map((item, cartIdx) => (
                   <div
-                    key={item.id}
+                    key={`cart-item-${item.id}-${cartIdx}`}
                     id={`cart-item-row-${item.id}`}
                     className="bg-white border border-brand-cocoa-border rounded-2xl p-4 flex gap-4 hover:border-brand-pink-accent/40 shadow-2xs transition-all relative"
                   >

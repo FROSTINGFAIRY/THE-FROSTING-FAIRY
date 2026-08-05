@@ -1456,7 +1456,7 @@ export default function AdminDashboard({
             </span>
             <div className="flex flex-wrap gap-1">
               {authorizedEmails.map((email, idx) => (
-                <span key={idx} className="font-mono text-[9px] font-semibold text-brand-pink-dark bg-brand-pink-light/50 border border-brand-pink-accent/20 px-2.5 py-0.5 rounded-full">
+                <span key={`auth-email-${email}-${idx}`} className="font-mono text-[9px] font-semibold text-brand-pink-dark bg-brand-pink-light/50 border border-brand-pink-accent/20 px-2.5 py-0.5 rounded-full">
                   {email}
                 </span>
               ))}
@@ -1762,8 +1762,8 @@ export default function AdminDashboard({
               
               <div className="bg-white p-5 rounded-2xl border border-brand-cocoa-border shadow-xs flex flex-col h-[320px]">
                 <div className="flex-1 overflow-y-auto space-y-3 pr-1">
-                  {auditLogs.slice(0, 8).map((log) => (
-                    <div key={log.id} className="text-left text-xs border-b border-brand-cream pb-2 last:border-0">
+                  {auditLogs.slice(0, 8).map((log, idx) => (
+                    <div key={`audit-summary-${log.id}-${idx}`} className="text-left text-xs border-b border-brand-cream pb-2 last:border-0">
                       <div className="flex items-center justify-between gap-2 mb-1">
                         <span className="font-mono text-[9px] font-semibold text-brand-cocoa-light">{log.time}</span>
                         <span className={`font-mono text-[8px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider ${
@@ -1831,12 +1831,12 @@ export default function AdminDashboard({
                   No matching products found
                 </div>
               ) : (
-                filteredRecipes.map((item) => {
+                filteredRecipes.map((item, itemIdx) => {
                   const isSelected = !isAddingNewProduct && item.id === selectedProductId;
                   const lowestPrice = Math.min(...item.priceOptions.map((o) => o.price));
                   return (
                     <button
-                      key={item.id}
+                      key={`recipe-item-${item.id}-${itemIdx}`}
                       onClick={() => {
                         setIsAddingNewProduct(false);
                         setSelectedProductId(item.id);
@@ -2067,7 +2067,7 @@ export default function AdminDashboard({
                     <div className="bg-brand-cream-light/45 p-3 rounded-xl border border-brand-cocoa-border/40 space-y-2">
                       <div className="max-h-[140px] overflow-y-auto space-y-1.5 pr-1">
                         {editPriceOptions.map((opt, index) => (
-                          <div key={index} className="flex items-center gap-2 bg-white p-2 rounded-lg border border-brand-cocoa-border/20">
+                          <div key={`create-price-${opt.label}-${index}`} className="flex items-center gap-2 bg-white p-2 rounded-lg border border-brand-cocoa-border/20">
                             <span className="font-sans font-bold text-xs text-brand-cocoa min-w-[70px]">
                               {opt.label}
                             </span>
@@ -2157,7 +2157,7 @@ export default function AdminDashboard({
                         </p>
                         <div className="flex flex-wrap gap-1 mt-2.5">
                           {editPriceOptions.map((opt, i) => (
-                            <span key={i} className="text-[8px] font-mono bg-white text-brand-cocoa border border-brand-cocoa-border/50 px-1.5 py-0.5 rounded-md font-bold">
+                            <span key={`create-preview-price-${opt.label}-${i}`} className="text-[8px] font-mono bg-white text-brand-cocoa border border-brand-cocoa-border/50 px-1.5 py-0.5 rounded-md font-bold">
                               {opt.label}: ₹{opt.price}
                             </span>
                           ))}
@@ -2429,9 +2429,9 @@ export default function AdminDashboard({
                                 Pick a Match manually:
                               </p>
                               <div className="grid grid-cols-4 gap-2">
-                                {pixabayResults.map((result) => (
+                                {pixabayResults.map((result, idx) => (
                                   <button
-                                    key={result.id}
+                                    key={`pixabay-img-${result.id}-${idx}`}
                                     type="button"
                                     title={`Photo by ${result.user}`}
                                     onClick={() => setEditImage(result.url)}
@@ -2507,7 +2507,7 @@ export default function AdminDashboard({
                     <div className="bg-brand-cream-light/45 p-3 rounded-xl border border-brand-cocoa-border/40 space-y-2">
                       <div className="max-h-[140px] overflow-y-auto space-y-1.5 pr-1">
                         {editPriceOptions.map((opt, index) => (
-                          <div key={index} className="flex items-center gap-2 bg-white p-2 rounded-lg border border-brand-cocoa-border/20">
+                          <div key={`edit-price-${opt.label}-${index}`} className="flex items-center gap-2 bg-white p-2 rounded-lg border border-brand-cocoa-border/20">
                             {/* Label label */}
                             <span className="font-sans font-bold text-xs text-brand-cocoa min-w-[70px]">
                               {opt.label}
@@ -2603,7 +2603,7 @@ export default function AdminDashboard({
                         {/* Option pills */}
                         <div className="flex flex-wrap gap-1 mt-2.5">
                           {editPriceOptions.map((opt, i) => (
-                            <span key={i} className="text-[8px] font-mono bg-white text-brand-cocoa border border-brand-cocoa-border/50 px-1.5 py-0.5 rounded-md font-bold">
+                            <span key={`edit-preview-price-${opt.label}-${i}`} className="text-[8px] font-mono bg-white text-brand-cocoa border border-brand-cocoa-border/50 px-1.5 py-0.5 rounded-md font-bold">
                               {opt.label}: ₹{opt.price}
                             </span>
                           ))}
@@ -2683,7 +2683,7 @@ export default function AdminDashboard({
 
           <div className="p-6 md:p-8 space-y-8 text-left">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {categoryInfos.map((cat) => {
+              {categoryInfos.map((cat, idx) => {
                 const preview = categoryPreviews[cat.name];
                 const currentImg = cat.imageUrl || cat.image;
                 const displayImg = preview !== undefined ? preview : currentImg;
@@ -2693,7 +2693,7 @@ export default function AdminDashboard({
 
                 return (
                   <div
-                    key={cat.name}
+                    key={`cat-info-${cat.name}-${idx}`}
                     className="bg-brand-cream-light/20 rounded-2xl border border-brand-cocoa-border/60 p-5 space-y-4 hover:border-brand-pink/50 transition-all flex flex-col justify-between"
                   >
                     {/* Category Header */}
@@ -3033,7 +3033,7 @@ export default function AdminDashboard({
                   const isActive = brandLogoInput === l.url;
                   return (
                     <div
-                      key={index}
+                      key={`logo-preset-${l.name}-${index}`}
                       onClick={() => handleApplyLogoPreset(l.url, l.name)}
                       className={`p-2.5 rounded-xl border text-left flex items-center gap-3 transition-all cursor-pointer relative group ${
                         isActive
@@ -3232,8 +3232,8 @@ export default function AdminDashboard({
                             defaultValue=""
                           >
                             <option value="" disabled>-- Select an active customer order --</option>
-                            {mealPlan.map(o => (
-                              <option key={o.id} value={o.id}>
+                            {mealPlan.map((o, idx) => (
+                              <option key={`meal-opt-${o.id}-${idx}`} value={o.id}>
                                 #{o.id} - {o.customerName || o.contactName || 'Anonymous'} ({o.cakeType})
                               </option>
                             ))}
@@ -3293,7 +3293,7 @@ export default function AdminDashboard({
                       </div>
                     ) : (
                       sentEmails.map((mail, idx) => (
-                        <div key={mail.id} className="pt-2.5 first:pt-0 flex flex-col gap-1 text-[11px] text-left">
+                        <div key={`sent-mail-${mail.id}-${idx}`} className="pt-2.5 first:pt-0 flex flex-col gap-1 text-[11px] text-left">
                           <div className="flex items-center justify-between">
                             <span className="font-mono text-[9px] text-brand-cocoa-light">[{mail.time}] ID: #{mail.id}</span>
                             <span className="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 font-mono font-bold text-[8px] px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-900/30">
@@ -3327,10 +3327,10 @@ export default function AdminDashboard({
                 <p className="text-xs text-brand-cocoa-light mt-1">Adjust search parameters or create a custom order from the storefront.</p>
               </div>
             ) : (
-              filteredOrders.map((order) => {
+              filteredOrders.map((order, idx) => {
                 const currentStatus = order.status || 'Pending';
                 return (
-                  <div key={order.id} className="bg-white border border-brand-cocoa-border rounded-2xl p-5 md:p-6 shadow-3xs relative overflow-hidden flex flex-col md:flex-row md:items-start justify-between gap-6 hover:shadow-2xs transition-all duration-200">
+                  <div key={`admin-order-${order.id}-${idx}`} className="bg-white border border-brand-cocoa-border rounded-2xl p-5 md:p-6 shadow-3xs relative overflow-hidden flex flex-col md:flex-row md:items-start justify-between gap-6 hover:shadow-2xs transition-all duration-200">
                     
                     {/* Status side indicator bar */}
                     <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${
@@ -3454,9 +3454,9 @@ export default function AdminDashboard({
                         {/* Notes List */}
                         {order.adminNotes && order.adminNotes.length > 0 ? (
                           <div className="space-y-1.5 pt-1">
-                            {order.adminNotes.map((noteItem, idx) => (
+                            {order.adminNotes.map((noteItem, noteIdx) => (
                               <div 
-                                key={idx} 
+                                key={`admin-note-${order.id}-${noteIdx}`} 
                                 className="group flex items-start justify-between gap-2 p-2 bg-amber-50/80 border border-amber-200/90 rounded-xl text-xs text-brand-cocoa shadow-3xs font-sans"
                               >
                                 <div className="flex items-start gap-2 flex-1">
@@ -3674,7 +3674,7 @@ export default function AdminDashboard({
                   {authorizedEmails.map((email, index) => {
                     const isSelf = googleUser && email.toLowerCase() === googleUser.email.toLowerCase();
                     return (
-                      <div key={index} className="flex items-center justify-between p-2.5 bg-brand-cream-light/45 border border-brand-cocoa-border/20 rounded-xl">
+                      <div key={`auth-email-manage-${email}-${index}`} className="flex items-center justify-between p-2.5 bg-brand-cream-light/45 border border-brand-cocoa-border/20 rounded-xl">
                         <div className="flex items-center gap-2 min-w-0">
                           <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
                           <span className="font-mono text-xs text-brand-cocoa truncate font-semibold">
@@ -4342,8 +4342,8 @@ export default function AdminDashboard({
 
             {/* Logs List */}
             <div className="max-h-[220px] overflow-y-auto font-mono text-[10px] divide-y divide-brand-cocoa-border/20 pr-1">
-              {auditLogs.map((log) => (
-                <div key={log.id} className="py-2.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
+              {auditLogs.map((log, idx) => (
+                <div key={`audit-log-all-${log.id}-${idx}`} className="py-2.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
                   <div className="flex items-start sm:items-center gap-2 min-w-0">
                     <span className="text-brand-cocoa-light shrink-0">[{log.time}]</span>
                     <span className={`px-2 py-0.5 rounded font-bold shrink-0 text-[9px] uppercase tracking-wide ${
