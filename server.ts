@@ -3,8 +3,88 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
+import { initializeApp, getApps } from "firebase/app";
+import { getFirestore, collection, onSnapshot, doc, getDoc } from "firebase/firestore";
+import firebaseConfig from "./firebase-applet-config.json";
 
 dotenv.config();
+
+// Initialize Firebase App for server-side order notification trigger
+const firebaseApp = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+const db = firebaseConfig.firestoreDatabaseId 
+  ? getFirestore(firebaseApp, firebaseConfig.firestoreDatabaseId)
+  : getFirestore(firebaseApp);
+
+let isInitialLoad = true;
+try {
+  const ordersRef = collection(db, "orders");
+  onSnapshot(ordersRef, (snapshot) => {
+    if (isInitialLoad) {
+      isInitialLoad = false;
+      return;
+    }
+    snapshot.docChanges().forEach(async (change) => {
+      if (change.type === "added") {
+        const orderData = change.doc.data();
+        const orderId = change.doc.id;
+        console.log(`[Automated Order Trigger] New order created in Firestore: #${orderId}`, orderData);
+
+        try {
+          const settingsSnap = await getDoc(doc(db, "settings", "notifications"));
+          const settings = settingsSnap.exists() ? settingsSnap.data() : {};
+
+          const customerName = orderData.customerName || orderData.contactName || "Valued Customer";
+          const cakeType = orderData.cakeType || "Custom Pastry";
+          const status = orderData.status || "Pending";
+          const messageText = `🔔 [THE FROSTING FAIRY] New Order #${orderId} received! Customer: "${customerName}", Item: "${cakeType}", Status: "${status}"`;
+
+          // 1. Dispatch Webhook / Instagram
+          if (settings.instaWebhook) {
+            fetch(settings.instaWebhook, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                event: "new_order",
+                orderId,
+                customerName,
+                cakeType,
+                status,
+                message: messageText,
+                timestamp: new Date().toISOString()
+              })
+            }).then(() => console.log(`[Server Trigger] Webhook dispatched for Order #${orderId}`))
+              .catch(e => console.error("[Server Trigger] Webhook error:", e));
+          }
+
+          // 2. Dispatch WhatsApp via Twilio
+          if (settings.whatsappEnabled && settings.twilioSid && settings.twilioToken && settings.twilioRecipient) {
+            const formData = new URLSearchParams();
+            formData.append("To", settings.twilioRecipient.trim());
+            formData.append("From", settings.twilioFrom ? settings.twilioFrom.trim() : "whatsapp:+14155238886");
+            formData.append("Body", messageText);
+
+            const basicAuth = Buffer.from(`${settings.twilioSid.trim()}:${settings.twilioToken.trim()}`).toString("base64");
+            fetch(`https://api.twilio.com/2010-04-01/Accounts/${settings.twilioSid.trim()}/Messages.json`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Authorization": `Basic ${basicAuth}`
+              },
+              body: formData.toString()
+            }).then(() => console.log(`[Server Trigger] WhatsApp alert dispatched for Order #${orderId}`))
+              .catch(e => console.error("[Server Trigger] WhatsApp error:", e));
+          }
+        } catch (err) {
+          console.error("Error running automated notification trigger:", err);
+        }
+      }
+    });
+  }, (err) => {
+    console.warn("Firestore listener on server notice:", err.message);
+  });
+} catch (e) {
+  console.warn("Failed to attach Firestore server order listener:", e);
+}
 
 async function startServer() {
   const app = express();

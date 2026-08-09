@@ -1,0 +1,46 @@
+{
+  "entities": {
+    "products": {
+      "title": "products",
+      "description": "Bakery product catalog",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "image": { "type": "string" },
+        "prepTime": { "type": "number" },
+        "cookTime": { "type": "number" },
+        "difficulty": { "type": "string" },
+        "servings": { "type": "number" },
+        "rating": { "type": "number" },
+        "votes": { "type": "number" },
+        "category": { "type": "string" },
+        "priceOptions": { "type": "array" }
+      },
+      "required": ["name", "category", "priceOptions"]
+    },
+    "orders": {
+      "title": "orders",
+      "description": "Customer purchase orders",
+      "type": "object",
+      "properties": {
+        "customerName": { "type": "string" },
+        "customerPhone": { "type": "string" },
+        "cakeType": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["customerName", "status"]
+    },
+    "admins": {
+      "title": "admins",
+      "description": "Admin authorization list",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "role": { "type": "string" }
+      },
+      "required": ["email"]
+    }
+  }
+}

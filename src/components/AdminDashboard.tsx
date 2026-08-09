@@ -44,6 +44,9 @@ import { motion } from 'motion/react';
 import { INITIAL_RECIPES, INITIAL_CATEGORY_INFOS } from '../data';
 import defaultLogoImg from '../assets/images/frosting_fairy_logo_1784129178255.jpg';
 import { PerformanceDashboard } from './PerformanceDashboard';
+import { db, auth, signInWithGoogle, logOutAdmin, checkIsAdminInFirestore } from '../lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { collection, onSnapshot, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 
 // Helper to decode Google JWT token client-side
 const decodeJwt = (token: string) => {
@@ -531,35 +534,106 @@ export default function AdminDashboard({
     addAuditLog(`Test notifications complete! Check above statuses for Webhook, Meta API, and/or WhatsApp execution states.`, 'success');
   };
 
-  // --- GOOGLE SIGN IN & ACCESS CONTROL ---
-  const [googleUser, setGoogleUser] = useState<{
-    email: string;
-    name: string;
-    picture: string;
-  } | null>(() => {
-    const saved = localStorage.getItem('gusto_google_user');
-    return saved ? JSON.parse(saved) : null;
-  });
-
-  const [authorizedEmails, setAuthorizedEmails] = useState<string[]>(() => {
-    const saved = localStorage.getItem('gusto_authorized_emails');
-    if (saved) return JSON.parse(saved);
-    return ['kiddepressed03@gmail.com', 'hellofrostingfairy@gmail.com'];
-  });
-
-  const [newEmailInput, setNewEmailInput] = useState('');
+  // --- FIREBASE AUTH & FIRESTORE ACCESS CONTROL ---
+  const [firebaseUser, setFirebaseUser] = useState<any>(null);
+  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [signInError, setSignInError] = useState('');
+  const [authorizedAdmins, setAuthorizedAdmins] = useState<string[]>(['kiddepressed03@gmail.com', 'hellofrostingfairy@gmail.com']);
 
-  const isUnlocked = googleUser !== null && authorizedEmails.map(e => e.toLowerCase()).includes(googleUser.email.toLowerCase());
+  // Subscribe to Firebase Auth state
+  React.useEffect(() => {
+    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+      setIsAuthLoading(true);
+      if (user) {
+        setFirebaseUser(user);
+        const email = user.email || '';
+        const isAuthorized = await checkIsAdminInFirestore(email);
+        if (isAuthorized) {
+          setIsUnlocked(true);
+          setSignInError('');
+          addAuditLog(`Firebase Auth Google sign in: ${email}`, 'success');
+        } else {
+          setIsUnlocked(false);
+          setSignInError(`Access Denied: Your Google account (${email}) is not listed in Firestore 'admins' collection.`);
+          addAuditLog(`Access denied for Google user: ${email}`, 'warning');
+        }
+      } else {
+        setFirebaseUser(null);
+        setIsUnlocked(false);
+      }
+      setIsAuthLoading(false);
+    });
 
-  // ====================================================================================
-  // SECURITY NOTICE / DISCLAIMER:
-  // Role-based capabilities ('admin' | 'chef' | 'viewer') and the corresponding UI checks
-  // (such as conditionally rendered buttons, disabled fields, etc.) are implemented
-  // purely on the client-side for sandbox demonstration purposes. Because there is currently
-  // no authenticated server-side database validation/backend check enforcing these, they
-  // are UI-ONLY limits and NOT a secure permission/security boundary.
-  // ====================================================================================
+    return () => unsubscribeAuth();
+  }, []);
+
+  // When an admin is signed in, seed products collection in Firestore if empty
+  React.useEffect(() => {
+    if (!isUnlocked) return;
+    const seedProductsIfEmpty = async () => {
+      try {
+        const productsRef = collection(db, 'products');
+        const snap = await getDocs(productsRef);
+        if (snap.empty) {
+          for (const recipe of INITIAL_RECIPES) {
+            await setDoc(doc(db, 'products', recipe.id), recipe);
+          }
+          addAuditLog('Seeded initial products catalog into Firestore', 'success');
+        }
+      } catch (err: any) {
+        console.warn('Admin products seed notice:', err.message);
+      }
+    };
+    seedProductsIfEmpty();
+  }, [isUnlocked]);
+
+  // Subscribe to Firestore 'admins' collection live
+  React.useEffect(() => {
+    const adminsRef = collection(db, 'admins');
+    const unsubscribe = onSnapshot(adminsRef, (snapshot) => {
+      const emails: string[] = [];
+      snapshot.forEach((docSnap) => {
+        emails.push(docSnap.id.toLowerCase());
+      });
+      if (emails.length > 0) {
+        setAuthorizedAdmins(emails);
+      }
+    }, (err) => {
+      console.warn('Firestore admins collection listener notice:', err.message);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const handleGoogleSignIn = async () => {
+    setSignInError('');
+    try {
+      const user = await signInWithGoogle();
+      const email = user.email || '';
+      const isAuthorized = await checkIsAdminInFirestore(email);
+      if (isAuthorized) {
+        setIsUnlocked(true);
+        triggerToast(`👑 Welcome, ${user.displayName || email}!`);
+      } else {
+        setIsUnlocked(false);
+        setSignInError(`Access Denied: Google account (${email}) is not in Firestore 'admins' collection.`);
+        triggerToast('❌ Unauthorized: Account not registered in Firestore.');
+      }
+    } catch (err: any) {
+      console.error('Sign-in error:', err);
+      setSignInError('Google sign in error: ' + (err?.message || 'Popup closed or failed'));
+    }
+  };
+
+  const handleLogoutAdmin = async () => {
+    await logOutAdmin();
+    setIsUnlocked(false);
+    setFirebaseUser(null);
+    addAuditLog('Admin signed out', 'info');
+    triggerToast('🔒 Admin session logged out.');
+  };
+
   // Authority role: 'admin' | 'chef' | 'viewer'
   const [currentRole, setCurrentRole] = useState<'admin' | 'chef' | 'viewer'>(() => {
     return (localStorage.getItem('gusto_current_role') as 'admin' | 'chef' | 'viewer') || 'admin';
@@ -578,16 +652,11 @@ export default function AdminDashboard({
     const saved = localStorage.getItem('gusto_audit_logs');
     if (saved) return JSON.parse(saved);
     return [
-      { id: '1', time: '09:12:05 AM', role: 'System', action: 'Boutique Security core initialized', status: 'info' },
+      { id: '1', time: '09:12:05 AM', role: 'System', action: 'Firestore Security core initialized', status: 'info' },
       { id: '2', time: '09:15:30 AM', role: 'Administrator', action: 'Updated Princess Pink Buttercream Cake details', status: 'success' },
       { id: '3', time: '09:18:12 AM', role: 'Head Pastry Chef', action: 'Updated Royal Iced Swirl Cupcakes description', status: 'success' },
     ];
   });
-
-  // Sync state modifications with localStorage
-  React.useEffect(() => {
-    localStorage.setItem('gusto_authorized_emails', JSON.stringify(authorizedEmails));
-  }, [authorizedEmails]);
 
   React.useEffect(() => {
     localStorage.setItem('gusto_current_role', currentRole);
@@ -596,57 +665,6 @@ export default function AdminDashboard({
   React.useEffect(() => {
     localStorage.setItem('gusto_audit_logs', JSON.stringify(auditLogs));
   }, [auditLogs]);
-
-  // Initialize Google Identity Services
-  React.useEffect(() => {
-    const clientId = (import.meta as any).env.VITE_GOOGLE_CLIENT_ID;
-    if (!clientId) return;
-
-    const initializeGsi = () => {
-      const google = (window as any).google;
-      if (google && google.accounts && google.accounts.id) {
-        google.accounts.id.initialize({
-          client_id: clientId,
-          callback: (response: any) => {
-            const decoded = decodeJwt(response.credential);
-            if (decoded && decoded.email) {
-              const emailLower = decoded.email.toLowerCase();
-              if (authorizedEmails.map(e => e.toLowerCase()).includes(emailLower)) {
-                const userObj = {
-                  email: decoded.email,
-                  name: decoded.name || decoded.email.split('@')[0],
-                  picture: decoded.picture || '',
-                };
-                setSignInError('');
-                setGoogleUser(userObj);
-                localStorage.setItem('gusto_google_user', JSON.stringify(userObj));
-                addAuditLog(`Admin signed in via Google: ${decoded.email}`, 'success');
-                triggerToast(`👑 Welcome, ${decoded.name || 'Admin'}!`);
-              } else {
-                setSignInError(`❌ Access Denied: The Google account (${decoded.email}) is not authorized.`);
-                addAuditLog(`Access denied for Google account: ${decoded.email}`, 'warning');
-                triggerToast('❌ Unauthorized: This Google Account does not have admin privileges.');
-              }
-            }
-          }
-        });
-
-        const btnContainer = document.getElementById('google-signin-btn-real');
-        if (btnContainer) {
-          google.accounts.id.renderButton(btnContainer, {
-            theme: 'outline',
-            size: 'large',
-            width: 280,
-          });
-        }
-      } else {
-        // Retry in case SDK takes a moment to load
-        setTimeout(initializeGsi, 500);
-      }
-    };
-
-    initializeGsi();
-  }, [authorizedEmails]);
 
   const addAuditLog = (action: string, status: 'success' | 'warning' | 'info' = 'success', roleName = currentRole) => {
     const formattedRole = roleName === 'admin' ? 'Administrator' : roleName === 'chef' ? 'Head Pastry Chef' : 'Cashier/Viewer';
@@ -658,13 +676,6 @@ export default function AdminDashboard({
       status
     };
     setAuditLogs(prev => [newLog, ...prev].slice(0, 50)); // Keep last 50
-  };
-
-  const handleLogoutAdmin = () => {
-    setGoogleUser(null);
-    localStorage.removeItem('gusto_google_user');
-    addAuditLog('Admin panel signed out', 'info');
-    triggerToast('🔒 Admin session secured and logged out.');
   };
 
   // Selected recipe to edit details
@@ -689,7 +700,7 @@ export default function AdminDashboard({
     setUploadError(null);
   };
 
-  const handleCreateProduct = () => {
+  const handleCreateProduct = async () => {
     if (currentRole === 'viewer') {
       addAuditLog(`Attempted to create product "${editName}" (Blocked)`, 'warning');
       triggerToast('❌ Permission Denied: Cashier/Viewer role is read-only.');
@@ -731,11 +742,16 @@ export default function AdminDashboard({
       isFavorite: false
     };
 
-    setRecipes((prev) => [newRecipe, ...prev]);
-    setSelectedProductId(newId);
-    setIsAddingNewProduct(false);
-    addAuditLog(`Created new bakery item: "${editName}"`);
-    triggerToast(`✨ Successfully created "${editName}"!`);
+    try {
+      await setDoc(doc(db, 'products', newId), newRecipe);
+      setSelectedProductId(newId);
+      setIsAddingNewProduct(false);
+      addAuditLog(`Created new bakery item in Firestore: "${editName}"`);
+      triggerToast(`✨ Successfully created "${editName}" in Firestore!`);
+    } catch (err: any) {
+      console.error('Firestore create product error:', err);
+      triggerToast('❌ Error creating product in Firestore: ' + err.message);
+    }
   };
 
   // Temporary local edit states to prevent immediate jagged keypress rendering
@@ -901,7 +917,7 @@ export default function AdminDashboard({
     return matchesSearch && matchesFilter;
   });
 
-  const handleUpdateOrderStatus = (
+  const handleUpdateOrderStatus = async (
     orderId: string, 
     newStatus: 'Pending' | 'Confirmed' | 'Baking' | 'Ready' | 'Ready for Pickup' | 'Out for Delivery' | 'Completed'
   ) => {
@@ -911,32 +927,31 @@ export default function AdminDashboard({
       return;
     }
 
-    setMealPlan((prev) => 
-      prev.map((o) => {
-        if (o.id === orderId) {
-          const oldStatus = o.status || 'Pending';
-          addAuditLog(`Transitioned Order #${orderId} status from "${oldStatus}" to "${newStatus}"`);
-          
-          // Trigger Instagram DM / WhatsApp if transitioning to 'Ready for Pickup' or 'Out for Delivery'
-          if (newStatus === 'Ready for Pickup' || newStatus === 'Out for Delivery') {
-            dispatchInstagramDM(orderId, o.cakeType, o.customerName || o.contactName || 'Valued Customer', newStatus);
-            if (whatsappEnabled) {
-              dispatchWhatsAppAlert(orderId, o.cakeType, o.customerName || o.contactName || 'Valued Customer', newStatus);
-            }
-            addToast(
-              `🔔 Order Notification Sent!`, 
-              `Alerted customer ${o.customerName || o.contactName || 'Valued Customer'} that order #${orderId} is ${newStatus}.`, 
-              'success'
-            );
-          }
-          
-          return { ...o, status: newStatus };
-        }
-        return o;
-      })
-    );
+    try {
+      await updateDoc(doc(db, 'orders', orderId), { status: newStatus });
+      
+      const orderMatch = mealPlan.find(o => o.id === orderId);
+      const customerName = orderMatch?.customerName || orderMatch?.contactName || 'Valued Customer';
+      const cakeType = orderMatch?.cakeType || 'Order';
 
-    triggerToast(`✨ Order #${orderId} status updated to: ${newStatus}`);
+      if (newStatus === 'Ready for Pickup' || newStatus === 'Out for Delivery') {
+        dispatchInstagramDM(orderId, cakeType, customerName, newStatus);
+        if (whatsappEnabled) {
+          dispatchWhatsAppAlert(orderId, cakeType, customerName, newStatus);
+        }
+        addToast(
+          `🔔 Order Notification Sent!`, 
+          `Alerted customer ${customerName} that order #${orderId} is ${newStatus}.`, 
+          'success'
+        );
+      }
+
+      addAuditLog(`Updated Order #${orderId} status to "${newStatus}" in Firestore`);
+      triggerToast(`✨ Order #${orderId} status updated to: ${newStatus}`);
+    } catch (err: any) {
+      console.error('Firestore update order status error:', err);
+      triggerToast('❌ Error updating order in Firestore: ' + err.message);
+    }
   };
 
   // Sync edit form with selected product
@@ -955,7 +970,7 @@ export default function AdminDashboard({
   }, [selectedProductId, activeProduct, isAddingNewProduct]);
 
   // Handle saving product edits
-  const handleSaveProduct = () => {
+  const handleSaveProduct = async () => {
     if (!activeProduct) return;
 
     if (currentRole === 'viewer') {
@@ -985,22 +1000,23 @@ export default function AdminDashboard({
       return;
     }
 
-    setRecipes((prev) =>
-      prev.map((r) =>
-        r.id === activeProduct.id
-          ? {
-              ...r,
-              name: editName,
-              image: editImage,
-              description: editDescription,
-              category: editCategory,
-              priceOptions: editPriceOptions,
-            }
-          : r
-      )
-    );
-    addAuditLog(`Updated product "${editName}" details`);
-    triggerToast(`✨ Successfully updated "${editName}"!`);
+    const updatedRecipe: Recipe = {
+      ...activeProduct,
+      name: editName,
+      image: editImage,
+      description: editDescription,
+      category: editCategory,
+      priceOptions: editPriceOptions,
+    };
+
+    try {
+      await setDoc(doc(db, 'products', activeProduct.id), updatedRecipe, { merge: true });
+      addAuditLog(`Updated product "${editName}" in Firestore`);
+      triggerToast(`✨ Successfully updated "${editName}" in Firestore!`);
+    } catch (err: any) {
+      console.error('Firestore save product error:', err);
+      triggerToast('❌ Error saving product to Firestore: ' + err.message);
+    }
   };
 
   const handleSearchPixabay = async () => {
@@ -1208,8 +1224,8 @@ export default function AdminDashboard({
     setEditPriceOptions(updated);
   };
 
-  // Save branding settings
-  const handleSaveBranding = () => {
+  // Save branding settings in Firestore
+  const handleSaveBranding = async () => {
     if (currentRole !== 'admin') {
       addAuditLog(`Attempted to save website branding (Blocked)`, 'warning');
       triggerToast('❌ Permission Denied: Only Administrators can change global branding settings.');
@@ -1219,15 +1235,31 @@ export default function AdminDashboard({
       triggerToast('❌ Website brand name cannot be empty!');
       return;
     }
-    setWebsiteName(brandNameInput.trim().toUpperCase());
-    setWebsiteSlogan(brandSloganInput.trim().toUpperCase());
-    setLogo(brandLogoInput.trim());
-    addAuditLog(`Updated boutique branding title and tagline`);
-    triggerToast('👑 Global Website Branding settings updated successfully!');
+    
+    const newName = brandNameInput.trim().toUpperCase();
+    const newSlogan = brandSloganInput.trim().toUpperCase();
+    const newLogo = brandLogoInput.trim();
+
+    try {
+      await setDoc(doc(db, 'settings', 'branding'), {
+        websiteName: newName,
+        websiteSlogan: newSlogan,
+        logo: newLogo,
+      }, { merge: true });
+
+      setWebsiteName(newName);
+      setWebsiteSlogan(newSlogan);
+      setLogo(newLogo);
+      addAuditLog(`Updated boutique branding in Firestore`);
+      triggerToast('👑 Global Website Branding settings updated in Firestore!');
+    } catch (err: any) {
+      console.error('Error saving branding to Firestore:', err);
+      triggerToast('❌ Error saving branding to Firestore: ' + err.message);
+    }
   };
 
-  // Save payment settings
-  const handleSavePayments = () => {
+  // Save payment settings in Firestore
+  const handleSavePayments = async () => {
     if (currentRole !== 'admin') {
       addAuditLog(`Attempted to save payment configurations (Blocked)`, 'warning');
       triggerToast('❌ Permission Denied: Only Administrators can modify payment details.');
@@ -1237,11 +1269,23 @@ export default function AdminDashboard({
       triggerToast('❌ UPI ID cannot be empty!');
       return;
     }
-    setUpiId(upiIdInput.trim());
-    setUpiQrCode(upiQrInput.trim());
-    setCashOnDeliveryEnabled(cashOnDeliveryInput);
-    addAuditLog(`Updated payment settings: UPI ID is ${upiIdInput.trim()}, COD is ${cashOnDeliveryInput ? 'Enabled' : 'Disabled'}`);
-    triggerToast('💳 Payment settings updated successfully!');
+
+    try {
+      await setDoc(doc(db, 'settings', 'branding'), {
+        upiId: upiIdInput.trim(),
+        upiQrCode: upiQrInput.trim(),
+        cashOnDeliveryEnabled: cashOnDeliveryInput,
+      }, { merge: true });
+
+      setUpiId(upiIdInput.trim());
+      setUpiQrCode(upiQrInput.trim());
+      setCashOnDeliveryEnabled(cashOnDeliveryInput);
+      addAuditLog(`Updated payment settings in Firestore: UPI ID ${upiIdInput.trim()}`);
+      triggerToast('💳 Payment settings updated in Firestore!');
+    } catch (err: any) {
+      console.error('Error saving payments to Firestore:', err);
+      triggerToast('❌ Error saving payments to Firestore: ' + err.message);
+    }
   };
 
   // Handle QR Code file selection via click or drag-and-drop
@@ -1403,59 +1447,48 @@ export default function AdminDashboard({
           </div>
 
           <div className="space-y-4 flex flex-col items-center">
-            {clientId ? (
-              <div className="w-full flex flex-col items-center space-y-2">
-                <div id="google-signin-btn-real" className="min-h-[40px]"></div>
-                <p className="text-[10px] text-brand-cocoa-light font-mono">
-                  Using secure Google Identity Services
-                </p>
-                {signInError && (
-                  <div className="w-full bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl p-3 mt-2 text-left font-sans">
-                    {signInError}
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="w-full bg-brand-cream-light/40 border border-brand-cocoa-border/40 p-4.5 rounded-2xl text-left space-y-3.5">
-                <div className="flex items-center gap-2">
-                  <span className="p-1.5 rounded-lg bg-red-50 text-red-800 border border-red-200 font-bold text-xs">⚠️</span>
-                  <div>
-                    <span className="font-sans font-bold text-xs text-brand-cocoa block">Admin Sign-In Not Configured</span>
-                    <span className="text-[9px] text-brand-cocoa-light leading-none block">Missing Google Client ID</span>
-                  </div>
-                </div>
-                <p className="text-[10px] text-brand-cocoa-light font-sans leading-relaxed">
-                  Google Account administrative sign-in is not configured yet. To enable administrative access, please declare the <code className="bg-white px-1 py-0.5 rounded border font-mono font-semibold text-brand-pink-dark">VITE_GOOGLE_CLIENT_ID</code> variable in your configuration.
-                </p>
+            <button
+              id="google-signin-btn-firebase"
+              onClick={handleGoogleSignIn}
+              type="button"
+              className="w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-50 text-gray-800 font-semibold py-3 px-4 rounded-xl border border-gray-300 shadow-sm transition-all hover:shadow-md active:scale-98 cursor-pointer"
+            >
+              <svg className="w-5 h-5" viewBox="0 0 24 24">
+                <path
+                  fill="#4285F4"
+                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                />
+                <path
+                  fill="#34A853"
+                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                />
+                <path
+                  fill="#EA4335"
+                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                />
+              </svg>
+              <span>Sign in with Google</span>
+            </button>
+            <p className="text-[10px] text-brand-cocoa-light font-mono">
+              Secured with Firebase Authentication & Firestore Security Rules
+            </p>
+            {signInError && (
+              <div className="w-full bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl p-3 text-left font-sans">
+                {signInError}
               </div>
             )}
-
-            <button
-              id="btn-bypass-admin-signin"
-              onClick={() => {
-                const demoUser = {
-                  email: 'kiddepressed03@gmail.com',
-                  name: 'Demo Admin',
-                  picture: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=150',
-                };
-                setGoogleUser(demoUser);
-                localStorage.setItem('gusto_google_user', JSON.stringify(demoUser));
-                setToastMessage('Access Granted ✨ Unlocked control panel using Demo Admin bypass.');
-                setTimeout(() => setToastMessage(''), 4000);
-              }}
-              className="w-full bg-brand-cocoa hover:bg-brand-cocoa/90 text-white font-sans font-bold py-3 px-4 rounded-xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer text-xs uppercase tracking-wider"
-            >
-              <Sparkles className="w-4 h-4 text-brand-pink fill-brand-pink" />
-              <span>Unlock with Demo Account ✨</span>
-            </button>
           </div>
 
           <div className="border-t border-brand-cocoa-border/40 pt-4 text-left">
             <span className="font-mono text-[9px] uppercase tracking-widest text-brand-cocoa-light/80 font-bold block mb-1">
-              Authorized Google Accounts:
+              Authorized Firestore Admin Accounts:
             </span>
             <div className="flex flex-wrap gap-1">
-              {authorizedEmails.map((email, idx) => (
+              {authorizedAdmins.map((email, idx) => (
                 <span key={`auth-email-${email}-${idx}`} className="font-mono text-[9px] font-semibold text-brand-pink-dark bg-brand-pink-light/50 border border-brand-pink-accent/20 px-2.5 py-0.5 rounded-full">
                   {email}
                 </span>
@@ -1657,7 +1690,7 @@ export default function AdminDashboard({
                 <span>Boutique Headquarters</span>
               </span>
               <h2 className="font-display font-black text-2xl sm:text-3xl uppercase tracking-tight">
-                Welcome back, {googleUser?.name || 'Fairy Chef'}!
+                Welcome back, {firebaseUser?.displayName || firebaseUser?.email || 'Fairy Chef'}!
               </h2>
               <p className="text-xs sm:text-sm text-brand-cream-light/80 leading-relaxed">
                 Your administrative session is secure. From here, you can manage real-time boutique confections, customize global brand assets, fulfill custom client orders, and track system audits.
@@ -3606,73 +3639,37 @@ export default function AdminDashboard({
               </div>
 
               {/* Active Admin Profile Card */}
-              {googleUser && (
+              {firebaseUser && (
                 <div className="p-4 bg-brand-pink-light/30 border border-brand-pink-accent/20 rounded-2xl flex items-center gap-3.5">
-                  <div className="w-11 h-11 rounded-full overflow-hidden border border-brand-pink-accent/40 shrink-0">
-                    <img src={googleUser.picture || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=150'} alt="Admin profile" className="w-full h-full object-cover" />
+                  <div className="w-11 h-11 rounded-full overflow-hidden border border-brand-pink-accent/40 shrink-0 bg-brand-cocoa text-brand-cream flex items-center justify-center font-bold font-display text-sm">
+                    {firebaseUser.photoURL ? (
+                      <img src={firebaseUser.photoURL} alt="Admin profile" className="w-full h-full object-cover" />
+                    ) : (
+                      <span>{(firebaseUser.displayName || firebaseUser.email || 'A')[0].toUpperCase()}</span>
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <span className="font-mono text-[8px] font-bold text-brand-pink bg-white/70 border border-brand-pink-accent/20 px-2 py-0.5 rounded uppercase tracking-wider">
                       Active Administrator
                     </span>
                     <span className="font-sans font-bold text-sm text-brand-cocoa block mt-0.5 truncate">
-                      {googleUser.name}
+                      {firebaseUser.displayName || 'Authorized Admin'}
                     </span>
                     <span className="font-mono text-[10px] text-brand-cocoa-light block truncate leading-none">
-                      {googleUser.email}
+                      {firebaseUser.email}
                     </span>
                   </div>
                 </div>
               )}
 
-              {/* Add New Email Form */}
-              <div className="space-y-2">
-                <label className="font-mono text-[9px] uppercase tracking-wider text-brand-cocoa-light block font-bold">
-                  Authorize New Google Email Address
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="email"
-                    placeholder="admin-email@gmail.com"
-                    value={newEmailInput}
-                    onChange={(e) => setNewEmailInput(e.target.value)}
-                    className="flex-1 px-3.5 py-2 text-xs font-semibold text-brand-cocoa border border-brand-cocoa-border rounded-xl focus:outline-none focus:ring-1 focus:ring-brand-pink"
-                  />
-                  <button
-                    onClick={() => {
-                      if (!newEmailInput.trim()) {
-                        triggerToast('⚠️ Please enter an email address!');
-                        return;
-                      }
-                      if (!newEmailInput.includes('@') || !newEmailInput.includes('.')) {
-                        triggerToast('⚠️ Please enter a valid email address!');
-                        return;
-                      }
-                      const emailLower = newEmailInput.trim().toLowerCase();
-                      if (authorizedEmails.map(e => e.toLowerCase()).includes(emailLower)) {
-                        triggerToast('⚠️ This email is already authorized!');
-                        return;
-                      }
-                      setAuthorizedEmails(prev => [...prev, emailLower]);
-                      setNewEmailInput('');
-                      addAuditLog(`Authorized new Google Account: ${emailLower}`, 'success');
-                      triggerToast(`✨ Successfully authorized ${emailLower}!`);
-                    }}
-                    className="px-4 py-2 bg-brand-cocoa text-brand-cream text-xs font-bold rounded-xl hover:bg-brand-cocoa-light transition-all cursor-pointer shadow-sm uppercase tracking-wider"
-                  >
-                    Authorize
-                  </button>
-                </div>
-              </div>
-
-              {/* List of Authorized Emails */}
+              {/* List of Authorized Firestore Accounts */}
               <div className="space-y-2">
                 <span className="font-mono text-[9px] uppercase tracking-wider text-brand-cocoa-light block font-bold">
-                  Currently Authorized Accounts
+                  Firestore Authorized Admin Accounts (Enforced by Rules)
                 </span>
-                <div className="max-h-[160px] overflow-y-auto space-y-1.5 pr-1">
-                  {authorizedEmails.map((email, index) => {
-                    const isSelf = googleUser && email.toLowerCase() === googleUser.email.toLowerCase();
+                <div className="max-h-[180px] overflow-y-auto space-y-1.5 pr-1">
+                  {authorizedAdmins.map((email, index) => {
+                    const isSelf = firebaseUser && email.toLowerCase() === (firebaseUser.email || '').toLowerCase();
                     return (
                       <div key={`auth-email-manage-${email}-${index}`} className="flex items-center justify-between p-2.5 bg-brand-cream-light/45 border border-brand-cocoa-border/20 rounded-xl">
                         <div className="flex items-center gap-2 min-w-0">
@@ -3686,24 +3683,9 @@ export default function AdminDashboard({
                             </span>
                           )}
                         </div>
-                        <button
-                          disabled={!!isSelf || authorizedEmails.length <= 1}
-                          onClick={() => {
-                            if (window.confirm(`Are you sure you want to revoke administrative access for ${email}?`)) {
-                              setAuthorizedEmails(prev => prev.filter(e => e.toLowerCase() !== email.toLowerCase()));
-                              addAuditLog(`Revoked Google Account authorization: ${email}`, 'info');
-                              triggerToast(`🗑️ Revoked access for ${email}`);
-                            }
-                          }}
-                          className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                            isSelf || authorizedEmails.length <= 1
-                              ? 'text-brand-cocoa-light/40 cursor-not-allowed'
-                              : 'text-brand-cocoa-light hover:text-red-500 hover:bg-brand-cream'
-                          }`}
-                          title={isSelf ? 'Cannot remove yourself' : authorizedEmails.length <= 1 ? 'Cannot remove the last remaining email' : 'Revoke administrative authorization'}
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        <span className="font-mono text-[9px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 font-bold">
+                          Firestore Verified
+                        </span>
                       </div>
                     );
                   })}

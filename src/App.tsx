@@ -16,105 +16,111 @@ import { INITIAL_RECIPES, INITIAL_CATEGORY_INFOS } from './data';
 import { Recipe, ShoppingItem, MealPlanEntry, MealType, CategoryInfo } from './types';
 import { AnimatePresence, motion } from 'motion/react';
 import { X, Instagram, ArrowLeft } from 'lucide-react';
+import { db, ensureInitialAdminsSeeded } from './lib/firebase';
+import { collection, onSnapshot, doc, getDoc, setDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 
-// Local storage key names
-const RECIPES_STORAGE_KEY = 'gusto_recipes';
-const PLAN_STORAGE_KEY = 'gusto_meal_plan';
+// Local storage key names for fallback preferences
 const SHOPPING_STORAGE_KEY = 'gusto_shopping_list';
-const CATEGORY_STORAGE_KEY = 'gusto_categories';
 
 export default function App() {
-  // --- SCHEMA VERSIONING HEURISTIC ---
-  // Store "gusto_data_version" in localStorage and reset when the version doesn't match,
-  // preventing fragile guessing based on recipe names or fields.
-  const CURRENT_DATA_VERSION = '3';
-  
-  // Run schema migration check on load before initializing states
-  const storedVersion = localStorage.getItem('gusto_data_version');
-  if (storedVersion !== CURRENT_DATA_VERSION) {
-    localStorage.removeItem(RECIPES_STORAGE_KEY);
-    localStorage.removeItem(PLAN_STORAGE_KEY);
-    localStorage.setItem('gusto_data_version', CURRENT_DATA_VERSION);
-  }
+  // --- CORE STATE DRIVEN BY FIRESTORE ---
+  const [recipes, setRecipes] = useState<Recipe[]>(INITIAL_RECIPES);
+  const [mealPlan, setMealPlan] = useState<MealPlanEntry[]>([]);
+  const [categoryInfos, setCategoryInfos] = useState<CategoryInfo[]>(INITIAL_CATEGORY_INFOS);
 
-  // --- CORE STATE ---
-  const [recipes, setRecipes] = useState<Recipe[]>(() => {
-    const saved = localStorage.getItem(RECIPES_STORAGE_KEY);
-    if (saved) {
-      try {
-        const parsed: Recipe[] = JSON.parse(saved);
-        return parsed.map((item) => {
-          if (!item.image || item.image.includes('pixabay.com/get/')) {
-            const initialMatch = INITIAL_RECIPES.find((r) => r.id === item.id);
-            if (initialMatch) {
-              return { ...item, image: initialMatch.image };
-            }
-          }
-          return item;
+  // Store & Branding State
+  const [logo, setLogo] = useState<string>(logoImg);
+  const [websiteName, setWebsiteName] = useState<string>('THE FROSTING FAIRY');
+  const [websiteSlogan, setWebsiteSlogan] = useState<string>('CREATING EDIBLE MAGIC');
+  const [upiId, setUpiId] = useState<string>('thefrostingfairy@okaxis');
+  const [upiQrCode, setUpiQrCode] = useState<string>('');
+  const [cashOnDeliveryEnabled, setCashOnDeliveryEnabled] = useState<boolean>(true);
+
+  // Auto-seed admin emails in Firestore if needed
+  useEffect(() => {
+    ensureInitialAdminsSeeded(['kiddepressed03@gmail.com', 'hellofrostingfairy@gmail.com']);
+  }, []);
+
+  // 1. LIVE PRODUCTS DATA FROM FIRESTORE
+  useEffect(() => {
+    const productsRef = collection(db, 'products');
+    const unsubscribe = onSnapshot(productsRef, (snapshot) => {
+      if (snapshot.empty) {
+        setRecipes(INITIAL_RECIPES);
+      } else {
+        const loadedRecipes: Recipe[] = [];
+        snapshot.forEach((docSnap) => {
+          loadedRecipes.push({ id: docSnap.id, ...docSnap.data() } as Recipe);
         });
-      } catch (e) {
-        return INITIAL_RECIPES;
+        setRecipes(loadedRecipes);
       }
-    }
-    return INITIAL_RECIPES;
-  });
+    }, (err) => {
+      console.warn('Firestore products listener error:', err.message);
+      setRecipes(INITIAL_RECIPES);
+    });
 
-  const [logo, setLogo] = useState<string>(() => {
-    return localStorage.getItem('gusto_logo') || logoImg;
-  });
+    return () => unsubscribe();
+  }, []);
 
-  const [websiteName, setWebsiteName] = useState<string>(() => {
-    return localStorage.getItem('gusto_website_name') || 'THE FROSTING FAIRY';
-  });
+  // 2. LIVE ORDERS DATA FROM FIRESTORE
+  useEffect(() => {
+    const ordersRef = collection(db, 'orders');
+    const unsubscribe = onSnapshot(ordersRef, (snapshot) => {
+      const loadedOrders: MealPlanEntry[] = [];
+      snapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        loadedOrders.push({
+          id: docSnap.id,
+          cakeType: data.cakeType || 'Custom Cake',
+          flavor: data.flavor || 'Standard',
+          weight: data.weight || 'Standard',
+          message: data.message || '',
+          instructions: data.instructions || '',
+          pickupDate: data.pickupDate || '',
+          pickupTime: data.pickupTime || '',
+          contactName: data.contactName || data.customerName || 'Customer',
+          contactPhone: data.contactPhone || data.customerPhone || '',
+          estimatedPrice: data.estimatedPrice || 0,
+          status: data.status || 'Pending',
+          recipe: data.recipe,
+          customerName: data.customerName || data.contactName || 'Customer',
+          customerPhone: data.customerPhone || data.contactPhone || '',
+          specialInstructions: data.specialInstructions || '',
+          deliveryType: data.deliveryType || 'Pickup',
+          deliveryAddress: data.deliveryAddress || '',
+          gpsCoordinates: data.gpsCoordinates || '',
+          paymentMethod: data.paymentMethod || 'COD',
+          paymentDetails: data.paymentDetails || {},
+          adminNotes: data.adminNotes || [],
+        });
+      });
+      setMealPlan(loadedOrders);
+    }, (err) => {
+      console.warn('Firestore orders listener error:', err.message);
+    });
 
-  const [websiteSlogan, setWebsiteSlogan] = useState<string>(() => {
-    return localStorage.getItem('gusto_website_slogan') || 'CREATING EDIBLE MAGIC';
-  });
+    return () => unsubscribe();
+  }, []);
 
-  const [upiId, setUpiId] = useState<string>(() => {
-    return localStorage.getItem('gusto_upi_id') || 'thefrostingfairy@okaxis';
-  });
-
-  const [upiQrCode, setUpiQrCode] = useState<string>(() => {
-    return localStorage.getItem('gusto_upi_qr_code') || '';
-  });
-
-  const [cashOnDeliveryEnabled, setCashOnDeliveryEnabled] = useState<boolean>(() => {
-    const saved = localStorage.getItem('gusto_cash_on_delivery_enabled');
-    return saved !== null ? saved === 'true' : true;
-  });
-
-  const [categoryInfos, setCategoryInfos] = useState<CategoryInfo[]>(() => {
-    const saved = localStorage.getItem(CATEGORY_STORAGE_KEY);
-    if (saved) {
-      try {
-        const parsed: CategoryInfo[] = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const OLD_DEFAULT = '1535141192574-5d4897c13636';
-          return parsed.map((cat) => {
-            if (cat.name === 'Signature Cakes') {
-              const isOldImage = cat.image && cat.image.includes(OLD_DEFAULT);
-              const isOldImageUrl = cat.imageUrl && cat.imageUrl.includes(OLD_DEFAULT);
-              if (isOldImage || isOldImageUrl) {
-                const initialMatch = INITIAL_CATEGORY_INFOS.find((c) => c.name === 'Signature Cakes');
-                if (initialMatch) {
-                  return {
-                    ...cat,
-                    image: isOldImage ? initialMatch.image : cat.image,
-                    imageUrl: isOldImageUrl ? initialMatch.imageUrl : cat.imageUrl,
-                  };
-                }
-              }
-            }
-            return cat;
-          });
-        }
-      } catch (e) {
-        // Fallback
+  // 3. LIVE BRANDING & STORE SETTINGS FROM FIRESTORE
+  useEffect(() => {
+    const brandingRef = doc(db, 'settings', 'branding');
+    const unsubscribe = onSnapshot(brandingRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (data.logo) setLogo(data.logo);
+        if (data.websiteName) setWebsiteName(data.websiteName);
+        if (data.websiteSlogan) setWebsiteSlogan(data.websiteSlogan);
+        if (data.upiId) setUpiId(data.upiId);
+        if (data.upiQrCode !== undefined) setUpiQrCode(data.upiQrCode);
+        if (data.cashOnDeliveryEnabled !== undefined) setCashOnDeliveryEnabled(data.cashOnDeliveryEnabled);
       }
-    }
-    return INITIAL_CATEGORY_INFOS;
-  });
+    }, (err) => {
+      console.warn('Firestore settings listener error:', err.message);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const [activeTab, setActiveTab] = useState<string>('home');
   const [activeCategory, setActiveCategory] = useState<string>('All');
@@ -136,131 +142,31 @@ export default function App() {
     localStorage.setItem('gusto_theme', theme);
   }, [theme]);
 
-  // Default orders to populate the custom planner and make it feel alive immediately
-  const [mealPlan, setMealPlan] = useState<MealPlanEntry[]>(() => {
-    const saved = localStorage.getItem(PLAN_STORAGE_KEY);
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        // Fallback
-      }
-    }
-
-    const vanillaCake = INITIAL_RECIPES.find((r) => r.id === 'cake-vanilla') || INITIAL_RECIPES[0];
-    const cinnamonRolls = INITIAL_RECIPES.find((r) => r.id === 'add-roll-cream-cheese') || INITIAL_RECIPES[14];
-
-    return [
-      {
-        id: 'ord-1',
-        day: 'Today',
-        mealType: 'Baking',
-        recipe: vanillaCake,
-        cakeType: 'Classic Vanilla Cake',
-        flavor: 'Madagascar Vanilla Bean Buttercream',
-        weight: '1kg',
-        message: 'Happy Birthday Sarah!',
-        pickupDate: '2026-07-16',
-        pickupTime: '15:30',
-        estimatedPrice: 900,
-        customerName: 'Sarah Jenkins',
-        customerPhone: '+91 98765 43210',
-        specialInstructions: 'Make it extra pink with floral piping and eggless sponge if possible!',
-        status: 'Baking',
-        adminNotes: [
-          'Confirmed eggless sponge formulation with head baker.',
-          'Customer requested extra edible gold glitter dust on top piping.'
-        ]
-      },
-      {
-        id: 'ord-2',
-        day: 'Friday',
-        mealType: 'Confirmed',
-        recipe: cinnamonRolls,
-        cakeType: 'Cream Cheese Glaze Cinnamon Rolls',
-        flavor: 'Cream Cheese Glaze',
-        weight: 'Box of 6',
-        message: '',
-        pickupDate: '2026-07-18',
-        pickupTime: '10:00',
-        estimatedPrice: 480,
-        customerName: 'David Miller',
-        customerPhone: '+91 91234 56789',
-        specialInstructions: 'Please pack in a gift ribbon box, it is for a housewarming surprise!',
-        status: 'Confirmed',
-        adminNotes: [
-          'Gift wrapping with satin pink ribbon prepped in front showcase.'
-        ]
-      }
-    ];
-  });
-
-  // Default shopping list (repurposed as Shopping Cart in e-commerce)
+  // Shopping Cart State
   const [shoppingList, setShoppingList] = useState<ShoppingItem[]>(() => {
     const saved = localStorage.getItem(SHOPPING_STORAGE_KEY);
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        // If it's a legacy ingredient list or initial sample cart item, clear or filter
-        if (parsed.length > 0 && parsed.some((e: any) => e.category === 'Produce' || e.category === 'Dairy & Eggs' || e.category === 'Pantry & Grains')) {
-          localStorage.removeItem(SHOPPING_STORAGE_KEY);
-        } else {
+        if (parsed.length > 0 && !parsed.some((e: any) => e.category === 'Produce' || e.category === 'Dairy & Eggs')) {
           return parsed;
         }
       } catch (e) {
         // Fallback
       }
     }
-
     return [];
   });
-
-  // --- LOCAL PERSISTENCE ---
-  useEffect(() => {
-    localStorage.setItem(RECIPES_STORAGE_KEY, JSON.stringify(recipes));
-  }, [recipes]);
-
-  useEffect(() => {
-    localStorage.setItem(PLAN_STORAGE_KEY, JSON.stringify(mealPlan));
-  }, [mealPlan]);
 
   useEffect(() => {
     localStorage.setItem(SHOPPING_STORAGE_KEY, JSON.stringify(shoppingList));
   }, [shoppingList]);
 
-  useEffect(() => {
-    localStorage.setItem('gusto_logo', logo);
-  }, [logo]);
-
-  useEffect(() => {
-    localStorage.setItem('gusto_website_name', websiteName);
-  }, [websiteName]);
-
-  useEffect(() => {
-    localStorage.setItem('gusto_website_slogan', websiteSlogan);
-  }, [websiteSlogan]);
-
-  useEffect(() => {
-    localStorage.setItem('gusto_upi_id', upiId);
-  }, [upiId]);
-
-  useEffect(() => {
-    localStorage.setItem('gusto_upi_qr_code', upiQrCode);
-  }, [upiQrCode]);
-
-  useEffect(() => {
-    localStorage.setItem('gusto_cash_on_delivery_enabled', String(cashOnDeliveryEnabled));
-  }, [cashOnDeliveryEnabled]);
-
-  useEffect(() => {
-    localStorage.setItem(CATEGORY_STORAGE_KEY, JSON.stringify(categoryInfos));
-  }, [categoryInfos]);
-
   // --- GLOBAL TOAST SYSTEM & STATUS CHANGE DETECTOR ---
   const [toasts, setToasts] = useState<{ id: string; title: string; message: string; type: 'success' | 'info' | 'warning' }[]>([]);
   const [prevStatuses, setPrevStatuses] = useState<Record<string, string>>(() => {
     const initial: Record<string, string> = {};
-    const saved = localStorage.getItem(PLAN_STORAGE_KEY);
+    const saved = localStorage.getItem('gusto_meal_plan');
     if (saved) {
       try {
         const parsed = JSON.parse(saved) as MealPlanEntry[];
@@ -414,10 +320,8 @@ export default function App() {
     });
   };
 
-  // Checkout and place custom orders instantly
-  // NOTE: Orders are stored locally in the browser's localStorage and are only visible on this device.
-  // Until a real backend database/service is connected, orders are local-only.
-  const handleCheckout = (checkoutData: {
+  // Checkout and place custom orders instantly in Firestore
+  const handleCheckout = async (checkoutData: {
     customerName: string;
     customerPhone: string;
     pickupDate: string;
@@ -435,12 +339,11 @@ export default function App() {
   }) => {
     const deliveryFee = checkoutData.deliveryType === 'Delivery' ? (shoppingList.reduce((sum, s) => sum + (s.price || 0) * s.amount, 0) >= 600 ? 0 : 50) : 0;
 
-    const newEntries: MealPlanEntry[] = shoppingList.map((item, idx) => {
-      const recipe = recipes.find((r) => r.id === item.productId); // Keep undefined if not found
+    const newEntries = shoppingList.map((item) => {
+      const recipe = recipes.find((r) => r.id === item.productId);
       const itemPrice = (item.price || 0) * item.amount;
       
       return {
-        id: `ord-${Date.now()}-${idx}-${Math.random().toString(36).substr(2, 3)}`,
         cakeType: item.name,
         flavor: item.recipeName || 'Standard Flavor',
         weight: item.selectedOption || 'Standard',
@@ -450,9 +353,9 @@ export default function App() {
         pickupTime: checkoutData.pickupTime,
         contactName: checkoutData.customerName,
         contactPhone: checkoutData.customerPhone,
-        estimatedPrice: itemPrice, // Base price only, no delivery fee attached here
+        estimatedPrice: itemPrice,
         status: 'Pending',
-        recipe: recipe,
+        recipe: recipe || null,
         customerName: checkoutData.customerName,
         customerPhone: checkoutData.customerPhone,
         specialInstructions: checkoutData.specialInstructions,
@@ -461,13 +364,13 @@ export default function App() {
         gpsCoordinates: checkoutData.gpsCoordinates,
         paymentMethod: checkoutData.paymentMethod,
         paymentDetails: checkoutData.paymentDetails,
+        adminNotes: [],
+        createdAt: serverTimestamp(),
       };
     });
 
-    // If there is a delivery fee, create a single separate "Delivery Fee" line-item order entry
     if (deliveryFee > 0) {
       newEntries.push({
-        id: `ord-delivery-${Date.now()}-${Math.random().toString(36).substr(2, 3)}`,
         cakeType: 'Delivery Fee',
         flavor: 'N/A',
         weight: 'Standard',
@@ -479,7 +382,7 @@ export default function App() {
         contactPhone: checkoutData.customerPhone,
         estimatedPrice: deliveryFee,
         status: 'Pending',
-        recipe: undefined,
+        recipe: null as any,
         customerName: checkoutData.customerName,
         customerPhone: checkoutData.customerPhone,
         specialInstructions: checkoutData.specialInstructions,
@@ -488,10 +391,20 @@ export default function App() {
         gpsCoordinates: checkoutData.gpsCoordinates,
         paymentMethod: checkoutData.paymentMethod,
         paymentDetails: checkoutData.paymentDetails,
+        adminNotes: [],
+        createdAt: serverTimestamp(),
       });
     }
 
-    setMealPlan((prev) => [...prev, ...newEntries]);
+    // Save orders to Firestore
+    for (const entry of newEntries) {
+      try {
+        await addDoc(collection(db, 'orders'), entry);
+      } catch (err) {
+        console.error('Error creating order in Firestore:', err);
+      }
+    }
+
     setShoppingList([]); // Clear the cart
     setActiveTab('planner'); // Redirect to track orders tab
   };

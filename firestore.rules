@@ -1,0 +1,46 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper function to check if the requesting user is an authorized admin
+    function isAdmin() {
+      return request.auth != null 
+        && request.auth.token.email != null
+        && (
+          request.auth.token.email.toLowerCase() == 'kiddepressed03@gmail.com'
+          || request.auth.token.email.toLowerCase() == 'hellofrostingfairy@gmail.com'
+          || exists(/databases/$(database)/documents/admins/$(request.auth.token.email.toLowerCase()))
+        );
+    }
+
+    // Products collection: public read, write only for signed-in admins
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Categories collection: public read, write only for signed-in admins
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Orders collection: public create for checkout, read/update/delete only for signed-in admins
+    match /orders/{orderId} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Admins collection: read allowed for signed-in users, no client writes allowed
+    match /admins/{email} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // Settings collection (e.g. notifications): public read, write only for signed-in admins
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}
