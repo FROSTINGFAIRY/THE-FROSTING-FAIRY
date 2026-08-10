@@ -7,9 +7,9 @@ service cloud.firestore {
       return request.auth != null 
         && request.auth.token.email != null
         && (
-          request.auth.token.email.toLowerCase() == 'kiddepressed03@gmail.com'
-          || request.auth.token.email.toLowerCase() == 'hellofrostingfairy@gmail.com'
-          || exists(/databases/$(database)/documents/admins/$(request.auth.token.email.toLowerCase()))
+          request.auth.token.email.lower() == 'kiddepressed03@gmail.com'
+          || request.auth.token.email.lower() == 'hellofrostingfairy@gmail.com'
+          || exists(/databases/$(database)/documents/admins/$(request.auth.token.email.lower()))
         );
     }
 
