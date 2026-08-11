@@ -3,6 +3,7 @@ import { ArrowLeft, Heart, ShoppingCart, Info, Sparkles, Check, Flame, MessageSq
 import { Recipe, PriceOption } from '../types';
 import { motion } from 'motion/react';
 import { getRecipeImages } from './Dashboard';
+import { auth } from '../lib/firebase';
 
 interface RecipeDetailProps {
   recipe: Recipe;
@@ -94,10 +95,12 @@ export default function RecipeDetail({
     }, 1500);
 
     try {
+      const idToken = auth.currentUser ? await auth.currentUser.getIdToken() : '';
       const response = await fetch('/api/generate-image', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`,
         },
         body: JSON.stringify({ prompt: `${recipe.name}: ${aiPrompt}` }),
       });

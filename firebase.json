@@ -1,0 +1,8 @@
+{
+  "firestore": [
+    {
+      "database": "ai-studio-thefrostingfairy-921cb999-217d-4754-98e5-84c32edf59fa",
+      "rules": "firestore.rules"
+    }
+  ]
+}

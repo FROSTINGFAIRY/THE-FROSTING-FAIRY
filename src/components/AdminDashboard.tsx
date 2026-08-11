@@ -46,7 +46,7 @@ import defaultLogoImg from '../assets/images/frosting_fairy_logo_1784129178255.j
 import { PerformanceDashboard } from './PerformanceDashboard';
 import { db, auth, signInWithGoogle, logOutAdmin, checkIsAdminInFirestore } from '../lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { collection, onSnapshot, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, onSnapshot, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, addDoc, serverTimestamp, query, orderBy, limit } from 'firebase/firestore';
 
 // Helper to decode Google JWT token client-side
 const decodeJwt = (token: string) => {
@@ -396,142 +396,45 @@ export default function AdminDashboard({
     setOrderToDelete(null);
   };
 
-  // Async sender for Instagram DM Webhooks or Meta API
+  // Server-side handled notification loggers
   const dispatchInstagramDM = async (orderId: string, cakeType: string, customerName: string, status: string) => {
-    const textMessage = `🔔 [THE FROSTING FAIRY] Order #${orderId} for "${customerName}" is now "${status}"! 🎂 (${cakeType})`;
-    addAuditLog(`Triggered Instagram DM dispatch for status: ${status}`, 'info');
-
-    let success = false;
-    let detail = "";
-
-    if (instaWebhook.trim()) {
-      try {
-        const res = await fetch(instaWebhook, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            event: 'order_status_update',
-            orderId,
-            cakeType,
-            customerName,
-            status,
-            message: textMessage,
-            timestamp: new Date().toISOString()
-          })
-        });
-        if (res.ok) {
-          success = true;
-          detail = "Sent via Custom Webhook forwarding to Instagram DM";
-        } else {
-          detail = `Webhook failed with response code: ${res.status}`;
-        }
-      } catch (err: any) {
-        detail = `Webhook connection error: ${err.message}`;
-      }
-    } else if (instaToken.trim() && instaRecipient.trim() && instaBusinessId.trim()) {
-      try {
-        const res = await fetch(`https://graph.facebook.com/v19.0/${instaBusinessId.trim()}/messages`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${instaToken.trim()}`
-          },
-          body: JSON.stringify({
-            recipient: { id: instaRecipient.trim() },
-            message: { text: textMessage }
-          })
-        });
-        const data = await res.json();
-        if (res.ok) {
-          success = true;
-          detail = "Sent via Facebook Meta Graph API to Instagram DM";
-        } else {
-          detail = `Meta Graph API error response: ${data.error?.message || 'Unknown'}`;
-        }
-      } catch (err: any) {
-        detail = `Meta connection failure: ${err.message}`;
-      }
-    } else {
-      detail = "Simulated successfully (Configure Webhook or Meta credentials in the 'Security & Authority' tab to route to live endpoints)";
-      success = true;
-    }
-
-    if (success) {
-      addAuditLog(`📱 [Instagram DM Dispatched] ${detail}`, 'success');
-      addAuditLog(`DM Content: "${textMessage}"`, 'success');
-    } else {
-      addAuditLog(`❌ [Instagram DM Fail] ${detail}`, 'warning');
-    }
+    addAuditLog(`📱 Status update recorded for Order #${orderId} (${status}). Instagram DM is dispatched automatically by server triggers.`, 'success');
   };
 
-  // Async sender for WhatsApp alerts via Twilio
   const dispatchWhatsAppAlert = async (orderId: string, cakeType: string, customerName: string, status: string) => {
-    const textMessage = `🔔 [THE FROSTING FAIRY] Order #${orderId} for "${customerName}" is now "${status}"! 🎂 (${cakeType})`;
-    addAuditLog(`Triggered WhatsApp dispatch for status: ${status}`, 'info');
-
-    let success = false;
-    let detail = "";
-
-    if (twilioSid.trim() && twilioToken.trim() && twilioFrom.trim() && twilioRecipient.trim()) {
-      try {
-        const formData = new URLSearchParams();
-        formData.append('To', twilioRecipient.trim());
-        formData.append('From', twilioFrom.trim());
-        formData.append('Body', textMessage);
-
-        const basicAuth = btoa(`${twilioSid.trim()}:${twilioToken.trim()}`);
-        const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${twilioSid.trim()}/Messages.json`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'Authorization': `Basic ${basicAuth}`
-          },
-          body: formData.toString()
-        });
-
-        const data = await res.json();
-        if (res.ok) {
-          success = true;
-          detail = `Sent via Twilio WhatsApp API (Message SID: ${data.sid})`;
-        } else {
-          detail = `Twilio API error response: ${data.message || 'Unknown'}`;
-        }
-      } catch (err: any) {
-        detail = `Twilio connection failure: ${err.message}`;
-      }
-    } else {
-      detail = "Simulated successfully (Configure Twilio credentials in 'Order Notifications' settings to route to live endpoints)";
-      success = true;
-    }
-
-    if (success) {
-      addAuditLog(`📱 [WhatsApp Dispatched] ${detail}`, 'success');
-      addAuditLog(`WhatsApp Content: "${textMessage}"`, 'success');
-    } else {
-      addAuditLog(`❌ [WhatsApp Fail] ${detail}`, 'warning');
-    }
+    addAuditLog(`💬 Status update recorded for Order #${orderId} (${status}). WhatsApp alert is dispatched automatically by server triggers.`, 'success');
   };
 
-  // Shared Test Notification sender
+  // Server-side Test Notification sender
   const handleSendTestNotification = async () => {
-    addAuditLog(`Initiating test suite for enabled notification channels...`, 'info');
+    addAuditLog(`Initiating secure server-side test notification dispatch...`, 'info');
     
-    const orderId = 'TEST-ALERT-01';
-    const cakeType = 'Signature Fudge Blossom';
-    const customerName = 'Jane Doe';
-    const status = 'Ready for Pickup';
+    try {
+      const idToken = auth.currentUser ? await auth.currentUser.getIdToken() : '';
+      const response = await fetch('/api/send-test-notification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          customerName: firebaseUser?.displayName || 'Authorized Admin',
+          cakeType: 'Signature Fudge Blossom',
+        }),
+      });
 
-    // 1. Instagram DM
-    await dispatchInstagramDM(orderId, cakeType, customerName, status);
-
-    // 2. WhatsApp
-    if (whatsappEnabled || (twilioSid.trim() && twilioToken.trim())) {
-      await dispatchWhatsAppAlert(orderId, cakeType, customerName, status);
-    } else {
-      addAuditLog(`WhatsApp notifications are disabled (or Twilio credentials omitted). Skipping WhatsApp test dispatch.`, 'info');
+      const data = await response.json();
+      if (response.ok && data.success) {
+        addAuditLog(`✅ [Server Notification Dispatch] Test notification successfully executed server-side!`, 'success');
+        triggerToast('⚡ Server test notification dispatched!');
+      } else {
+        addAuditLog(`❌ [Server Notification Fail] ${data.error || 'Unknown error'}`, 'warning');
+        triggerToast(`⚠️ Test notification error: ${data.error || 'Failed'}`);
+      }
+    } catch (err: any) {
+      addAuditLog(`❌ [Server Notification Connection Error] ${err.message}`, 'warning');
+      triggerToast(`❌ Network error sending test notification.`);
     }
-
-    addAuditLog(`Test notifications complete! Check above statuses for Webhook, Meta API, and/or WhatsApp execution states.`, 'success');
   };
 
   // --- FIREBASE AUTH & FIRESTORE ACCESS CONTROL ---
@@ -600,7 +503,11 @@ export default function AdminDashboard({
         setAuthorizedAdmins(emails);
       }
     }, (err) => {
-      console.warn('Firestore admins collection listener notice:', err.message);
+      if (err.message?.includes('CANCELLED') || err.code === 'cancelled') {
+        console.debug('Firestore admins stream re-establishing connection...');
+      } else {
+        console.warn('Firestore admins collection listener notice:', err.message);
+      }
     });
 
     return () => unsubscribe();
@@ -635,11 +542,35 @@ export default function AdminDashboard({
   };
 
   // Authority role: 'admin' | 'chef' | 'viewer'
-  const [currentRole, setCurrentRole] = useState<'admin' | 'chef' | 'viewer'>(() => {
-    return (localStorage.getItem('gusto_current_role') as 'admin' | 'chef' | 'viewer') || 'admin';
-  });
+  const [currentRole, setCurrentRole] = useState<'admin' | 'chef' | 'viewer'>('admin');
 
-  // Audit Logs state
+  // Sync admin role live from Firestore for signed-in user
+  React.useEffect(() => {
+    if (!firebaseUser?.email) return;
+    const cleanEmail = firebaseUser.email.toLowerCase();
+    const adminDocRef = doc(db, 'admins', cleanEmail);
+
+    const unsubscribe = onSnapshot(adminDocRef, (snap) => {
+      if (snap.exists() && snap.data()?.role) {
+        const r = snap.data().role;
+        if (r === 'admin' || r === 'chef' || r === 'viewer') {
+          setCurrentRole(r);
+        }
+      } else if (['kiddepressed03@gmail.com', 'hellofrostingfairy@gmail.com'].includes(cleanEmail)) {
+        setCurrentRole('admin');
+      } else {
+        setCurrentRole('viewer');
+      }
+    }, (err) => {
+      if (!err.message?.includes('CANCELLED')) {
+        console.warn('Admin role document snapshot listener notice:', err.message);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [firebaseUser]);
+
+  // Audit Logs state stored in Firestore 'auditLogs' collection
   interface AuditLog {
     id: string;
     time: string;
@@ -648,35 +579,56 @@ export default function AdminDashboard({
     status: 'success' | 'warning' | 'info';
   }
 
-  const [auditLogs, setAuditLogs] = useState<AuditLog[]>(() => {
-    const saved = localStorage.getItem('gusto_audit_logs');
-    if (saved) return JSON.parse(saved);
-    return [
-      { id: '1', time: '09:12:05 AM', role: 'System', action: 'Firestore Security core initialized', status: 'info' },
-      { id: '2', time: '09:15:30 AM', role: 'Administrator', action: 'Updated Princess Pink Buttercream Cake details', status: 'success' },
-      { id: '3', time: '09:18:12 AM', role: 'Head Pastry Chef', action: 'Updated Royal Iced Swirl Cupcakes description', status: 'success' },
-    ];
-  });
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
 
+  // Live subscription to Firestore auditLogs collection
   React.useEffect(() => {
-    localStorage.setItem('gusto_current_role', currentRole);
-  }, [currentRole]);
+    if (!isUnlocked) return;
+    try {
+      const q = query(collection(db, 'auditLogs'), orderBy('timestamp', 'desc'), limit(50));
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const logs: AuditLog[] = [];
+        snapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+          logs.push({
+            id: docSnap.id,
+            time: data.time || (data.timestamp ? new Date(data.timestamp.toDate()).toLocaleTimeString() : 'Recently'),
+            role: data.role || 'System',
+            action: data.action || '',
+            status: data.status || 'info'
+          });
+        });
+        setAuditLogs(logs);
+      }, (err) => {
+        if (!err.message?.includes('CANCELLED')) {
+          console.warn('Firestore auditLogs stream notice:', err.message);
+        }
+      });
+      return () => unsubscribe();
+    } catch (err) {
+      console.warn('Error setting up auditLogs stream:', err);
+    }
+  }, [isUnlocked]);
 
-  React.useEffect(() => {
-    localStorage.setItem('gusto_audit_logs', JSON.stringify(auditLogs));
-  }, [auditLogs]);
-
-  const addAuditLog = (action: string, status: 'success' | 'warning' | 'info' = 'success', roleName = currentRole) => {
+  const addAuditLog = async (action: string, status: 'success' | 'warning' | 'info' = 'success', roleName = currentRole) => {
     const formattedRole = roleName === 'admin' ? 'Administrator' : roleName === 'chef' ? 'Head Pastry Chef' : 'Cashier/Viewer';
-    const newLog: AuditLog = {
-      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    const newLog = {
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      timestamp: serverTimestamp(),
       role: formattedRole,
       action,
       status
     };
-    setAuditLogs(prev => [newLog, ...prev].slice(0, 50)); // Keep last 50
+
+    if (isUnlocked) {
+      try {
+        await addDoc(collection(db, 'auditLogs'), newLog);
+      } catch (err: any) {
+        console.warn('Could not save audit log to Firestore:', err?.message || err);
+      }
+    }
   };
+
 
   // Selected recipe to edit details
   const [selectedProductId, setSelectedProductId] = useState<string>(recipes[0]?.id || '');
@@ -3722,10 +3674,19 @@ export default function AdminDashboard({
             <div className="space-y-4">
               {/* Administrator */}
               <button
-                onClick={() => {
-                  setCurrentRole('admin');
+                onClick={async () => {
+                  if (firebaseUser?.email) {
+                    const cleanEmail = firebaseUser.email.toLowerCase();
+                    try {
+                      await setDoc(doc(db, 'admins', cleanEmail), { email: cleanEmail, role: 'admin' }, { merge: true });
+                      triggerToast('👑 Authority updated: Administrator role active in Firestore.');
+                    } catch (err: any) {
+                      triggerToast('❌ Firestore role update error: ' + err.message);
+                    }
+                  } else {
+                    setCurrentRole('admin');
+                  }
                   addAuditLog('Authority level set to Administrator', 'info', 'admin');
-                  triggerToast('👑 Authority updated: Administrator role active.');
                 }}
                 className={`w-full text-left p-4 rounded-xl border flex items-start gap-3.5 transition-all cursor-pointer ${
                   currentRole === 'admin'
@@ -3748,10 +3709,19 @@ export default function AdminDashboard({
 
               {/* Pastry Chef */}
               <button
-                onClick={() => {
-                  setCurrentRole('chef');
+                onClick={async () => {
+                  if (firebaseUser?.email) {
+                    const cleanEmail = firebaseUser.email.toLowerCase();
+                    try {
+                      await setDoc(doc(db, 'admins', cleanEmail), { email: cleanEmail, role: 'chef' }, { merge: true });
+                      triggerToast('👩‍🍳 Authority updated: Head Pastry Chef role active in Firestore.');
+                    } catch (err: any) {
+                      triggerToast('❌ Firestore role update error: ' + err.message);
+                    }
+                  } else {
+                    setCurrentRole('chef');
+                  }
                   addAuditLog('Authority level set to Head Pastry Chef', 'info', 'chef');
-                  triggerToast('👩‍🍳 Authority updated: Head Pastry Chef role active.');
                 }}
                 className={`w-full text-left p-4 rounded-xl border flex items-start gap-3.5 transition-all cursor-pointer ${
                   currentRole === 'chef'
@@ -3774,10 +3744,19 @@ export default function AdminDashboard({
 
               {/* Viewer / Cashier */}
               <button
-                onClick={() => {
-                  setCurrentRole('viewer');
+                onClick={async () => {
+                  if (firebaseUser?.email) {
+                    const cleanEmail = firebaseUser.email.toLowerCase();
+                    try {
+                      await setDoc(doc(db, 'admins', cleanEmail), { email: cleanEmail, role: 'viewer' }, { merge: true });
+                      triggerToast('👁️ Authority updated: Cashier/Viewer read-only active in Firestore.');
+                    } catch (err: any) {
+                      triggerToast('❌ Firestore role update error: ' + err.message);
+                    }
+                  } else {
+                    setCurrentRole('viewer');
+                  }
                   addAuditLog('Authority level set to Cashier / Viewer', 'info', 'viewer');
-                  triggerToast('👁️ Authority updated: Cashier/Viewer read-only active.');
                 }}
                 className={`w-full text-left p-4 rounded-xl border flex items-start gap-3.5 transition-all cursor-pointer ${
                   currentRole === 'viewer'

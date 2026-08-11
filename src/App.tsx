@@ -16,7 +16,7 @@ import { INITIAL_RECIPES, INITIAL_CATEGORY_INFOS } from './data';
 import { Recipe, ShoppingItem, MealPlanEntry, MealType, CategoryInfo } from './types';
 import { AnimatePresence, motion } from 'motion/react';
 import { X, Instagram, ArrowLeft } from 'lucide-react';
-import { db, ensureInitialAdminsSeeded } from './lib/firebase';
+import { db } from './lib/firebase';
 import { collection, onSnapshot, doc, getDoc, setDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 
 // Local storage key names for fallback preferences
@@ -36,11 +36,6 @@ export default function App() {
   const [upiQrCode, setUpiQrCode] = useState<string>('');
   const [cashOnDeliveryEnabled, setCashOnDeliveryEnabled] = useState<boolean>(true);
 
-  // Auto-seed admin emails in Firestore if needed
-  useEffect(() => {
-    ensureInitialAdminsSeeded(['kiddepressed03@gmail.com', 'hellofrostingfairy@gmail.com']);
-  }, []);
-
   // 1. LIVE PRODUCTS DATA FROM FIRESTORE
   useEffect(() => {
     const productsRef = collection(db, 'products');
@@ -55,7 +50,11 @@ export default function App() {
         setRecipes(loadedRecipes);
       }
     }, (err) => {
-      console.warn('Firestore products listener error:', err.message);
+      if (err.message?.includes('CANCELLED') || err.code === 'cancelled') {
+        console.debug('Firestore products stream re-establishing connection...');
+      } else {
+        console.warn('Firestore products listener notice:', err.message);
+      }
       setRecipes(INITIAL_RECIPES);
     });
 
@@ -96,7 +95,11 @@ export default function App() {
       });
       setMealPlan(loadedOrders);
     }, (err) => {
-      console.warn('Firestore orders listener error:', err.message);
+      if (err.message?.includes('CANCELLED') || err.code === 'cancelled') {
+        console.debug('Firestore orders stream re-establishing connection...');
+      } else {
+        console.warn('Firestore orders listener notice:', err.message);
+      }
     });
 
     return () => unsubscribe();
@@ -116,7 +119,11 @@ export default function App() {
         if (data.cashOnDeliveryEnabled !== undefined) setCashOnDeliveryEnabled(data.cashOnDeliveryEnabled);
       }
     }, (err) => {
-      console.warn('Firestore settings listener error:', err.message);
+      if (err.message?.includes('CANCELLED') || err.code === 'cancelled') {
+        console.debug('Firestore settings stream re-establishing connection...');
+      } else {
+        console.warn('Firestore settings listener notice:', err.message);
+      }
     });
 
     return () => unsubscribe();
@@ -320,7 +327,7 @@ export default function App() {
     });
   };
 
-  // Checkout and place custom orders instantly in Firestore
+  // Checkout and place custom orders securely server-side
   const handleCheckout = async (checkoutData: {
     customerName: string;
     customerPhone: string;
@@ -337,76 +344,36 @@ export default function App() {
       upiId?: string;
     };
   }) => {
-    const deliveryFee = checkoutData.deliveryType === 'Delivery' ? (shoppingList.reduce((sum, s) => sum + (s.price || 0) * s.amount, 0) >= 600 ? 0 : 50) : 0;
-
-    const newEntries = shoppingList.map((item) => {
-      const recipe = recipes.find((r) => r.id === item.productId);
-      const itemPrice = (item.price || 0) * item.amount;
-      
-      return {
-        cakeType: item.name,
-        flavor: item.recipeName || 'Standard Flavor',
-        weight: item.selectedOption || 'Standard',
-        message: item.customMessage || '',
-        instructions: item.customMessage ? `Text on cake: "${item.customMessage}"` : '',
-        pickupDate: checkoutData.pickupDate,
-        pickupTime: checkoutData.pickupTime,
-        contactName: checkoutData.customerName,
-        contactPhone: checkoutData.customerPhone,
-        estimatedPrice: itemPrice,
-        status: 'Pending',
-        recipe: recipe || null,
-        customerName: checkoutData.customerName,
-        customerPhone: checkoutData.customerPhone,
-        specialInstructions: checkoutData.specialInstructions,
-        deliveryType: checkoutData.deliveryType,
-        deliveryAddress: checkoutData.deliveryAddress,
-        gpsCoordinates: checkoutData.gpsCoordinates,
-        paymentMethod: checkoutData.paymentMethod,
-        paymentDetails: checkoutData.paymentDetails,
-        adminNotes: [],
-        createdAt: serverTimestamp(),
-      };
-    });
-
-    if (deliveryFee > 0) {
-      newEntries.push({
-        cakeType: 'Delivery Fee',
-        flavor: 'N/A',
-        weight: 'Standard',
-        message: '',
-        instructions: 'Delivery fee for hand-crafted cake delivery',
-        pickupDate: checkoutData.pickupDate,
-        pickupTime: checkoutData.pickupTime,
-        contactName: checkoutData.customerName,
-        contactPhone: checkoutData.customerPhone,
-        estimatedPrice: deliveryFee,
-        status: 'Pending',
-        recipe: null as any,
-        customerName: checkoutData.customerName,
-        customerPhone: checkoutData.customerPhone,
-        specialInstructions: checkoutData.specialInstructions,
-        deliveryType: checkoutData.deliveryType,
-        deliveryAddress: checkoutData.deliveryAddress,
-        gpsCoordinates: checkoutData.gpsCoordinates,
-        paymentMethod: checkoutData.paymentMethod,
-        paymentDetails: checkoutData.paymentDetails,
-        adminNotes: [],
-        createdAt: serverTimestamp(),
+    try {
+      const response = await fetch('/api/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cartItems: shoppingList.map(item => ({
+            productId: item.productId,
+            name: item.name,
+            recipeName: item.recipeName,
+            selectedOption: item.selectedOption,
+            amount: item.amount,
+            unit: item.unit,
+            customMessage: item.customMessage
+          })),
+          checkoutData
+        })
       });
-    }
 
-    // Save orders to Firestore
-    for (const entry of newEntries) {
-      try {
-        await addDoc(collection(db, 'orders'), entry);
-      } catch (err) {
-        console.error('Error creating order in Firestore:', err);
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to process order checkout.');
       }
-    }
 
-    setShoppingList([]); // Clear the cart
-    setActiveTab('planner'); // Redirect to track orders tab
+      console.log('Order created successfully with validated pricing:', data);
+      setShoppingList([]); // Clear the cart
+      setActiveTab('planner'); // Redirect to track orders tab
+    } catch (err: any) {
+      console.error('Error during order creation checkout:', err);
+      alert('Order checkout notice: ' + (err.message || 'Please try again.'));
+    }
   };
 
   // Toggle bought/checked state

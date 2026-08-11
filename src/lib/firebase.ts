@@ -12,8 +12,16 @@ import {
   onSnapshot, 
   query, 
   orderBy, 
-  serverTimestamp 
+  serverTimestamp,
+  setLogLevel
 } from 'firebase/firestore';
+
+// Suppress internal gRPC idle stream disconnect logs
+try {
+  setLogLevel('error');
+} catch {
+  // ignore
+}
 import { 
   getAuth, 
   GoogleAuthProvider, 
@@ -68,23 +76,23 @@ export const checkIsAdminInFirestore = async (email: string | null | undefined):
   return false;
 };
 
-// Seed initial admins in Firestore if missing
-export const ensureInitialAdminsSeeded = async (defaultEmails: string[]): Promise<void> => {
-  for (const email of defaultEmails) {
-    const cleanEmail = email.trim().toLowerCase();
-    try {
-      const adminDocRef = doc(db, 'admins', cleanEmail);
-      const adminSnap = await getDoc(adminDocRef);
-      if (!adminSnap.exists()) {
-        await setDoc(adminDocRef, {
-          email: cleanEmail,
-          role: 'Administrator',
-          createdAt: new Date().toISOString()
-        });
+// Fetch admin role from Firestore
+export const getAdminRoleFromFirestore = async (email: string | null | undefined): Promise<'admin' | 'chef' | 'viewer'> => {
+  if (!email) return 'viewer';
+  const cleanEmail = email.trim().toLowerCase();
+  try {
+    const adminSnap = await getDoc(doc(db, 'admins', cleanEmail));
+    if (adminSnap.exists()) {
+      const role = adminSnap.data()?.role;
+      if (role === 'admin' || role === 'chef' || role === 'viewer') {
+        return role;
       }
-    } catch (e) {
-      // Security rules or permissions might prevent writing if not signed in yet
-      console.warn('Could not auto-seed admin email (may require existing admin or server setup):', cleanEmail, e);
     }
+  } catch (err) {
+    console.warn('Error reading admin role from Firestore:', err);
   }
+  if (DEFAULT_ADMIN_EMAILS.includes(cleanEmail)) {
+    return 'admin';
+  }
+  return 'viewer';
 };
