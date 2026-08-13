@@ -370,6 +370,11 @@ export default function App() {
       upiId?: string;
     };
   }) => {
+    if (!cashOnDeliveryEnabled && checkoutData.paymentMethod === 'COD') {
+      alert("Cash on Delivery is currently disabled. Please select a different payment method.");
+      return;
+    }
+
     try {
       const response = await fetch('/api/create-order', {
         method: 'POST',
