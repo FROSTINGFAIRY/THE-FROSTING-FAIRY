@@ -267,18 +267,8 @@ export default function AdminDashboard({
     addToast('Image Cleared', `Removed image for "${catName}". Card will show a clean soft placeholder.`, 'info');
   };
 
-  // --- INSTAGRAM DM CONFIGURATION ---
-  const [instaToken, setInstaToken] = useState(() => localStorage.getItem('gusto_insta_token') || '');
-  const [instaRecipient, setInstaRecipient] = useState(() => localStorage.getItem('gusto_insta_recipient') || '');
-  const [instaBusinessId, setInstaBusinessId] = useState(() => localStorage.getItem('gusto_insta_business_id') || '');
-  const [instaWebhook, setInstaWebhook] = useState(() => localStorage.getItem('gusto_insta_webhook') || '');
-
-  // --- WHATSAPP CONFIGURATION ---
-  const [twilioSid, setTwilioSid] = useState(() => localStorage.getItem('gusto_twilio_sid') || '');
-  const [twilioToken, setTwilioToken] = useState(() => localStorage.getItem('gusto_twilio_token') || '');
-  const [twilioFrom, setTwilioFrom] = useState(() => localStorage.getItem('gusto_twilio_from') || 'whatsapp:+14155238886');
-  const [twilioRecipient, setTwilioRecipient] = useState(() => localStorage.getItem('gusto_twilio_recipient') || 'whatsapp:+9665XXXXXXX');
-  const [whatsappEnabled, setWhatsappEnabled] = useState(() => localStorage.getItem('gusto_whatsapp_enabled') === 'true');
+  // --- ORDER NOTIFICATIONS CONFIGURATION ---
+  const [whatsappEnabled, setWhatsappEnabled] = useState(() => localStorage.getItem('gusto_whatsapp_enabled') !== 'false');
   const [isOrderNotificationsExpanded, setIsOrderNotificationsExpanded] = useState(true);
 
   // Orders filters state
@@ -3801,8 +3791,9 @@ export default function AdminDashboard({
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-mono uppercase bg-brand-pink/5 text-brand-pink px-2.5 py-1 rounded-full border border-brand-pink-accent/10 font-bold">
-                  {whatsappEnabled || instaWebhook.trim() || (instaToken.trim() && instaRecipient.trim()) ? "Active" : "Inactive"}
+                <span className="text-[10px] font-mono uppercase bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-full border border-emerald-200 font-bold flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  Secured Server Gateway
                 </span>
                 <span className="text-brand-cocoa-light text-xs font-bold font-mono">
                   {isOrderNotificationsExpanded ? '▲ COLLAPSE' : '▼ EXPAND'}
@@ -3811,248 +3802,38 @@ export default function AdminDashboard({
             </button>
 
             {isOrderNotificationsExpanded && (
-              <div className="p-6 md:p-8 space-y-8 text-left">
-                {/* 1. Instagram DM Notifications Section */}
-                <div className="space-y-6">
-                  <div className="border-b border-brand-cocoa-border/40 pb-3">
-                    <h4 className="font-sans font-extrabold text-xs text-brand-pink uppercase tracking-widest flex items-center gap-2">
-                      <span>📸 Instagram DM Notification Gateway</span>
-                    </h4>
-                    <p className="text-[11px] text-brand-cocoa-light mt-1 leading-relaxed">
-                      Configure custom webhooks or Meta Developer Graph API credentials to transmit order ready/delivery direct messages to Instagram accounts automatically.
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Option A */}
-                    <div className="space-y-4">
-                      <h5 className="font-sans font-bold text-xs text-brand-cocoa uppercase tracking-wide">
-                        Option A: Custom Integration Webhook (Zapier / Make)
-                      </h5>
-                      <p className="text-[11px] text-brand-cocoa-light leading-relaxed">
-                        Provide a custom POST webhook. On status update, we will dispatch order payloads and message text directly to this URL.
+              <div className="p-6 md:p-8 space-y-6 text-left">
+                <div className="bg-brand-cream-light/40 border border-brand-cocoa-border/40 rounded-2xl p-6 space-y-4">
+                  <div className="flex items-start gap-3">
+                    <span className="text-xl">🔒</span>
+                    <div className="space-y-1">
+                      <h4 className="font-sans font-bold text-xs text-brand-cocoa uppercase tracking-wider">
+                        Secure Server-Side Notification Gateway
+                      </h4>
+                      <p className="text-xs text-brand-cocoa-light leading-relaxed">
+                        Twilio WhatsApp and Instagram API credentials (<strong>TWILIO_SID</strong>, <strong>TWILIO_TOKEN</strong>, <strong>INSTA_TOKEN</strong>) are configured securely via Firebase Secrets in the environment panel — exactly like your <strong>GEMINI_API_KEY</strong>.
                       </p>
-
-                      <div className="space-y-2 text-left">
-                        <label className="font-mono text-[9px] uppercase tracking-wider text-brand-cocoa-light block font-bold">
-                          Automator Webhook URL
-                        </label>
-                        <input
-                          type="url"
-                          placeholder="https://hooks.zapier.com/hooks/catch/..."
-                          value={instaWebhook}
-                          onChange={(e) => {
-                            setInstaWebhook(e.target.value);
-                            localStorage.setItem('gusto_insta_webhook', e.target.value);
-                          }}
-                          className="w-full px-3.5 py-2 text-xs font-semibold text-brand-cocoa border border-brand-cocoa-border rounded-xl focus:outline-none focus:ring-1 focus:ring-brand-pink bg-white"
-                        />
-                        <span className="text-[9px] font-mono text-brand-cocoa-light/60 block">
-                          {instaWebhook.trim() ? "✅ Live Webhook posting active." : "ℹ️ Leave empty to use simulation logs or Meta API below."}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Option B */}
-                    <div className="space-y-4 border-t md:border-t-0 md:border-l border-brand-cocoa-border/30 pt-4 md:pt-0 md:pl-6 text-left">
-                      <h5 className="font-sans font-bold text-xs text-brand-cocoa uppercase tracking-wide">
-                        Option B: Official Meta Graph API Credentials
-                      </h5>
-                      <p className="text-[11px] text-brand-cocoa-light leading-relaxed">
-                        Transmits messages using official Meta API Graph endpoints directly to authorized Instagram professional accounts.
-                      </p>
-
-                      {/* Secure warning note for browser token storage */}
-                      <div className="text-[10px] text-red-700 bg-red-50 border border-red-200 px-3.5 py-2.5 rounded-xl flex items-start gap-2 leading-relaxed">
-                        <span className="font-bold text-xs">⚠️</span>
-                        <span>
-                          <strong>Security Warning:</strong> This access token is stored in the browser's localStorage and is used in a client-side fetch, making it visible to anyone opening DevTools. This is insecure. <strong>Only use low-privilege test tokens for testing; never input a production token here.</strong>
-                        </span>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div className="space-y-1">
-                          <label className="font-mono text-[8px] uppercase tracking-wider text-brand-cocoa-light block font-bold">
-                            Instagram User Access Token
-                          </label>
-                          <input
-                            type="password"
-                            placeholder="EAAGy..."
-                            value={instaToken}
-                            onChange={(e) => {
-                              setInstaToken(e.target.value);
-                              localStorage.setItem('gusto_insta_token', e.target.value);
-                            }}
-                            className="w-full px-3 py-1.5 text-xs font-semibold text-brand-cocoa border border-brand-cocoa-border rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-pink bg-white"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="font-mono text-[8px] uppercase tracking-wider text-brand-cocoa-light block font-bold">
-                            Instagram Professional ID
-                          </label>
-                          <input
-                            type="text"
-                            placeholder="178414..."
-                            value={instaBusinessId}
-                            onChange={(e) => {
-                              setInstaBusinessId(e.target.value);
-                              localStorage.setItem('gusto_insta_business_id', e.target.value);
-                            }}
-                            className="w-full px-3 py-1.5 text-xs font-semibold text-brand-cocoa border border-brand-cocoa-border rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-pink bg-white"
-                          />
-                        </div>
-                        <div className="space-y-1 sm:col-span-2">
-                          <label className="font-mono text-[8px] uppercase tracking-wider text-brand-cocoa-light block font-bold">
-                            Admin Instagram Recipient ID (Thread / User ID)
-                          </label>
-                          <input
-                            type="text"
-                            placeholder="849204321..."
-                            value={instaRecipient}
-                            onChange={(e) => {
-                              setInstaRecipient(e.target.value);
-                              localStorage.setItem('gusto_insta_recipient', e.target.value);
-                            }}
-                            className="w-full px-3 py-1.5 text-xs font-semibold text-brand-cocoa border border-brand-cocoa-border rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-pink bg-white"
-                          />
-                        </div>
-                      </div>
                     </div>
                   </div>
+                  <p className="text-[11px] text-brand-cocoa-light/80 leading-relaxed border-t border-brand-cocoa-border/20 pt-3">
+                    No API keys, account tokens, or auth credentials are stored in browser local storage or exposed to client-side scripts. All notification dispatches (WhatsApp alerts, Instagram DMs, and webhook postings) are processed exclusively by server triggers during order creation and status changes.
+                  </p>
                 </div>
 
-                {/* 2. WhatsApp Notifications Section */}
-                <div className="space-y-6 pt-6 border-t border-brand-cocoa-border/30">
-                  <div className="border-b border-brand-cocoa-border/40 pb-3">
-                    <h4 className="font-sans font-extrabold text-xs text-brand-pink uppercase tracking-widest flex items-center gap-2">
-                      <span>💬 WhatsApp Notification Gateway</span>
-                    </h4>
-                    <p className="text-[11px] text-brand-cocoa-light mt-1 leading-relaxed">
-                      Configure your Twilio account credentials to transmit real-time customer status alerts to WhatsApp.
-                    </p>
-                  </div>
-
-                  {/* Security warning identical to Meta warning */}
-                  <div className="text-[10px] text-red-700 bg-red-50 border border-red-200 px-3.5 py-2.5 rounded-xl flex items-start gap-2 leading-relaxed">
-                    <span className="font-bold text-xs">⚠️</span>
-                    <span>
-                      Security Warning: Your Twilio credentials are stored in the browser's localStorage and are used in a client-side fetch, making them visible to anyone inspecting network traffic or DevTools. This is highly insecure. We recommend routing this through a Supabase Edge Function instead of storing tokens in localStorage. Only use test/developer credentials here.
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
-                    <div className="space-y-1.5">
-                      <label className="font-mono text-[8px] uppercase tracking-wider text-brand-cocoa-light block font-bold">
-                        Twilio Account SID
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="AC..."
-                        value={twilioSid}
-                        onChange={(e) => {
-                          setTwilioSid(e.target.value);
-                          localStorage.setItem('gusto_twilio_sid', e.target.value);
-                        }}
-                        className="w-full px-3.5 py-2 text-xs font-semibold text-brand-cocoa border border-brand-cocoa-border rounded-xl focus:outline-none focus:ring-1 focus:ring-brand-pink bg-white"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="font-mono text-[8px] uppercase tracking-wider text-brand-cocoa-light block font-bold">
-                        Twilio Auth Token
-                      </label>
-                      <input
-                        type="password"
-                        placeholder="Token..."
-                        value={twilioToken}
-                        onChange={(e) => {
-                          setTwilioToken(e.target.value);
-                          localStorage.setItem('gusto_twilio_token', e.target.value);
-                        }}
-                        className="w-full px-3.5 py-2 text-xs font-semibold text-brand-cocoa border border-brand-cocoa-border rounded-xl focus:outline-none focus:ring-1 focus:ring-brand-pink bg-white"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="font-mono text-[8px] uppercase tracking-wider text-brand-cocoa-light block font-bold">
-                        Twilio WhatsApp From Number
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="whatsapp:+14155238886"
-                        value={twilioFrom}
-                        onChange={(e) => {
-                          setTwilioFrom(e.target.value);
-                          localStorage.setItem('gusto_twilio_from', e.target.value);
-                        }}
-                        className="w-full px-3.5 py-2 text-xs font-semibold text-brand-cocoa border border-brand-cocoa-border rounded-xl focus:outline-none focus:ring-1 focus:ring-brand-pink bg-white"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="font-mono text-[8px] uppercase tracking-wider text-brand-cocoa-light block font-bold">
-                        Admin WhatsApp Recipient Number
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="whatsapp:+9665XXXXXXX"
-                        value={twilioRecipient}
-                        onChange={(e) => {
-                          setTwilioRecipient(e.target.value);
-                          localStorage.setItem('gusto_twilio_recipient', e.target.value);
-                        }}
-                        className="w-full px-3.5 py-2 text-xs font-semibold text-brand-cocoa border border-brand-cocoa-border rounded-xl focus:outline-none focus:ring-1 focus:ring-brand-pink bg-white"
-                      />
-                    </div>
-
-                    {/* Toggle: Enable WhatsApp alerts on status change */}
-                    <div className="sm:col-span-2 pt-4 border-t border-brand-cocoa-border/20 flex items-center justify-between gap-4">
-                      <div className="space-y-0.5">
-                        <span className="font-sans font-bold text-xs text-brand-cocoa block">
-                          Enable WhatsApp Alerts on Status Change
-                        </span>
-                        <span className="text-[10px] text-brand-cocoa-light leading-relaxed block max-w-lg">
-                          Dispatches WhatsApp alerts using your Twilio credentials to the configured admin number whenever an order changes status.
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (currentRole === 'viewer') {
-                            triggerToast('❌ Permission Denied: Read-only role cannot toggle settings.');
-                            return;
-                          }
-                          const nextVal = !whatsappEnabled;
-                          setWhatsappEnabled(nextVal);
-                          localStorage.setItem('gusto_whatsapp_enabled', nextVal.toString());
-                        }}
-                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                          whatsappEnabled ? 'bg-brand-pink' : 'bg-brand-cocoa-border'
-                        }`}
-                        title="Toggle WhatsApp Alerts"
-                      >
-                        <span
-                          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
-                            whatsappEnabled ? 'translate-x-5' : 'translate-x-0'
-                          }`}
-                        />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Shared Test Connection Actions */}
-                <div className="pt-6 border-t border-brand-cocoa-border/30 flex flex-col sm:flex-row items-center justify-between p-5 bg-brand-pink-light/10 border border-brand-pink-accent/15 rounded-xl gap-4 text-left">
+                <div className="pt-4 border-t border-brand-cocoa-border/30 flex flex-col sm:flex-row items-center justify-between p-5 bg-brand-pink-light/10 border border-brand-pink-accent/15 rounded-xl gap-4 text-left">
                   <div className="flex-1">
                     <span className="font-sans font-bold text-xs text-brand-cocoa block">
-                      Verify Notification Gateway Dispatchers
+                      Verify Server Notification Dispatcher
                     </span>
                     <span className="text-[10px] text-brand-cocoa-light block leading-normal mt-0.5 max-w-xl">
-                      Dispatches a simulated status transition alert. This fires all active channels that you have configured (webhooks, Instagram Meta Graph, and/or WhatsApp) instantly. Check the Security Audit Log below to verify!
+                      Dispatches a secure server-side test alert through the backend notification handler. Check the Security Audit Log below to verify execution results!
                     </span>
                   </div>
                   <button
                     onClick={handleSendTestNotification}
-                    className="px-5 py-2.5 bg-brand-cocoa text-brand-cream hover:bg-brand-cocoa-light text-xs font-bold rounded-xl transition-all shadow-sm shrink-0 uppercase tracking-wider cursor-pointer"
+                    className="px-5 py-2.5 bg-brand-pink text-white hover:bg-brand-pink-accent text-xs font-bold rounded-xl transition-all shadow-sm shrink-0 uppercase tracking-wider cursor-pointer"
                   >
-                    Send Test Alerts
+                    ⚡ Send Test Alert
                   </button>
                 </div>
               </div>

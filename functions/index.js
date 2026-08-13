@@ -1,8 +1,7 @@
-const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { defineSecret } = require("firebase-functions/params");
 const { initializeApp } = require("firebase-admin/app");
-const { getFirestore, FieldValue } = require("firebase-admin/firestore");
+const { getFirestore } = require("firebase-admin/firestore");
 
 initializeApp();
 
@@ -12,8 +11,12 @@ const instaTokenSecret = defineSecret("INSTA_TOKEN");
 
 const DEFAULT_ADMINS = ['kiddepressed03@gmail.com', 'hellofrostingfairy@gmail.com'];
 
+// Note: createOrder and onNewOrderCreated have been removed from Cloud Functions
+// to maintain a single canonical path in server.ts (Cloud Run), which handles order
+// creation validation, pricing calculation, database storage, and real-time order notifications.
+
 /**
- * Helper to send notifications via Webhook and/or Twilio WhatsApp
+ * Helper to send notifications via Webhook, Instagram Graph API, and/or Twilio WhatsApp
  */
 async function dispatchNotification({ orderId, customerName, cakeType, status, isTest = false }) {
   const db = getFirestore();
@@ -29,7 +32,7 @@ async function dispatchNotification({ orderId, customerName, cakeType, status, i
 
   const results = { webhook: false, twilio: false, instagram: false };
 
-  // 1. Dispatch Webhook / Instagram
+  // 1. Dispatch Webhook
   if (settings.instaWebhook) {
     try {
       await fetch(settings.instaWebhook, {
@@ -74,7 +77,7 @@ async function dispatchNotification({ orderId, customerName, cakeType, status, i
   }
 
   // 3. Dispatch WhatsApp via Twilio
-  if (settings.whatsappEnabled && twilioSid && twilioToken && settings.twilioRecipient) {
+  if (settings.whatsappEnabled !== false && twilioSid && twilioToken && settings.twilioRecipient) {
     try {
       const formData = new URLSearchParams();
       formData.append("To", settings.twilioRecipient.trim());
@@ -137,134 +140,3 @@ exports.sendTestNotification = onCall(
     return { success: true, message: "Test notification dispatched successfully.", results };
   }
 );
-
-/**
- * Callable Cloud Function: createOrder
- * Validates pricing server-side using products collection and creates order.
- */
-exports.createOrder = onCall(async (request) => {
-  const { cartItems, checkoutData } = request.data || {};
-
-  if (!Array.isArray(cartItems) || cartItems.length === 0) {
-    throw new HttpsError("invalid-argument", "Cart items are required to create an order.");
-  }
-  if (!checkoutData || !checkoutData.customerName || !checkoutData.customerPhone) {
-    throw new HttpsError("invalid-argument", "Customer details (name & phone) are required.");
-  }
-
-  const db = getFirestore();
-  const createdOrderIds = [];
-  let totalItemsPrice = 0;
-
-  // Verify and calculate item prices server-side
-  const orderEntries = [];
-  for (const item of cartItems) {
-    let unitPrice = 0;
-    let recipeData = null;
-
-    if (item.productId) {
-      const productDoc = await db.collection("products").doc(item.productId).get();
-      if (productDoc.exists) {
-        recipeData = productDoc.data();
-        if (Array.isArray(recipeData.priceOptions) && recipeData.priceOptions.length > 0) {
-          const matchedOpt = recipeData.priceOptions.find(
-            (opt) => opt.weight === item.selectedOption || opt.weight === item.unit
-          );
-          unitPrice = matchedOpt ? matchedOpt.price : recipeData.priceOptions[0].price;
-        } else {
-          unitPrice = recipeData.basePrice || recipeData.price || 0;
-        }
-      }
-    }
-
-    const itemQuantity = Math.max(1, parseInt(item.amount, 10) || 1);
-    const calculatedLinePrice = unitPrice * itemQuantity;
-    totalItemsPrice += calculatedLinePrice;
-
-    orderEntries.push({
-      cakeType: item.name || recipeData?.name || "Custom Pastry",
-      flavor: item.recipeName || recipeData?.category || "Standard Flavor",
-      weight: item.selectedOption || "Standard",
-      message: item.customMessage || "",
-      instructions: item.customMessage ? `Text on cake: "${item.customMessage}"` : "",
-      pickupDate: checkoutData.pickupDate || "",
-      pickupTime: checkoutData.pickupTime || "",
-      contactName: checkoutData.customerName,
-      contactPhone: checkoutData.customerPhone,
-      estimatedPrice: calculatedLinePrice,
-      status: "Pending",
-      recipe: recipeData,
-      customerName: checkoutData.customerName,
-      customerPhone: checkoutData.customerPhone,
-      specialInstructions: checkoutData.specialInstructions || "",
-      deliveryType: checkoutData.deliveryType || "Pickup",
-      deliveryAddress: checkoutData.deliveryAddress || "",
-      gpsCoordinates: checkoutData.gpsCoordinates || "",
-      paymentMethod: checkoutData.paymentMethod || "COD",
-      paymentDetails: checkoutData.paymentDetails || {},
-      adminNotes: [],
-      createdAt: FieldValue.serverTimestamp()
-    });
-  }
-
-  // Server-side delivery fee calculation
-  const deliveryFee = checkoutData.deliveryType === "Delivery" ? (totalItemsPrice >= 600 ? 0 : 50) : 0;
-  if (deliveryFee > 0) {
-    orderEntries.push({
-      cakeType: "Delivery Fee",
-      flavor: "N/A",
-      weight: "Standard",
-      message: "",
-      instructions: "Delivery fee for hand-crafted cake delivery",
-      pickupDate: checkoutData.pickupDate || "",
-      pickupTime: checkoutData.pickupTime || "",
-      contactName: checkoutData.customerName,
-      contactPhone: checkoutData.customerPhone,
-      estimatedPrice: deliveryFee,
-      status: "Pending",
-      recipe: null,
-      customerName: checkoutData.customerName,
-      customerPhone: checkoutData.customerPhone,
-      specialInstructions: checkoutData.specialInstructions || "",
-      deliveryType: checkoutData.deliveryType || "Delivery",
-      deliveryAddress: checkoutData.deliveryAddress || "",
-      gpsCoordinates: checkoutData.gpsCoordinates || "",
-      paymentMethod: checkoutData.paymentMethod || "COD",
-      paymentDetails: checkoutData.paymentDetails || {},
-      adminNotes: [],
-      createdAt: FieldValue.serverTimestamp()
-    });
-  }
-
-  // Create order documents server-side
-  for (const entry of orderEntries) {
-    const docRef = await db.collection("orders").add(entry);
-    createdOrderIds.push(docRef.id);
-  }
-
-  return {
-    success: true,
-    orderIds: createdOrderIds,
-    totalPrice: totalItemsPrice + deliveryFee
-  };
-});
-
-/**
- * Firestore Trigger: onNewOrderCreated
- */
-exports.onNewOrderCreated = onDocumentCreated("orders/{orderId}", async (event) => {
-  const orderId = event.params.orderId;
-  const newOrder = event.data?.data();
-
-  if (!newOrder) return;
-
-  console.log(`[Cloud Function] New order trigger fired: #${orderId}`, newOrder);
-
-  await dispatchNotification({
-    orderId,
-    customerName: newOrder.customerName || newOrder.contactName || "Valued Customer",
-    cakeType: newOrder.cakeType || "Custom Pastry",
-    status: newOrder.status || "Pending",
-    isTest: false
-  });
-});

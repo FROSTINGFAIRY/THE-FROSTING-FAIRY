@@ -49,9 +49,9 @@ service cloud.firestore {
       allow write: if isRoleAdmin();
     }
 
-    // Orders collection: server-only creation (allow create: if false), chef/admin update, admin delete
+    // Orders collection: allow create with required fields validation, chef/admin read/update, admin delete
     match /orders/{orderId} {
-      allow create: if false;
+      allow create: if request.resource.data.keys().hasAll(['cakeType', 'contactName', 'customerName', 'status', 'createdAt']);
       allow read, update: if isRoleChefOrAdmin();
       allow delete: if isRoleAdmin();
     }

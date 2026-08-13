@@ -4,35 +4,27 @@ import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
 import rateLimit from "express-rate-limit";
-import { initializeApp, getApps } from "firebase/app";
-import { 
-  getFirestore, 
-  collection, 
-  onSnapshot, 
-  doc, 
-  getDoc, 
-  addDoc, 
-  serverTimestamp, 
-  setLogLevel 
-} from "firebase/firestore";
-
-try {
-  setLogLevel('error');
-} catch {}
+import { initializeApp, getApps } from "firebase-admin/app";
+import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import firebaseConfig from "./firebase-applet-config.json";
 
 dotenv.config();
 
 const DEFAULT_ADMINS = ['kiddepressed03@gmail.com', 'hellofrostingfairy@gmail.com'];
 
-// Initialize Firebase App for server-side operations
-const firebaseApp = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-const db = firebaseConfig.firestoreDatabaseId 
-  ? getFirestore(firebaseApp, firebaseConfig.firestoreDatabaseId)
-  : getFirestore(firebaseApp);
+// Initialize Firebase Admin SDK using Application Default Credentials
+const adminApp = getApps().length === 0
+  ? initializeApp({ projectId: firebaseConfig.projectId })
+  : getApps()[0];
+
+// Target the named database: ai-studio-thefrostingfairy-921cb999-217d-4754-98e5-84c32edf59fa
+const db = getFirestore(
+  adminApp,
+  firebaseConfig.firestoreDatabaseId || "ai-studio-thefrostingfairy-921cb999-217d-4754-98e5-84c32edf59fa"
+);
 
 /**
- * Server-side Admin Token Verification helper
+ * Server-side Admin Token Verification helper using Firebase Identity Toolkit lookup
  */
 async function verifyAdminToken(req: express.Request) {
   const authHeader = req.headers.authorization;
@@ -66,8 +58,8 @@ async function verifyAdminToken(req: express.Request) {
 
   if (!isAuthorized) {
     try {
-      const adminSnap = await getDoc(doc(db, "admins", email));
-      if (adminSnap.exists()) {
+      const adminSnap = await db.collection("admins").doc(email).get();
+      if (adminSnap.exists) {
         isAuthorized = true;
       }
     } catch (err) {
@@ -93,8 +85,8 @@ async function dispatchServerNotification({ orderId, customerName, cakeType, sta
   isTest?: boolean;
 }) {
   try {
-    const settingsSnap = await getDoc(doc(db, "settings", "notifications"));
-    const settings = settingsSnap.exists() ? settingsSnap.data() : {};
+    const settingsSnap = await db.collection("settings").doc("notifications").get();
+    const settings = settingsSnap.exists ? settingsSnap.data() || {} : {};
 
     const twilioSid = process.env.TWILIO_SID || settings.twilioSid || "";
     const twilioToken = process.env.TWILIO_TOKEN || settings.twilioToken || "";
@@ -105,7 +97,7 @@ async function dispatchServerNotification({ orderId, customerName, cakeType, sta
 
     const results = { webhook: false, twilio: false, instagram: false };
 
-    // 1. Dispatch Webhook / Instagram
+    // 1. Dispatch Webhook
     if (settings.instaWebhook) {
       fetch(settings.instaWebhook, {
         method: "POST",
@@ -142,7 +134,7 @@ async function dispatchServerNotification({ orderId, customerName, cakeType, sta
     }
 
     // 3. Dispatch WhatsApp via Twilio
-    if (settings.whatsappEnabled && twilioSid && twilioToken && settings.twilioRecipient) {
+    if (settings.whatsappEnabled !== false && twilioSid && twilioToken && settings.twilioRecipient) {
       const formData = new URLSearchParams();
       formData.append("To", settings.twilioRecipient.trim());
       formData.append("From", settings.twilioFrom ? settings.twilioFrom.trim() : "whatsapp:+14155238886");
@@ -168,11 +160,10 @@ async function dispatchServerNotification({ orderId, customerName, cakeType, sta
   }
 }
 
-// Order listener for server-side real-time trigger
+// Attach real-time order listener using Admin SDK
 let isInitialLoad = true;
 try {
-  const ordersRef = collection(db, "orders");
-  onSnapshot(ordersRef, (snapshot) => {
+  db.collection("orders").onSnapshot((snapshot) => {
     if (isInitialLoad) {
       isInitialLoad = false;
       return;
@@ -193,11 +184,7 @@ try {
       }
     });
   }, (err: any) => {
-    if (err?.message?.includes('CANCELLED') || err?.code === 1 || err?.code === 'cancelled') {
-      console.debug('[Server Trigger] Firestore idle stream re-establishing connection...');
-    } else {
-      console.warn("Firestore listener on server notice:", err?.message || err);
-    }
+    console.warn("Firestore listener on server notice:", err?.message || err);
   });
 } catch (e) {
   console.warn("Failed to attach Firestore server order listener:", e);
@@ -212,6 +199,15 @@ async function startServer() {
     windowMs: 60 * 1000,
     max: 10,
     message: { error: "Rate limit exceeded. Maximum 10 image generation requests per minute allowed." },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
+  // Rate Limiting for order creation (5 orders per 10 minutes per IP)
+  const createOrderLimiter = rateLimit({
+    windowMs: 10 * 60 * 1000,
+    max: 5,
+    message: { error: "Rate limit exceeded. Maximum 5 orders per 10 minutes allowed." },
     standardHeaders: true,
     legacyHeaders: false,
   });
@@ -257,7 +253,7 @@ async function startServer() {
       }
 
       console.log(`Generating cake image for prompt: "${prompt}"`);
-      
+
       try {
         const client = getAiClient();
         const response = await client.models.generateContent({
@@ -308,10 +304,10 @@ async function startServer() {
         fallbackUrl = "https://images.unsplash.com/photo-1588195538326-c5b1e9f80a1b?auto=format&fit=crop&q=80&w=800";
       }
 
-      return res.json({ 
-        imageUrl: fallbackUrl, 
-        isFallback: true, 
-        message: "Served curated high-resolution bakery photo preview." 
+      return res.json({
+        imageUrl: fallbackUrl,
+        isFallback: true,
+        message: "Served curated high-resolution bakery photo preview."
       });
     } catch (error: any) {
       console.error("Image generation handler error:", error);
@@ -347,7 +343,7 @@ async function startServer() {
   });
 
   // 3) VALIDATE ORDER PRICING SERVER-SIDE /api/create-order
-  app.post("/api/create-order", async (req, res) => {
+  app.post("/api/create-order", createOrderLimiter, async (req, res) => {
     try {
       const { cartItems, checkoutData } = req.body || {};
 
@@ -361,15 +357,15 @@ async function startServer() {
       let totalItemsPrice = 0;
       const orderEntries: any[] = [];
 
-      // Look up true product prices from Firestore products collection server-side
+      // Look up true product prices from Firestore products collection server-side via Admin SDK
       for (const item of cartItems) {
         let unitPrice = 0;
         let recipeData: any = null;
 
         if (item.productId) {
           try {
-            const productSnap = await getDoc(doc(db, "products", item.productId));
-            if (productSnap.exists()) {
+            const productSnap = await db.collection("products").doc(item.productId).get();
+            if (productSnap.exists) {
               recipeData = productSnap.data();
               if (Array.isArray(recipeData.priceOptions) && recipeData.priceOptions.length > 0) {
                 const matchedOpt = recipeData.priceOptions.find(
@@ -385,7 +381,10 @@ async function startServer() {
           }
         }
 
-        const itemQuantity = Math.max(1, parseInt(item.amount, 10) || 1);
+        // Clamp item amount server-side to range 1-50
+        const rawAmount = parseInt(item.amount, 10) || 1;
+        const itemQuantity = Math.min(50, Math.max(1, rawAmount));
+
         const calculatedLinePrice = unitPrice * itemQuantity;
         totalItemsPrice += calculatedLinePrice;
 
@@ -411,7 +410,7 @@ async function startServer() {
           paymentMethod: checkoutData.paymentMethod || "COD",
           paymentDetails: checkoutData.paymentDetails || {},
           adminNotes: [],
-          createdAt: serverTimestamp()
+          createdAt: FieldValue.serverTimestamp()
         });
       }
 
@@ -440,14 +439,14 @@ async function startServer() {
           paymentMethod: checkoutData.paymentMethod || "COD",
           paymentDetails: checkoutData.paymentDetails || {},
           adminNotes: [],
-          createdAt: serverTimestamp()
+          createdAt: FieldValue.serverTimestamp()
         });
       }
 
       const createdOrderIds: string[] = [];
-      const ordersColRef = collection(db, "orders");
+      const ordersColRef = db.collection("orders");
       for (const entry of orderEntries) {
-        const docRef = await addDoc(ordersColRef, entry);
+        const docRef = await ordersColRef.add(entry);
         createdOrderIds.push(docRef.id);
       }
 
