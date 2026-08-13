@@ -249,6 +249,11 @@ export default function ShoppingList({
         setErrorMessage('Please enter a valid UPI ID (e.g. name@paytm or phone@okaxis).');
         return;
       }
+    } else if (paymentMethod === 'COD') {
+      if (!cashOnDeliveryEnabled) {
+        setErrorMessage('Cash on Delivery is currently disabled by store management. Please select Card or UPI.');
+        return;
+      }
     }
 
     const cleanCard = cardNumber.replace(/\s/g, '');

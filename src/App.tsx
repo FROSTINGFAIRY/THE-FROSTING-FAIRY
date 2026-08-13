@@ -17,7 +17,7 @@ import { Recipe, ShoppingItem, MealPlanEntry, MealType, CategoryInfo } from './t
 import { AnimatePresence, motion } from 'motion/react';
 import { X, Instagram, ArrowLeft } from 'lucide-react';
 import { db } from './lib/firebase';
-import { collection, onSnapshot, doc, getDoc, setDoc, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, onSnapshot, doc, getDoc, setDoc, addDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 
 // Local storage key names for fallback preferences
 const SHOPPING_STORAGE_KEY = 'gusto_shopping_list';
@@ -68,6 +68,26 @@ export default function App() {
       const loadedOrders: MealPlanEntry[] = [];
       snapshot.forEach((docSnap) => {
         const data = docSnap.data();
+        const cName = (data.customerName || data.contactName || '').toLowerCase();
+        const cPhone = (data.customerPhone || data.contactPhone || '').toLowerCase();
+        const cAddr = (data.deliveryAddress || '').toLowerCase();
+
+        // Detect dummy test orders and purge them permanently from Firestore
+        const isDummy =
+          cName.includes('jane doe') ||
+          cName.includes('test') ||
+          cPhone.includes('15550192834') ||
+          cPhone.includes('5550192834') ||
+          cAddr.includes('fairy lane') ||
+          cAddr.includes('pastry tow');
+
+        if (isDummy) {
+          deleteDoc(doc(db, 'orders', docSnap.id)).catch((err) => {
+            console.warn('Auto-purge dummy order error:', err);
+          });
+          return;
+        }
+
         loadedOrders.push({
           id: docSnap.id,
           cakeType: data.cakeType || 'Custom Cake',
@@ -88,7 +108,7 @@ export default function App() {
           deliveryType: data.deliveryType || 'Pickup',
           deliveryAddress: data.deliveryAddress || '',
           gpsCoordinates: data.gpsCoordinates || '',
-          paymentMethod: data.paymentMethod || 'COD',
+          paymentMethod: (!cashOnDeliveryEnabled && data.paymentMethod === 'COD') ? 'Card' : (data.paymentMethod || 'Card'),
           paymentDetails: data.paymentDetails || {},
           adminNotes: data.adminNotes || [],
         });
@@ -103,7 +123,7 @@ export default function App() {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [cashOnDeliveryEnabled]);
 
   // 3. LIVE BRANDING & STORE SETTINGS FROM FIRESTORE
   useEffect(() => {
@@ -272,8 +292,14 @@ export default function App() {
     setMealPlan((prev) => [...prev, entry]);
   };
 
-  const handleRemoveMeal = (id: string) => {
+  const handleRemoveMeal = async (id: string) => {
     setMealPlan((prev) => prev.filter((item) => item.id !== id));
+    try {
+      await deleteDoc(doc(db, 'orders', id));
+      addToast('🗑️ Order Cancelled', 'The order has been removed.', 'info');
+    } catch (e: any) {
+      console.warn('Could not delete order from Firestore:', e);
+    }
   };
 
   // --- SHOPPING CART & E-COMMERCE HANDLERS ---
@@ -484,6 +510,7 @@ export default function App() {
             onSelectRecipe={handleSelectRecipe}
             preselectedRecipeId={preselectedRecipeId}
             clearPreselectedRecipeId={() => setPreselectedRecipeId('')}
+            cashOnDeliveryEnabled={cashOnDeliveryEnabled}
           />
         );
       case 'shopping':

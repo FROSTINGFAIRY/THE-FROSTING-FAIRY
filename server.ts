@@ -354,6 +354,27 @@ async function startServer() {
         return res.status(400).json({ error: "Customer details (name & phone) are required." });
       }
 
+      // Fetch branding settings to check if Cash on Delivery is enabled
+      let isCodEnabled = true;
+      try {
+        const brandingSnap = await db.collection("settings").doc("branding").get();
+        if (brandingSnap.exists) {
+          const bData = brandingSnap.data();
+          if (bData && bData.cashOnDeliveryEnabled === false) {
+            isCodEnabled = false;
+          }
+        }
+      } catch (err) {
+        console.warn("Could not check branding settings in server:", err);
+      }
+
+      const requestedPaymentMethod = checkoutData.paymentMethod || "Card";
+      if (!isCodEnabled && requestedPaymentMethod === "COD") {
+        return res.status(400).json({ error: "Cash on Delivery is currently disabled by store management. Please select Card or UPI payment method." });
+      }
+
+      const resolvedPaymentMethod = (!isCodEnabled && requestedPaymentMethod === "COD") ? "Card" : requestedPaymentMethod;
+
       let totalItemsPrice = 0;
       const orderEntries: any[] = [];
 
@@ -407,7 +428,7 @@ async function startServer() {
           deliveryType: checkoutData.deliveryType || "Pickup",
           deliveryAddress: checkoutData.deliveryAddress || "",
           gpsCoordinates: checkoutData.gpsCoordinates || "",
-          paymentMethod: checkoutData.paymentMethod || "COD",
+          paymentMethod: resolvedPaymentMethod,
           paymentDetails: checkoutData.paymentDetails || {},
           adminNotes: [],
           createdAt: FieldValue.serverTimestamp()
@@ -436,7 +457,7 @@ async function startServer() {
           deliveryType: checkoutData.deliveryType || "Delivery",
           deliveryAddress: checkoutData.deliveryAddress || "",
           gpsCoordinates: checkoutData.gpsCoordinates || "",
-          paymentMethod: checkoutData.paymentMethod || "COD",
+          paymentMethod: resolvedPaymentMethod,
           paymentDetails: checkoutData.paymentDetails || {},
           adminNotes: [],
           createdAt: FieldValue.serverTimestamp()

@@ -896,6 +896,31 @@ export default function AdminDashboard({
     }
   };
 
+  const handleUpdateOrderPaymentMethod = async (
+    orderId: string,
+    newPaymentMethod: 'Card' | 'UPI' | 'COD'
+  ) => {
+    if (currentRole === 'viewer') {
+      addAuditLog(`Attempted to update payment method of Order #${orderId} (Blocked)`, 'warning');
+      triggerToast('❌ Permission Denied: Cashier/Viewer role is read-only.');
+      return;
+    }
+
+    if (!cashOnDeliveryEnabled && newPaymentMethod === 'COD') {
+      triggerToast('❌ Cash on Delivery is currently disabled in Payment Settings.');
+      return;
+    }
+
+    try {
+      await updateDoc(doc(db, 'orders', orderId), { paymentMethod: newPaymentMethod });
+      addAuditLog(`Updated Order #${orderId} payment method to "${newPaymentMethod}" in Firestore`);
+      triggerToast(`💳 Order #${orderId} payment method updated to: ${newPaymentMethod}`);
+    } catch (err: any) {
+      console.error('Firestore update order payment method error:', err);
+      triggerToast('❌ Error updating payment method: ' + err.message);
+    }
+  };
+
   // Sync edit form with selected product
   React.useEffect(() => {
     if (activeProduct && !isAddingNewProduct) {
@@ -1222,6 +1247,24 @@ export default function AdminDashboard({
       setUpiId(upiIdInput.trim());
       setUpiQrCode(upiQrInput.trim());
       setCashOnDeliveryEnabled(cashOnDeliveryInput);
+
+      // If Cash on Delivery is disabled, update any active/pending COD orders in Firestore to Card payment
+      if (!cashOnDeliveryInput) {
+        const codOrders = mealPlan.filter(o => o.paymentMethod === 'COD');
+        if (codOrders.length > 0) {
+          for (const ord of codOrders) {
+            try {
+              await updateDoc(doc(db, 'orders', ord.id), { paymentMethod: 'Card' });
+            } catch (e) {
+              console.warn(`Could not update order #${ord.id} to Card:`, e);
+            }
+          }
+          addAuditLog(`Auto-updated ${codOrders.length} Cash on Delivery order(s) to Card payment as COD was disabled.`, 'info');
+          triggerToast(`💳 COD disabled. Automatically converted ${codOrders.length} existing COD order(s) to Card/Online payment!`);
+          return;
+        }
+      }
+
       addAuditLog(`Updated payment settings in Firestore: UPI ID ${upiIdInput.trim()}`);
       triggerToast('💳 Payment settings updated in Firestore!');
     } catch (err: any) {
@@ -3096,7 +3139,7 @@ export default function AdminDashboard({
               />
             </div>
 
-            <div className="flex items-center gap-3 w-full md:w-auto shrink-0">
+            <div className="flex flex-wrap items-center gap-3 w-full md:w-auto shrink-0">
               <span className="font-sans font-bold text-xs text-brand-cocoa shrink-0">Status:</span>
               <select
                 value={orderStatusFilter}
@@ -3111,6 +3154,34 @@ export default function AdminDashboard({
                 <option value="Out for Delivery">Out for Delivery 🛵</option>
                 <option value="Completed">Completed 🎉</option>
               </select>
+
+              {mealPlan.some(o => o.paymentMethod === 'COD') && (
+                <button
+                  onClick={async () => {
+                    if (currentRole === 'viewer') {
+                      triggerToast('❌ Permission Denied.');
+                      return;
+                    }
+                    const codOrders = mealPlan.filter(o => o.paymentMethod === 'COD');
+                    let count = 0;
+                    for (const ord of codOrders) {
+                      try {
+                        await updateDoc(doc(db, 'orders', ord.id), { paymentMethod: 'Card' });
+                        count++;
+                      } catch (err) {
+                        console.warn('Error updating order:', err);
+                      }
+                    }
+                    addAuditLog(`Converted ${count} COD orders to Card payment`, 'info');
+                    triggerToast(`✨ Converted ${count} Cash on Delivery order(s) to Card/Online payment!`);
+                  }}
+                  className="px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white font-sans font-bold text-xs rounded-xl transition-all cursor-pointer shadow-xs flex items-center gap-1 shrink-0"
+                  title="Convert all COD orders to Card payment"
+                >
+                  <DollarSign className="w-3.5 h-3.5" />
+                  <span>Convert COD Orders to Card</span>
+                </button>
+              )}
             </div>
           </div>
 
@@ -3523,6 +3594,21 @@ export default function AdminDashboard({
                         </select>
                       </div>
 
+                      <div className="space-y-1.5">
+                        <label className="font-mono text-[8px] uppercase tracking-wider text-brand-cocoa-light block font-bold">Payment Method</label>
+                        <select
+                          value={order.paymentMethod || 'Card'}
+                          onChange={(e) => handleUpdateOrderPaymentMethod(order.id, e.target.value as any)}
+                          className="w-full px-2.5 py-1.5 bg-white border border-brand-cocoa-border rounded-xl text-xs font-semibold text-brand-cocoa focus:outline-none focus:ring-1 focus:ring-brand-pink cursor-pointer"
+                        >
+                          <option value="Card">💳 Credit / Debit Card</option>
+                          <option value="UPI">📱 UPI / QR Scan</option>
+                          <option value="COD" disabled={!cashOnDeliveryEnabled}>
+                            💵 Cash on Delivery {!cashOnDeliveryEnabled ? '(Disabled)' : ''}
+                          </option>
+                        </select>
+                      </div>
+
                       <div className="space-y-2 pt-1 border-t border-brand-cocoa-border/20">
                         <button
                           onClick={() => {
@@ -3546,6 +3632,30 @@ export default function AdminDashboard({
                         >
                           <Mail className="w-3.5 h-3.5" />
                           <span>Send Order Confirmation</span>
+                        </button>
+
+                        <button
+                          onClick={async () => {
+                            if (currentRole === 'viewer') {
+                              triggerToast('❌ Permission Denied: Viewer role cannot delete orders.');
+                              return;
+                            }
+                            if (window.confirm(`Are you sure you want to delete Order #${order.id}?`)) {
+                              try {
+                                await deleteDoc(doc(db, 'orders', order.id));
+                                addAuditLog(`Deleted Order #${order.id} from Firestore`, 'warning');
+                                triggerToast(`🗑️ Order #${order.id} deleted successfully!`);
+                              } catch (err: any) {
+                                console.error('Error deleting order:', err);
+                                triggerToast('❌ Error deleting order: ' + err.message);
+                              }
+                            }
+                          }}
+                          className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 font-sans font-bold text-xs rounded-xl transition-all cursor-pointer shadow-3xs"
+                          title="Delete this order permanently from Firestore"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Delete Order</span>
                         </button>
                       </div>
 

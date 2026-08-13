@@ -12,12 +12,14 @@ interface MealPlannerProps {
   onSelectRecipe: (recipe: Recipe) => void;
   preselectedRecipeId?: string;
   clearPreselectedRecipeId?: () => void;
+  cashOnDeliveryEnabled?: boolean;
 }
 
 export default function MealPlanner({
   mealPlan,
   onRemoveMeal,
   onSelectRecipe,
+  cashOnDeliveryEnabled = true,
 }: MealPlannerProps) {
   const [syncedOrders, setSyncedOrders] = useState<Record<string, boolean>>({});
 
@@ -155,7 +157,7 @@ export default function MealPlanner({
                           <div className="bg-brand-cream-light/40 p-2.5 rounded-lg border border-brand-cocoa-border/40">
                             <span className="font-mono text-[8px] uppercase tracking-wider text-brand-cocoa-light/80 block">Payment Option</span>
                             <span className="font-sans font-bold text-brand-cocoa text-[11px] flex items-center gap-1 mt-0.5">
-                              {order.paymentMethod === 'Card' ? '💳 Credit Card' : order.paymentMethod === 'UPI' ? '📱 UPI / QR Scan' : '💵 COD (Pay on Arrival)'}
+                              {order.paymentMethod === 'Card' ? '💳 Credit Card' : order.paymentMethod === 'UPI' ? '📱 UPI / QR Scan' : (!cashOnDeliveryEnabled || order.paymentMethod !== 'COD') ? '💳 Card / Online Payment' : '💵 COD (Pay on Arrival)'}
                             </span>
                             {order.paymentDetails?.upiId && (
                               <span className="text-[9px] font-mono text-brand-cocoa-light block mt-0.5 truncate">{order.paymentDetails.upiId}</span>
