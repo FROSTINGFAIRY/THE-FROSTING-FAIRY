@@ -111,6 +111,7 @@ export default function App() {
           paymentMethod: (!cashOnDeliveryEnabled && data.paymentMethod === 'COD') ? 'Card' : (data.paymentMethod || 'Card'),
           paymentDetails: data.paymentDetails || {},
           adminNotes: data.adminNotes || [],
+          boxContents: data.boxContents || undefined,
         });
       });
       setMealPlan(loadedOrders);
@@ -316,6 +317,7 @@ export default function App() {
     image: string;
     customMessage: string;
     recipeName: string; // repurposed for selected frosting flavor/flavor
+    boxContents?: { name: string; quantity: number }[];
   }) => {
     const newItem: ShoppingItem = {
       id: `cart-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
@@ -330,16 +332,18 @@ export default function App() {
       customMessage: item.customMessage,
       isBought: false,
       recipeName: item.recipeName,
+      boxContents: item.boxContents,
     };
 
     setShoppingList((prev) => {
-      // If exact matching item is already in cart, increment quantity
+      // If exact matching item (including identical box contents) is already in cart, increment quantity
       const existingIdx = prev.findIndex(
         (i) =>
           i.productId === item.productId &&
           i.selectedOption === item.selectedOption &&
           i.customMessage === item.customMessage &&
-          i.recipeName === item.recipeName
+          i.recipeName === item.recipeName &&
+          JSON.stringify(i.boxContents || []) === JSON.stringify(item.boxContents || [])
       );
       if (existingIdx > -1) {
         const updated = [...prev];
@@ -387,7 +391,8 @@ export default function App() {
             selectedOption: item.selectedOption,
             amount: item.amount,
             unit: item.unit,
-            customMessage: item.customMessage
+            customMessage: item.customMessage,
+            boxContents: item.boxContents,
           })),
           checkoutData
         })
@@ -454,6 +459,7 @@ export default function App() {
       return (
         <RecipeDetail
           recipe={selectedRecipe}
+          allRecipes={recipes}
           onBack={handleBackToDiscover}
           onToggleFavorite={handleToggleFavorite}
           onAddToCart={(item) => {
@@ -657,7 +663,7 @@ export default function App() {
           <div className="space-y-3">
             <div className="flex items-center gap-3">
               <div className="w-14 h-14 rounded-full border border-brand-cream/25 overflow-hidden bg-white/10 p-0.5 shrink-0">
-                <img src={logo} alt={`${websiteName} Logo`} className="w-full h-full object-cover rounded-full" />
+                <img src={logo} alt={`${websiteName} Logo`} loading="lazy" decoding="async" className="w-full h-full object-cover rounded-full" />
               </div>
               <h4 className="font-display font-black text-lg text-white uppercase tracking-wider">{websiteName}</h4>
             </div>

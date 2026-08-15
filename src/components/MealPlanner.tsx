@@ -106,6 +106,8 @@ export default function MealPlanner({
                         <img
                           src={order.recipe?.image || 'https://images.unsplash.com/photo-1565958011703-44f9829ba187?auto=format&fit=crop&q=80&w=300'}
                           alt={order.cakeType}
+                          loading="lazy"
+                          decoding="async"
                           className="w-full h-full object-cover"
                         />
                       </div>
@@ -142,6 +144,24 @@ export default function MealPlanner({
                         <div className="flex gap-2">
                           <span className="font-mono text-brand-cocoa-light text-[10px] uppercase w-24 shrink-0">Special Request:</span>
                           <span className="text-brand-cocoa italic">"{order.specialInstructions}"</span>
+                        </div>
+                      )}
+
+                      {order.boxContents && order.boxContents.length > 0 && (
+                        <div className="bg-brand-pink-light/25 border border-brand-pink/20 rounded-xl p-2.5 space-y-1 mt-2">
+                          <span className="font-mono text-[9px] uppercase tracking-wider text-brand-pink-dark block font-bold">
+                            🎁 Custom Box Assortment:
+                          </span>
+                          <div className="flex flex-wrap gap-1.5 pt-0.5">
+                            {order.boxContents.map((content, cIdx) => (
+                              <span
+                                key={`order-box-item-${cIdx}`}
+                                className="text-[11px] font-sans font-semibold text-brand-cocoa bg-white border border-brand-cocoa-border/40 px-2 py-0.5 rounded-lg shadow-3xs"
+                              >
+                                <span className="font-bold text-brand-pink">{content.quantity}x</span> {content.name}
+                              </span>
+                            ))}
+                          </div>
                         </div>
                       )}
 

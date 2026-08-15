@@ -358,6 +358,8 @@ export default function Dashboard({
                         <img
                           src={displayImg}
                           alt={cat.name}
+                          loading="lazy"
+                          decoding="async"
                           onError={(e) => {
                             (e.target as HTMLElement).style.display = 'none';
                             const parent = (e.target as HTMLElement).parentElement;
@@ -473,6 +475,8 @@ export default function Dashboard({
                     <img
                       src={currentCatInfo.image}
                       alt={currentCatInfo.name}
+                      loading="lazy"
+                      decoding="async"
                       className="w-full h-full object-cover"
                     />
                     <div className="absolute inset-0 bg-gradient-to-r from-white via-white/10 to-transparent hidden md:block" />
@@ -516,6 +520,8 @@ export default function Dashboard({
                         id={`recipe-card-image-${recipe.id}`}
                         src={activeImage}
                         alt={recipe.name}
+                        loading="lazy"
+                        decoding="async"
                         className="w-full h-full object-cover transition-all duration-500 cursor-pointer"
                         onClick={() => onSelectRecipe(recipe)}
                       />
@@ -619,7 +625,7 @@ export default function Dashboard({
                                 currentImgIdx === thumbIdx ? 'border-brand-pink ring-1 ring-brand-pink' : 'border-brand-cocoa-border/50 hover:border-brand-pink/50'
                               }`}
                             >
-                              <img src={thumbUrl} alt="" className="w-full h-full object-cover" />
+                              <img src={thumbUrl} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
                             </button>
                           ))}
                         </div>

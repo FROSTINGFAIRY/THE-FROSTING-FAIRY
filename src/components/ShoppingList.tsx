@@ -327,6 +327,8 @@ export default function ShoppingList({
                       <img
                         src={item.image}
                         alt={item.name}
+                        loading="lazy"
+                        decoding="async"
                         className="w-full h-full object-cover"
                       />
                     </div>
@@ -360,6 +362,24 @@ export default function ShoppingList({
                           <p className="bg-brand-pink-light/30 border border-brand-pink/10 rounded-lg p-1.5 mt-1.5 inline-block text-brand-pink-dark font-medium">
                             🎂 <span className="font-semibold">Piped Text:</span> "{item.customMessage}"
                           </p>
+                        )}
+                        {item.boxContents && item.boxContents.length > 0 && (
+                          <div className="bg-brand-pink-light/25 border border-brand-pink/20 rounded-xl p-2.5 mt-2 space-y-1">
+                            <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold uppercase tracking-wider text-brand-pink-dark">
+                              <Sparkles className="w-3 h-3 text-brand-pink" />
+                              <span>Box Assortment Contents:</span>
+                            </div>
+                            <div className="flex flex-wrap gap-1.5 pt-0.5">
+                              {item.boxContents.map((content, idx) => (
+                                <span
+                                  key={`box-item-${idx}`}
+                                  className="text-[11px] font-sans font-semibold text-brand-cocoa bg-white border border-brand-cocoa-border/40 px-2 py-0.5 rounded-lg shadow-3xs"
+                                >
+                                  <span className="font-bold text-brand-pink">{content.quantity}x</span> {content.name}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
                         )}
                       </div>
 
@@ -686,6 +706,8 @@ export default function ShoppingList({
                               <img
                                 src={upiQrCode}
                                 alt="Payment QR Code"
+                                loading="lazy"
+                                decoding="async"
                                 className="w-full h-full object-contain"
                               />
                             ) : (

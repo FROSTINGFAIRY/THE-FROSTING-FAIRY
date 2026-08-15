@@ -229,15 +229,16 @@ export default function Home({
     <div id="home-view-container" className="flex-1 flex flex-col bg-brand-cream">
       
       {/* 1. LUXURIOUS HERO SECTION */}
-      <section id="home-hero" className="relative min-h-[850px] lg:min-h-[950px] py-16 lg:py-24 overflow-hidden bg-brand-cocoa flex flex-col items-center justify-center text-center px-4">
+      <section id="home-hero" className="relative min-h-[550px] lg:min-h-[650px] py-16 lg:py-20 overflow-hidden bg-brand-cocoa flex flex-col items-center justify-center text-center px-4 border-b-4 border-brand-pink">
         {/* Absolute Background Image with parallax overlay */}
         <div className="absolute inset-0 z-0">
           <img 
             src={heroImage} 
             alt="Artisanal Cake Showcase" 
+            fetchPriority="high"
             className="w-full h-full object-cover opacity-25 scale-105 transition-all duration-10000"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/75 via-brand-cocoa/60 to-brand-cream" />
+          <div className="absolute inset-0 bg-brand-cocoa/70" />
         </div>
 
         {/* Content Box */}
@@ -274,92 +275,8 @@ export default function Home({
           >
             Welcome to <span className="font-bold text-white uppercase">{websiteName}</span>. We translate sweet dreams into luxury confectionery—using fine organic ingredients, bespoke recipes, and custom hand-piped decorations.
           </motion.p>
-
-          {/* MASSIVE CALL-TO-ACTION PORTALS (HIGHLIGHTED BIGGER THAN ANYTHING ELSE) */}
-          <motion.div
-            initial={{ opacity: 0, y: 35 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.5 }}
-            className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-5xl pt-6"
-          >
-            {/* PORTAL 1: EXPLORE OUR MENU */}
-            <div 
-              onClick={() => onNavigateToTab('discover', 'All')}
-              className="group relative overflow-hidden rounded-3xl border-2 border-brand-pink/30 hover:border-brand-pink bg-brand-cocoa/85 backdrop-blur-md p-8 sm:p-10 text-left transition-all duration-300 hover:shadow-[0_20px_50px_rgba(236,72,153,0.15)] cursor-pointer flex flex-col justify-between min-h-[300px] sm:min-h-[340px] transform hover:-translate-y-2"
-            >
-              {/* Background decorative image with hover zoom */}
-              <div className="absolute inset-0 z-0 opacity-20 group-hover:opacity-40 transition-all duration-500">
-                <img 
-                  src="https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=800&q=80" 
-                  alt="Pastry Menu background" 
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                />
-              </div>
-              <div className="absolute inset-0 bg-gradient-to-t from-brand-cocoa via-brand-cocoa/40 to-transparent opacity-80 z-0" />
-              
-              <div className="relative z-10 space-y-4">
-                <span className="inline-block px-3.5 py-1 rounded-full bg-brand-pink/25 text-brand-pink-light font-mono text-[10px] font-bold uppercase tracking-wider">
-                  Fresh Baked Daily
-                </span>
-                <h3 className="font-display font-black text-3xl sm:text-4xl text-white uppercase tracking-tight leading-none group-hover:text-brand-pink transition-colors">
-                  Explore <br />Our Menu
-                </h3>
-                <p className="text-xs sm:text-sm text-brand-cream-light/90 leading-relaxed font-sans max-w-md">
-                  Delve into our freshly-baked cupcakes, dense cocoa brownies, custom cinnamon rolls, and gourmet additions. Customize flavors, portion sizes, and frostings dynamically.
-                </p>
-              </div>
-
-              <div className="relative z-10 pt-6">
-                <button className="inline-flex items-center gap-2.5 px-8 py-4 bg-brand-pink hover:bg-brand-pink-dark text-white text-xs font-extrabold uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-brand-pink/20 cursor-pointer group-hover:scale-[1.05]">
-                  <span>See What's Baking</span>
-                  <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1.5" />
-                </button>
-              </div>
-            </div>
-
-            {/* PORTAL 2: ORDER CUSTOM CAKES */}
-            <div 
-              onClick={() => onNavigateToTab('discover', 'Signature Cakes')}
-              className="group relative overflow-hidden rounded-3xl border-2 border-brand-pink/30 hover:border-brand-pink bg-brand-cocoa/85 backdrop-blur-md p-8 sm:p-10 text-left transition-all duration-300 hover:shadow-[0_20px_50px_rgba(236,72,153,0.15)] cursor-pointer flex flex-col justify-between min-h-[300px] sm:min-h-[340px] transform hover:-translate-y-2"
-            >
-              {/* Background decorative image with hover zoom */}
-              <div className="absolute inset-0 z-0 opacity-20 group-hover:opacity-40 transition-all duration-500">
-                <img 
-                  src="https://images.unsplash.com/photo-1535254973040-607b474cb50d?auto=format&fit=crop&w=800&q=80" 
-                  alt="Custom Cake background" 
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                />
-              </div>
-              <div className="absolute inset-0 bg-gradient-to-t from-brand-cocoa via-brand-cocoa/40 to-transparent opacity-80 z-0" />
-
-              <div className="relative z-10 space-y-4">
-                <span className="inline-block px-3.5 py-1 rounded-full bg-brand-pink/25 text-brand-pink-light font-mono text-[10px] font-bold uppercase tracking-wider">
-                  Bespoke Artistry
-                </span>
-                <h3 className="font-display font-black text-3xl sm:text-4xl text-white uppercase tracking-tight leading-none group-hover:text-brand-pink transition-colors">
-                  Order <br />Custom Cakes
-                </h3>
-                <p className="text-xs sm:text-sm text-brand-cream-light/90 leading-relaxed font-sans max-w-md">
-                  Collaborate directly with our master pastry architects. Design luxurious tiered wedding cakes, milestone birthday layers, themed centerpieces, and custom sugar plaques.
-                </p>
-              </div>
-
-              <div className="relative z-10 pt-6">
-                <button className="inline-flex items-center gap-2.5 px-8 py-4 bg-white/10 group-hover:bg-brand-pink group-hover:text-white border border-white/30 group-hover:border-brand-pink text-white text-xs font-extrabold uppercase tracking-widest rounded-xl transition-all cursor-pointer group-hover:scale-[1.05]">
-                  <span>Consult & Order Custom Cake</span>
-                  <Sparkles className="w-4 h-4 text-brand-pink group-hover:text-white" />
-                </button>
-              </div>
-            </div>
-          </motion.div>
         </div>
-
-        {/* Curved Divider */}
-        <div className="absolute bottom-0 left-0 right-0 h-16 bg-brand-cream animate-fade-in" style={{ clipPath: 'ellipse(60% 100% at 50% 100%)' }} />
       </section>
-
-
-
 
       {/* 4. PREMIUM QUICK CATEGORY FILTERS & PORTAL COVERS */}
       <section id="home-collections-portal" className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-brand-cocoa-border/20">
@@ -415,6 +332,8 @@ export default function Home({
                       <img
                         src={displayImg}
                         alt={cat.name}
+                        loading="lazy"
+                        decoding="async"
                         onError={(e) => {
                           (e.target as HTMLElement).style.display = 'none';
                           const parent = (e.target as HTMLElement).parentElement;
@@ -480,6 +399,85 @@ export default function Home({
         </div>
       </section>
 
+      {/* 2. CALL-TO-ACTION PORTALS SECTION */}
+      <section id="home-cta-portals" className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-5xl mx-auto">
+          {/* PORTAL 1: EXPLORE OUR MENU */}
+          <div 
+            onClick={() => onNavigateToTab('discover', 'All')}
+            className="group relative overflow-hidden rounded-3xl border-2 border-brand-pink/30 hover:border-brand-pink bg-brand-cocoa/85 backdrop-blur-md p-8 sm:p-10 text-left transition-all duration-300 hover:shadow-[0_20px_50px_rgba(236,72,153,0.15)] cursor-pointer flex flex-col justify-between min-h-[300px] sm:min-h-[340px] transform hover:-translate-y-2"
+          >
+            {/* Background decorative image with hover zoom */}
+            <div className="absolute inset-0 z-0 opacity-20 group-hover:opacity-40 transition-all duration-500">
+              <img 
+                src="https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=800&q=80" 
+                alt="Pastry Menu background" 
+                loading="lazy"
+                decoding="async"
+                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+              />
+            </div>
+            <div className="absolute inset-0 bg-gradient-to-t from-brand-cocoa via-brand-cocoa/40 to-transparent opacity-80 z-0" />
+            
+            <div className="relative z-10 space-y-4">
+              <span className="inline-block px-3.5 py-1 rounded-full bg-brand-pink/25 text-brand-pink-light font-mono text-[10px] font-bold uppercase tracking-wider">
+                Fresh Baked Daily
+              </span>
+              <h3 className="font-display font-black text-3xl sm:text-4xl text-white uppercase tracking-tight leading-none group-hover:text-brand-pink transition-colors">
+                Explore <br />Our Menu
+              </h3>
+              <p className="text-xs sm:text-sm text-brand-cream-light/90 leading-relaxed font-sans max-w-md">
+                Delve into our freshly-baked cupcakes, dense cocoa brownies, custom cinnamon rolls, and gourmet additions. Customize flavors, portion sizes, and frostings dynamically.
+              </p>
+            </div>
+
+            <div className="relative z-10 pt-6">
+              <button className="inline-flex items-center gap-2.5 px-8 py-4 bg-brand-pink hover:bg-brand-pink-dark text-white text-xs font-extrabold uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-brand-pink/20 cursor-pointer group-hover:scale-[1.05]">
+                <span>See What's Baking</span>
+                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1.5" />
+              </button>
+            </div>
+          </div>
+
+          {/* PORTAL 2: ORDER CUSTOM CAKES */}
+          <div 
+            onClick={() => onNavigateToTab('discover', 'Signature Cakes')}
+            className="group relative overflow-hidden rounded-3xl border-2 border-brand-pink/30 hover:border-brand-pink bg-brand-cocoa/85 backdrop-blur-md p-8 sm:p-10 text-left transition-all duration-300 hover:shadow-[0_20px_50px_rgba(236,72,153,0.15)] cursor-pointer flex flex-col justify-between min-h-[300px] sm:min-h-[340px] transform hover:-translate-y-2"
+          >
+            {/* Background decorative image with hover zoom */}
+            <div className="absolute inset-0 z-0 opacity-20 group-hover:opacity-40 transition-all duration-500">
+              <img 
+                src="https://images.unsplash.com/photo-1535254973040-607b474cb50d?auto=format&fit=crop&w=800&q=80" 
+                alt="Custom Cake background" 
+                loading="lazy"
+                decoding="async"
+                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+              />
+            </div>
+            <div className="absolute inset-0 bg-gradient-to-t from-brand-cocoa via-brand-cocoa/40 to-transparent opacity-80 z-0" />
+
+            <div className="relative z-10 space-y-4">
+              <span className="inline-block px-3.5 py-1 rounded-full bg-brand-pink/25 text-brand-pink-light font-mono text-[10px] font-bold uppercase tracking-wider">
+                Bespoke Artistry
+              </span>
+              <h3 className="font-display font-black text-3xl sm:text-4xl text-white uppercase tracking-tight leading-none group-hover:text-brand-pink transition-colors">
+                Order <br />Custom Cakes
+              </h3>
+              <p className="text-xs sm:text-sm text-brand-cream-light/90 leading-relaxed font-sans max-w-md">
+                Collaborate directly with our master pastry architects. Design luxurious tiered wedding cakes, milestone birthday layers, themed centerpieces, and custom sugar plaques.
+              </p>
+            </div>
+
+            <div className="relative z-10 pt-6">
+              <button className="inline-flex items-center gap-2.5 px-8 py-4 bg-white/10 group-hover:bg-brand-pink group-hover:text-white border border-white/30 group-hover:border-brand-pink text-white text-xs font-extrabold uppercase tracking-widest rounded-xl transition-all cursor-pointer group-hover:scale-[1.05]">
+                <span>Consult & Order Custom Cake</span>
+                <Sparkles className="w-4 h-4 text-brand-pink group-hover:text-white" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
 
       {/* 2. THE BRAND VISION STORY */}
       <section id="home-story-section" className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-center border-t border-brand-cocoa-border/20">
@@ -492,6 +490,8 @@ export default function Home({
               <img 
                 src="https://images.unsplash.com/photo-1535254973040-607b474cb50d?auto=format&fit=crop&w=400&q=80" 
                 alt="Finely decorated cake" 
+                loading="lazy"
+                decoding="async"
                 className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
               />
             </div>
@@ -499,6 +499,8 @@ export default function Home({
               <img 
                 src="https://images.unsplash.com/photo-1576618148400-f54bed99fcfd?auto=format&fit=crop&w=400&q=80" 
                 alt="Fluffy cupcakes" 
+                loading="lazy"
+                decoding="async"
                 className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
               />
             </div>
@@ -508,6 +510,8 @@ export default function Home({
               <img 
                 src="https://images.unsplash.com/photo-1551024601-bec78aea704b?auto=format&fit=crop&w=400&q=80" 
                 alt="Gourmet bakes" 
+                loading="lazy"
+                decoding="async"
                 className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
               />
             </div>
@@ -515,6 +519,8 @@ export default function Home({
               <img 
                 src="https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=400&q=80" 
                 alt="Chocolate brownies" 
+                loading="lazy"
+                decoding="async"
                 className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
               />
             </div>

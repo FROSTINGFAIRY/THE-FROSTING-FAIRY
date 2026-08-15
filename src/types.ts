@@ -45,6 +45,11 @@ export interface Recipe {
   // Custom Bakery fields
   priceOptions: PriceOption[];
   details: string[];
+
+  // Assorted Box configuration
+  isBuildYourBox?: boolean;
+  boxCapacity?: number;
+  boxEligibleCategories?: string[];
 }
 
 export interface ShoppingItem {
@@ -60,6 +65,7 @@ export interface ShoppingItem {
   customMessage?: string; // e.g. "Happy Birthday Romy!"
   isBought: boolean;
   recipeName?: string;
+  boxContents?: { name: string; quantity: number }[]; // what the customer picked for assorted box
 }
 
 export interface CategoryInfo {
@@ -103,5 +109,6 @@ export interface MealPlanEntry {
     upiId?: string;
   };
   adminNotes?: string[];
+  boxContents?: { name: string; quantity: number }[]; // assorted box item selections
 }
 

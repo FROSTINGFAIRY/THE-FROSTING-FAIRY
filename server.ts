@@ -431,6 +431,7 @@ async function startServer() {
           paymentMethod: resolvedPaymentMethod,
           paymentDetails: checkoutData.paymentDetails || {},
           adminNotes: [],
+          boxContents: Array.isArray(item.boxContents) ? item.boxContents : null,
           createdAt: FieldValue.serverTimestamp()
         });
       }
