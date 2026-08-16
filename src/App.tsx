@@ -12,6 +12,8 @@ import MealPlanner from './components/MealPlanner';
 import ShoppingList from './components/ShoppingList';
 import RecipeDetail from './components/RecipeDetail';
 import AdminDashboard from './components/AdminDashboard';
+import OrderSuccessModal, { OrderSuccessDetails } from './components/OrderSuccessModal';
+import { triggerOrderSuccessConfetti } from './lib/confetti';
 import { INITIAL_RECIPES, INITIAL_CATEGORY_INFOS } from './data';
 import { Recipe, ShoppingItem, MealPlanEntry, MealType, CategoryInfo } from './types';
 import { AnimatePresence, motion } from 'motion/react';
@@ -160,6 +162,9 @@ export default function App() {
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     return (localStorage.getItem('gusto_theme') as 'light' | 'dark') || 'light';
   });
+
+  // Order Success Celebratory Modal State
+  const [orderSuccessModalData, setOrderSuccessModalData] = useState<OrderSuccessDetails | null>(null);
 
   useEffect(() => {
     if (theme === 'dark') {
@@ -317,7 +322,7 @@ export default function App() {
     image: string;
     customMessage: string;
     recipeName: string; // repurposed for selected frosting flavor/flavor
-    boxContents?: { name: string; quantity: number }[];
+    boxContents?: { name: string; quantity: number; price: number }[];
   }) => {
     const newItem: ShoppingItem = {
       id: `cart-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
@@ -404,8 +409,35 @@ export default function App() {
       }
 
       console.log('Order created successfully with validated pricing:', data);
+
+      // Calculate totals for celebratory summary
+      const cartSubtotal = shoppingList.reduce((sum, item) => sum + (item.price || 0) * item.amount, 0);
+      const deliveryCharge = checkoutData.deliveryType === 'Delivery' ? (cartSubtotal >= 600 ? 0 : 50) : 0;
+      const grandTotal = cartSubtotal + deliveryCharge;
+      const totalCount = shoppingList.reduce((sum, item) => sum + item.amount, 0);
+
+      // Trigger celebratory confetti animation
+      triggerOrderSuccessConfetti();
+
+      // Open celebratory order confirmed modal
+      setOrderSuccessModalData({
+        orderId: data.orderId || data.id,
+        customerName: checkoutData.customerName,
+        deliveryType: checkoutData.deliveryType,
+        deliveryAddress: checkoutData.deliveryAddress,
+        pickupDate: checkoutData.pickupDate,
+        pickupTime: checkoutData.pickupTime,
+        totalAmount: grandTotal,
+        itemsCount: totalCount,
+      });
+
+      addToast(
+        '🎉 Order Placed Successfully!',
+        `Thank you ${checkoutData.customerName}! Your order has been placed and queued with our bakers.`,
+        'success'
+      );
+
       setShoppingList([]); // Clear the cart
-      setActiveTab('planner'); // Redirect to track orders tab
     } catch (err: any) {
       console.error('Error during order creation checkout:', err);
       alert('Order checkout notice: ' + (err.message || 'Please try again.'));
@@ -656,6 +688,24 @@ export default function App() {
           ))}
         </AnimatePresence>
       </div>
+
+      {/* Celebratory Order Confirmation Modal */}
+      <AnimatePresence>
+        {orderSuccessModalData && (
+          <OrderSuccessModal
+            orderDetails={orderSuccessModalData}
+            onClose={() => setOrderSuccessModalData(null)}
+            onViewOrders={() => {
+              setOrderSuccessModalData(null);
+              setActiveTab('planner');
+            }}
+            onContinueShopping={() => {
+              setOrderSuccessModalData(null);
+              setActiveTab('discover');
+            }}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Luxury Brand Store Footer */}
       <footer className="bg-brand-cocoa text-brand-cream border-t border-brand-cocoa-border py-12 px-6 shrink-0 mt-auto">

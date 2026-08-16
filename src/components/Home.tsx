@@ -16,10 +16,11 @@ import {
   Cake,
   ChefHat,
   Flame,
-  Cookie
+  Cookie,
+  Gift
 } from 'lucide-react';
 import { Recipe, CategoryInfo } from '../types';
-import { imgBomboloniVanilla, imgPinkFrostedDonut, INITIAL_CATEGORY_INFOS } from '../data';
+import { imgBomboloniVanilla, imgPinkFrostedDonut, imgAssortedBoxes, INITIAL_CATEGORY_INFOS } from '../data';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface HomeProps {
@@ -123,6 +124,14 @@ const CATEGORY_INFOS = [
     image: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=600&q=80',
     itemCountText: 'Warm Cinnamon Rolls & Specials',
     startingPrice: 400,
+  },
+  {
+    name: 'Assorted Boxes',
+    emoji: '🎁',
+    description: 'Custom artisan gift boxes! Mix and match any confections from our entire menu with live price calculation.',
+    image: imgAssortedBoxes,
+    itemCountText: 'Custom Assorted Confectionery Box',
+    startingPrice: 0,
   }
 ];
 
@@ -145,6 +154,8 @@ const getCategoryIcon = (name: string) => {
       return <ChefHat className={iconClass} />;
     case 'New Additions':
       return <Sparkles className={iconClass} />;
+    case 'Assorted Boxes':
+      return <Gift className={iconClass} />;
     default:
       return <Sparkles className={iconClass} />;
   }

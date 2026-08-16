@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Flame, Clock, ChefHat, Star, Heart, ArrowRight, ChevronLeft, ChevronRight, ArrowLeft, Sparkles, LayoutGrid, Cake, Cookie } from 'lucide-react';
+import { Search, Flame, Clock, ChefHat, Star, Heart, ArrowRight, ChevronLeft, ChevronRight, ArrowLeft, Sparkles, LayoutGrid, Cake, Cookie, Gift } from 'lucide-react';
 import { Recipe, CategoryInfo } from '../types';
-import { imgBomboloniVanilla, imgPinkFrostedDonut, INITIAL_CATEGORY_INFOS } from '../data';
+import { imgBomboloniVanilla, imgPinkFrostedDonut, imgAssortedBoxes, INITIAL_CATEGORY_INFOS } from '../data';
 import { motion } from 'motion/react';
 
 // Custom helper to render premium SVG icons for categories instead of emojis
@@ -28,6 +28,8 @@ const getCategoryIcon = (name: string, isActive: boolean) => {
       return <Heart className={iconClass} />;
     case 'New Additions':
       return <Sparkles className={iconClass} />;
+    case 'Assorted Boxes':
+      return <Gift className={iconClass} />;
     default:
       return <Sparkles className={iconClass} />;
   }
@@ -75,6 +77,12 @@ export function getRecipeImages(recipe: { id: string; category: string; image: s
       'https://images.unsplash.com/photo-1544982503-9f984c14501a?auto=format&fit=crop&w=800&q=80',
       'https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=800&q=80',
       'https://images.unsplash.com/photo-1608039829572-78524f79c4c7?auto=format&fit=crop&w=800&q=80',
+    ],
+    'Assorted Boxes': [
+      imgAssortedBoxes,
+      'https://images.unsplash.com/photo-1587668178277-295251f900ce?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1551024601-bec78aea704b?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1579372786545-d24232daf58c?auto=format&fit=crop&w=800&q=80',
     ]
   };
 
@@ -140,6 +148,7 @@ export default function Dashboard({
     { name: 'Donuts', emoji: '🍩' },
     { name: 'Bombolonis', emoji: '🥯' },
     { name: 'New Additions', emoji: '✨' },
+    { name: 'Assorted Boxes', emoji: '🎁' },
   ];
 
   // Filter recipes based on category and search query
@@ -244,9 +253,11 @@ export default function Dashboard({
               {/* Cooking Quick Stats */}
               <div id="hero-quick-stats" className="flex items-center gap-4 mt-6 border-y border-dashed border-brand-cocoa-border py-3.5">
                 <div id="hero-stat-time" className="flex flex-col justify-center">
-                  <span className="text-[10px] font-mono text-brand-cocoa-light uppercase tracking-wider">Starting at</span>
+                  <span className="text-[10px] font-mono text-brand-cocoa-light uppercase tracking-wider">
+                    {heroRecipe.isBuildYourBox ? 'Custom Box' : 'Starting at'}
+                  </span>
                   <span id="hero-time-value" className="text-base font-sans font-semibold text-brand-pink">
-                    ₹{heroRecipe.priceOptions?.[0]?.price || 0}
+                    {heroRecipe.isBuildYourBox ? 'Build Your Own' : `₹${heroRecipe.priceOptions?.[0]?.price || 0}`}
                   </span>
                 </div>
                 <div id="hero-stat-calories" className="flex flex-col justify-center border-l border-brand-cocoa-border/40 pl-4">
@@ -634,9 +645,11 @@ export default function Dashboard({
                       {/* Prices display and action button */}
                       <div id={`recipe-card-bottom-${recipe.id}`} className="mt-4 pt-4 border-t border-brand-cocoa-border/60 flex items-center justify-between">
                         <div id={`recipe-card-stats-${recipe.id}`} className="flex flex-col text-left">
-                          <span className="text-[9px] font-mono uppercase tracking-wider text-brand-cocoa-light/70">starting price</span>
+                          <span className="text-[9px] font-mono uppercase tracking-wider text-brand-cocoa-light/70">
+                            {recipe.isBuildYourBox ? 'custom box' : 'starting price'}
+                          </span>
                           <span id={`recipe-card-price-${recipe.id}`} className="text-base font-sans font-semibold text-brand-pink">
-                            ₹{recipe.priceOptions?.[0]?.price || 0}
+                            {recipe.isBuildYourBox ? 'Build Your Own' : `₹${recipe.priceOptions?.[0]?.price || 0}`}
                           </span>
                         </div>
 
@@ -645,7 +658,7 @@ export default function Dashboard({
                           onClick={() => onSelectRecipe(recipe)}
                           className="bg-brand-pink hover:bg-brand-pink-dark text-white text-xs font-semibold px-4.5 py-2.5 rounded-xl transition-all flex items-center gap-1 group/btn cursor-pointer shadow-3xs"
                         >
-                          <span>Order</span>
+                          <span>{recipe.isBuildYourBox ? 'Build Box' : 'Order'}</span>
                           <ArrowRight id={`recipe-card-arrow-${recipe.id}`} className="w-3.5 h-3.5 transition-transform group-hover/btn:translate-x-0.5" />
                         </button>
                       </div>

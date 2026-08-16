@@ -48,7 +48,8 @@ export interface Recipe {
 
   // Assorted Box configuration
   isBuildYourBox?: boolean;
-  boxCapacity?: number;
+  boxMinItems?: number;       // minimum total items required before checkout is allowed
+  boxCapacity?: number;       // legacy/optional
   boxEligibleCategories?: string[];
 }
 
@@ -65,7 +66,7 @@ export interface ShoppingItem {
   customMessage?: string; // e.g. "Happy Birthday Romy!"
   isBought: boolean;
   recipeName?: string;
-  boxContents?: { name: string; quantity: number }[]; // what the customer picked for assorted box
+  boxContents?: { name: string; quantity: number; price: number }[]; // live snapshot of box items with unit prices
 }
 
 export interface CategoryInfo {
@@ -109,6 +110,6 @@ export interface MealPlanEntry {
     upiId?: string;
   };
   adminNotes?: string[];
-  boxContents?: { name: string; quantity: number }[]; // assorted box item selections
+  boxContents?: { name: string; quantity: number; price?: number }[]; // assorted box item selections with price
 }
 

@@ -72,6 +72,7 @@ export default function ShoppingList({
   const [pickupTime, setPickupTime] = useState('14:00');
   const [specialInstructions, setSpecialInstructions] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // New features state
   const [deliveryType, setDeliveryType] = useState<'Pickup' | 'Delivery'>('Pickup');
@@ -260,22 +261,27 @@ export default function ShoppingList({
     const last4 = cleanCard.slice(-4);
     const maskedCard = `•••• •••• •••• ${last4}`;
 
-    onCheckout({
-      customerName: customerName.trim(),
-      customerPhone: customerPhone.trim(),
-      pickupDate,
-      pickupTime,
-      specialInstructions: specialInstructions.trim(),
-      deliveryType,
-      deliveryAddress: deliveryType === 'Delivery' ? deliveryAddress.trim() : 'Store Pick-up',
-      gpsCoordinates,
-      paymentMethod,
-      paymentDetails: {
-        cardHolder: paymentMethod === 'Card' ? cardHolder : undefined,
-        cardNumber: paymentMethod === 'Card' ? maskedCard : undefined,
-        upiId: paymentMethod === 'UPI' ? upiId : undefined,
-      },
-    });
+    setIsSubmitting(true);
+    try {
+      onCheckout({
+        customerName: customerName.trim(),
+        customerPhone: customerPhone.trim(),
+        pickupDate,
+        pickupTime,
+        specialInstructions: specialInstructions.trim(),
+        deliveryType,
+        deliveryAddress: deliveryType === 'Delivery' ? deliveryAddress.trim() : 'Store Pick-up',
+        gpsCoordinates,
+        paymentMethod,
+        paymentDetails: {
+          cardHolder: paymentMethod === 'Card' ? cardHolder : undefined,
+          cardNumber: paymentMethod === 'Card' ? maskedCard : undefined,
+          upiId: paymentMethod === 'UPI' ? upiId : undefined,
+        },
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
 
     // Security: Clear CVV right after submit and set the card number to the masked version
     setCardCvv('');
@@ -364,20 +370,39 @@ export default function ShoppingList({
                           </p>
                         )}
                         {item.boxContents && item.boxContents.length > 0 && (
-                          <div className="bg-brand-pink-light/25 border border-brand-pink/20 rounded-xl p-2.5 mt-2 space-y-1">
-                            <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold uppercase tracking-wider text-brand-pink-dark">
-                              <Sparkles className="w-3 h-3 text-brand-pink" />
-                              <span>Box Assortment Contents:</span>
+                          <div className="bg-brand-pink-light/25 border border-brand-pink/20 rounded-xl p-3 mt-2.5 space-y-2">
+                            <div className="flex items-center justify-between text-[10px] font-mono font-bold uppercase tracking-wider text-brand-pink-dark">
+                              <div className="flex items-center gap-1.5">
+                                <Sparkles className="w-3.5 h-3.5 text-brand-pink" />
+                                <span>Box Treat Breakdown</span>
+                              </div>
+                              <span className="font-semibold">{item.boxContents.reduce((s, c) => s + c.quantity, 0)} items selected</span>
                             </div>
-                            <div className="flex flex-wrap gap-1.5 pt-0.5">
-                              {item.boxContents.map((content, idx) => (
-                                <span
-                                  key={`box-item-${idx}`}
-                                  className="text-[11px] font-sans font-semibold text-brand-cocoa bg-white border border-brand-cocoa-border/40 px-2 py-0.5 rounded-lg shadow-3xs"
-                                >
-                                  <span className="font-bold text-brand-pink">{content.quantity}x</span> {content.name}
-                                </span>
-                              ))}
+                            <div className="space-y-1.5 pt-1">
+                              {item.boxContents.map((content, idx) => {
+                                const linePrice = content.price !== undefined ? content.price * content.quantity : undefined;
+                                return (
+                                  <div
+                                    key={`box-item-${idx}`}
+                                    className="flex items-center justify-between text-xs font-sans text-brand-cocoa bg-white border border-brand-cocoa-border/40 px-3 py-1.5 rounded-lg shadow-3xs"
+                                  >
+                                    <span>
+                                      <strong className="text-brand-pink font-mono mr-1">{content.quantity}x</strong> {content.name}
+                                    </span>
+                                    {linePrice !== undefined ? (
+                                      <span className="text-xs font-mono font-bold text-brand-cocoa-light">
+                                        ₹{linePrice}
+                                      </span>
+                                    ) : null}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            <div className="flex items-center justify-between pt-2 border-t border-brand-pink/20 text-xs font-mono font-bold text-brand-cocoa">
+                              <span>Box Subtotal:</span>
+                              <span className="text-brand-pink font-display font-extrabold text-sm">
+                                ₹{item.price || 0}
+                              </span>
                             </div>
                           </div>
                         )}
@@ -794,10 +819,20 @@ export default function ShoppingList({
 
               <button
                 type="submit"
-                className="w-full bg-brand-pink hover:bg-brand-pink-dark text-white font-sans font-bold py-4 rounded-xl transition-all shadow-md shadow-brand-pink/15 flex items-center justify-center gap-2 group cursor-pointer mt-4"
+                disabled={isSubmitting}
+                className="w-full bg-brand-pink hover:bg-brand-pink-dark text-white font-sans font-bold py-4 rounded-xl transition-all shadow-md shadow-brand-pink/15 flex items-center justify-center gap-2 group cursor-pointer mt-4 disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                <span>Confirm & Place Custom Order 🎂</span>
-                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span>Baking Your Order Request...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Confirm & Place Custom Order 🎂</span>
+                    <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                  </>
+                )}
               </button>
             </form>
           </div>

@@ -638,6 +638,8 @@ export default function AdminDashboard({
     setEditDescription('');
     setEditCategory('Signature Cakes');
     setEditPriceOptions([{ label: 'Standard', price: 500 }]);
+    setEditIsBuildYourBox(false);
+    setEditBoxMinItems(3);
     setDeviceImagePreview(null);
     setUploadError(null);
   };
@@ -680,6 +682,8 @@ export default function AdminDashboard({
       tags: ['Fresh', 'Handcrafted', editCategory],
       category: editCategory,
       priceOptions: editPriceOptions,
+      isBuildYourBox: editIsBuildYourBox,
+      boxMinItems: editIsBuildYourBox ? (Number(editBoxMinItems) || 3) : undefined,
       details: ['Freshly baked daily', 'Handcrafted with premium ingredients'],
       isFavorite: false
     };
@@ -702,6 +706,8 @@ export default function AdminDashboard({
   const [editDescription, setEditDescription] = useState('');
   const [editCategory, setEditCategory] = useState('');
   const [editPriceOptions, setEditPriceOptions] = useState<PriceOption[]>([]);
+  const [editIsBuildYourBox, setEditIsBuildYourBox] = useState(false);
+  const [editBoxMinItems, setEditBoxMinItems] = useState(3);
 
   // Device Image Upload states for Product Management
   const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
@@ -929,6 +935,8 @@ export default function AdminDashboard({
       setEditDescription(activeProduct.description);
       setEditCategory(activeProduct.category);
       setEditPriceOptions([...activeProduct.priceOptions]);
+      setEditIsBuildYourBox(!!activeProduct.isBuildYourBox);
+      setEditBoxMinItems(activeProduct.boxMinItems || 3);
       setPixabayError(null);
       setPixabayResults([]);
       setDeviceImagePreview(null);
@@ -974,6 +982,8 @@ export default function AdminDashboard({
       description: editDescription,
       category: editCategory,
       priceOptions: editPriceOptions,
+      isBuildYourBox: editIsBuildYourBox,
+      boxMinItems: editIsBuildYourBox ? (Number(editBoxMinItems) || 3) : undefined,
     };
 
     try {
@@ -1952,6 +1962,7 @@ export default function AdminDashboard({
                         <option value="Cookies">Cookies</option>
                         <option value="Donuts">Donuts</option>
                         <option value="Bombolonis">Bombolonis</option>
+                        <option value="Assorted Boxes">Assorted Boxes</option>
                         <option value="New Additions">New Additions</option>
                       </select>
                     </div>
@@ -2067,6 +2078,59 @@ export default function AdminDashboard({
                       placeholder="Describe this delightful pastry..."
                       className="w-full px-3 py-2 text-xs font-semibold text-brand-cocoa border border-brand-cocoa-border rounded-xl focus:outline-none focus:ring-1 focus:ring-brand-pink bg-brand-cream-light/10 resize-none"
                     />
+                  </div>
+
+                  {/* Build-Your-Own Assorted Box Configuration */}
+                  <div className="p-4 bg-brand-cream-light/40 border border-brand-cocoa-border/40 rounded-2xl space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-base">🎁</span>
+                        <div>
+                          <label htmlFor="create-build-your-box-toggle" className="font-sans font-bold text-xs text-brand-cocoa block cursor-pointer">
+                            Build-Your-Own Assorted Box
+                          </label>
+                          <span className="text-[10px] text-brand-cocoa-light block">
+                            Enables interactive pastry customizer where customers pick individual menu items with live running totals
+                          </span>
+                        </div>
+                      </div>
+                      <input
+                        id="create-build-your-box-toggle"
+                        type="checkbox"
+                        checked={editIsBuildYourBox}
+                        onChange={(e) => {
+                          setEditIsBuildYourBox(e.target.checked);
+                          if (e.target.checked && editCategory !== 'Assorted Boxes') {
+                            setEditCategory('Assorted Boxes');
+                          }
+                        }}
+                        className="w-4 h-4 accent-brand-pink rounded cursor-pointer"
+                      />
+                    </div>
+
+                    {editIsBuildYourBox && (
+                      <div className="pt-2 border-t border-brand-cocoa-border/20 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                          <label className="font-mono text-[9px] uppercase tracking-wider text-brand-cocoa-light font-bold block">
+                            Minimum Items Required (Floor)
+                          </label>
+                          <span className="text-[10px] text-brand-cocoa-light">
+                            Minimum total pieces customer must select before checkout is allowed
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            min="1"
+                            max="100"
+                            value={editBoxMinItems}
+                            onChange={(e) => setEditBoxMinItems(Math.max(1, parseInt(e.target.value) || 1))}
+                            className="w-20 px-2.5 py-1 text-xs font-mono font-bold text-brand-cocoa border border-brand-cocoa-border rounded-lg bg-white text-center"
+                          />
+                          <span className="text-xs text-brand-cocoa-light font-mono">items</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Manage Pricing Options inside Create Form */}
@@ -2288,6 +2352,7 @@ export default function AdminDashboard({
                         <option value="Cookies">Cookies</option>
                         <option value="Donuts">Donuts</option>
                         <option value="Bombolonis">Bombolonis</option>
+                        <option value="Assorted Boxes">Assorted Boxes</option>
                         <option value="New Additions">New Additions</option>
                       </select>
                     </div>
@@ -2504,6 +2569,61 @@ export default function AdminDashboard({
                         currentRole === 'viewer' ? 'bg-brand-cream-light/65 text-brand-cocoa-light/80 cursor-not-allowed' : 'bg-brand-cream-light/10'
                       }`}
                     />
+                  </div>
+
+                  {/* Build-Your-Own Assorted Box Configuration */}
+                  <div className="p-4 bg-brand-cream-light/40 border border-brand-cocoa-border/40 rounded-2xl space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-base">🎁</span>
+                        <div>
+                          <label htmlFor="edit-build-your-box-toggle" className="font-sans font-bold text-xs text-brand-cocoa block cursor-pointer">
+                            Build-Your-Own Assorted Box
+                          </label>
+                          <span className="text-[10px] text-brand-cocoa-light block">
+                            Enables interactive pastry customizer where customers pick individual menu items with live running totals
+                          </span>
+                        </div>
+                      </div>
+                      <input
+                        id="edit-build-your-box-toggle"
+                        type="checkbox"
+                        disabled={currentRole === 'viewer' || currentRole === 'chef'}
+                        checked={editIsBuildYourBox}
+                        onChange={(e) => {
+                          setEditIsBuildYourBox(e.target.checked);
+                          if (e.target.checked && editCategory !== 'Assorted Boxes') {
+                            setEditCategory('Assorted Boxes');
+                          }
+                        }}
+                        className="w-4 h-4 accent-brand-pink rounded cursor-pointer disabled:cursor-not-allowed"
+                      />
+                    </div>
+
+                    {editIsBuildYourBox && (
+                      <div className="pt-2 border-t border-brand-cocoa-border/20 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                          <label className="font-mono text-[9px] uppercase tracking-wider text-brand-cocoa-light font-bold block">
+                            Minimum Items Required (Floor)
+                          </label>
+                          <span className="text-[10px] text-brand-cocoa-light">
+                            Minimum total pieces customer must select before checkout is allowed
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            min="1"
+                            max="100"
+                            disabled={currentRole === 'viewer' || currentRole === 'chef'}
+                            value={editBoxMinItems}
+                            onChange={(e) => setEditBoxMinItems(Math.max(1, parseInt(e.target.value) || 1))}
+                            className="w-20 px-2.5 py-1 text-xs font-mono font-bold text-brand-cocoa border border-brand-cocoa-border rounded-lg bg-white text-center disabled:bg-gray-100 disabled:cursor-not-allowed"
+                          />
+                          <span className="text-xs text-brand-cocoa-light font-mono">items</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* CHAGE PRODUCT PRICES ROW */}
@@ -3456,6 +3576,11 @@ export default function AdminDashboard({
                               >
                                 <span className="font-bold text-brand-pink bg-brand-pink-light/60 px-1.5 py-0.5 rounded text-[11px]">{content.quantity}x</span>
                                 <span>{content.name}</span>
+                                {content.price !== undefined && (
+                                  <span className="font-mono text-[10px] text-brand-cocoa-light font-medium">
+                                    (@ ₹{content.price} = ₹{content.price * content.quantity})
+                                  </span>
+                                )}
                               </span>
                             ))}
                           </div>

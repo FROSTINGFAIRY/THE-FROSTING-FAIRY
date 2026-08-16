@@ -38,8 +38,9 @@ import imgDonutGlazed from './assets/images/classic_glazed_donuts_1784435107615.
 import imgPinkFrostedDonut from './assets/images/pink_frosted_donut_1785428801914.jpg';
 import imgDonutCaramel from './assets/images/caramel_glazed_donuts_1785429045626.jpg';
 import imgDonutOreos from './assets/images/cookies_cream_donuts_1785429058056.jpg';
+import imgAssortedBoxes from './assets/images/assorted_boxes_collection_1786875438455.jpg';
 
-export { imgBomboloniVanilla, imgBomboloniHazelnut, imgBomboloniStrawberry, imgPinkFrostedDonut, imgDonutGlazed, imgDonutCaramel, imgDonutOreos };
+export { imgBomboloniVanilla, imgBomboloniHazelnut, imgBomboloniStrawberry, imgPinkFrostedDonut, imgDonutGlazed, imgDonutCaramel, imgDonutOreos, imgAssortedBoxes };
 
 export const INITIAL_CATEGORY_INFOS: CategoryInfo[] = [
   {
@@ -108,11 +109,11 @@ export const INITIAL_CATEGORY_INFOS: CategoryInfo[] = [
   {
     name: 'Assorted Boxes',
     emoji: '🎁',
-    description: 'Custom artisan gift boxes! Mix and match your favorite fairy confections up to your box size.',
-    image: 'https://images.unsplash.com/photo-1587668178277-295251f900ce?auto=format&fit=crop&w=600&q=80',
-    imageUrl: 'https://images.unsplash.com/photo-1587668178277-295251f900ce?auto=format&fit=crop&w=600&q=80',
-    itemCountText: 'Custom Assorted Confectionery Boxes',
-    startingPrice: 600,
+    description: 'Custom artisan gift boxes! Mix and match any confections from our entire menu with live price calculation.',
+    image: imgAssortedBoxes,
+    imageUrl: imgAssortedBoxes,
+    itemCountText: 'Custom Assorted Confectionery Box',
+    startingPrice: 0,
   }
 ];
 
@@ -1407,105 +1408,36 @@ export const INITIAL_RECIPES: Recipe[] = [
     isFavorite: false
   },
   {
-    id: 'box-sweet-sampler-6',
-    name: 'Sweet Sampler Assorted Box (6 Treats)',
-    description: 'Build your dream pastry box! Pick any 6 delicious items from our handcrafted cupcakes, fudgy brownies, chewy cookies, gourmet donuts, and stuffed bombolonis.',
-    image: 'https://images.unsplash.com/photo-1587668178277-295251f900ce?auto=format&fit=crop&w=600&q=80',
+    id: 'assorted-box',
+    name: 'Build Your Own Assorted Box',
+    description: 'Pick anything from anywhere on our menu, in any quantity you like — cakes, cupcakes, brownies, cookies, donuts, bombolonis, all fair game. Your box, your price, your mix.',
+    image: imgAssortedBoxes,
     prepTime: 15,
     cookTime: 0,
     difficulty: 'Easy',
     servings: 6,
     rating: 5.0,
-    votes: 342,
-    nutrients: { calories: 310, protein: '4g', carbs: '38g', fat: '14g' },
-    tags: ['Assorted Box', 'Custom Mix', 'Gift Box', 'Bestseller'],
+    votes: 418,
+    nutrients: { calories: 320, protein: '4g', carbs: '38g', fat: '14g' },
+    tags: ['Assorted Box', 'Build Your Own', 'Custom Mix', 'Gift Box', 'Bestseller'],
     category: 'Assorted Boxes',
     isBuildYourBox: true,
-    boxCapacity: 6,
-    boxEligibleCategories: ['Cupcakes', 'Cookies', 'Brownies', 'Donuts', 'Bombolonis'],
+    boxMinItems: 3,
     priceOptions: [
-      { label: 'Box of 6 Treats', price: 600 }
+      { label: 'Starting from', price: 0 }
     ],
     details: [
-      'Choose exactly 6 artisanal treats of your choice',
-      'Packed in our signature pink fairy gift box with ribbon',
-      'Perfect for personal gifting or sharing with family'
+      'Pick any sweets from our entire bakery menu in any quantity',
+      'Live total calculated as you choose your favorite pastries',
+      'Sealed in our signature luxury fairy gift box with ribbon'
     ],
     ingredients: [
-      { name: 'Custom Selection of 6 Baked Delights', amount: 6, unit: 'items' }
+      { name: 'Custom Selection of Artisan Bakery Treats', amount: 3, unit: 'items min' }
     ],
     instructions: [
-      { step: 1, text: 'Carefully select your 6 favorite confections.' },
-      { step: 2, text: 'Our pastry fairy packs each fresh delicacy into custom cradles in our signature boutique box.' }
+      { step: 1, text: 'Select at least 3 treats from any bakery category with no upper limit.' },
+      { step: 2, text: 'Our bakers pack each fresh delicacy into custom cradles in our signature boutique gift box.' }
     ],
     isFavorite: true
-  },
-  {
-    id: 'box-fairy-feast-12',
-    name: 'Fairy Feast Assorted Box (12 Treats)',
-    description: 'The ultimate dessert party pack! Mix and match any 12 treats across all our pastry categories: cupcakes, brownies, stuffed cookies, donuts, and bombolonis.',
-    image: 'https://images.unsplash.com/photo-1558961363-fa8fdf82db35?auto=format&fit=crop&w=600&q=80',
-    prepTime: 20,
-    cookTime: 0,
-    difficulty: 'Easy',
-    servings: 12,
-    rating: 5.0,
-    votes: 288,
-    nutrients: { calories: 310, protein: '4g', carbs: '38g', fat: '14g' },
-    tags: ['Assorted Box', 'Party Pack', 'Family Feast', 'Custom Mix'],
-    category: 'Assorted Boxes',
-    isBuildYourBox: true,
-    boxCapacity: 12,
-    boxEligibleCategories: ['Cupcakes', 'Cookies', 'Brownies', 'Donuts', 'Bombolonis'],
-    priceOptions: [
-      { label: 'Box of 12 Treats', price: 1100 }
-    ],
-    details: [
-      'Choose any 12 freshly baked delights across 5 categories',
-      'Delivered in our luxury dual-tier boutique keepsake box',
-      'Ideal for parties, family gatherings, and office celebrations'
-    ],
-    ingredients: [
-      { name: 'Custom Selection of 12 Baked Delights', amount: 12, unit: 'items' }
-    ],
-    instructions: [
-      { step: 1, text: 'Select 12 of your favorite confections in any combination.' },
-      { step: 2, text: 'Our chefs assemble and seal the luxury gift box with golden silk fairy twine.' }
-    ],
-    isFavorite: true
-  },
-  {
-    id: 'box-petite-treat-6',
-    name: 'Gourmet Brownie & Cookie Duo Box (6 Treats)',
-    description: 'For the ultimate chocolate and cookie lovers! Choose any combination of 6 decadent fudgy brownies and thick bakery cookies.',
-    image: 'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=600&q=80',
-    prepTime: 15,
-    cookTime: 0,
-    difficulty: 'Easy',
-    servings: 6,
-    rating: 4.9,
-    votes: 195,
-    nutrients: { calories: 360, protein: '5g', carbs: '45g', fat: '18g' },
-    tags: ['Assorted Box', 'Brownies & Cookies', 'Choco Cravers'],
-    category: 'Assorted Boxes',
-    isBuildYourBox: true,
-    boxCapacity: 6,
-    boxEligibleCategories: ['Brownies', 'Cookies'],
-    priceOptions: [
-      { label: 'Box of 6 Treats', price: 650 }
-    ],
-    details: [
-      'Mix and match 6 fudgy Belgian brownies and chunky cookies',
-      'Handcrafted with gourmet Callebaut dark and milk chocolates',
-      'Sealed in our signature dessert box with gold foil stamping'
-    ],
-    ingredients: [
-      { name: 'Custom Selection of 6 Brownies & Cookies', amount: 6, unit: 'items' }
-    ],
-    instructions: [
-      { step: 1, text: 'Pick your preferred mix of 6 gourmet brownies and cookies.' },
-      { step: 2, text: 'Individually wrapped and boxed for fresh indulgence.' }
-    ],
-    isFavorite: false
   }
 ];

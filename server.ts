@@ -388,7 +388,12 @@ async function startServer() {
             const productSnap = await db.collection("products").doc(item.productId).get();
             if (productSnap.exists) {
               recipeData = productSnap.data();
-              if (Array.isArray(recipeData.priceOptions) && recipeData.priceOptions.length > 0) {
+              if (recipeData.isBuildYourBox && Array.isArray(item.boxContents) && item.boxContents.length > 0) {
+                unitPrice = item.boxContents.reduce(
+                  (sum: number, c: any) => sum + (Number(c.price) || 0) * (Number(c.quantity) || 0),
+                  0
+                );
+              } else if (Array.isArray(recipeData.priceOptions) && recipeData.priceOptions.length > 0) {
                 const matchedOpt = recipeData.priceOptions.find(
                   (opt: any) => opt.weight === item.selectedOption || opt.weight === item.unit
                 );
@@ -400,6 +405,14 @@ async function startServer() {
           } catch (err) {
             console.warn(`Error looking up product ${item.productId}:`, err);
           }
+        }
+
+        // Fallback calculation for box contents if product wasn't found in Firestore
+        if (unitPrice === 0 && Array.isArray(item.boxContents) && item.boxContents.length > 0) {
+          unitPrice = item.boxContents.reduce(
+            (sum: number, c: any) => sum + (Number(c.price) || 0) * (Number(c.quantity) || 0),
+            0
+          );
         }
 
         // Clamp item amount server-side to range 1-50

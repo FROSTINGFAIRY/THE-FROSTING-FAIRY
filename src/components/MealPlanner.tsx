@@ -147,20 +147,32 @@ export default function MealPlanner({
                         </div>
                       )}
 
+                      {/* Box Contents Breakdown with prices */}
                       {order.boxContents && order.boxContents.length > 0 && (
-                        <div className="bg-brand-pink-light/25 border border-brand-pink/20 rounded-xl p-2.5 space-y-1 mt-2">
-                          <span className="font-mono text-[9px] uppercase tracking-wider text-brand-pink-dark block font-bold">
-                            🎁 Custom Box Assortment:
-                          </span>
-                          <div className="flex flex-wrap gap-1.5 pt-0.5">
-                            {order.boxContents.map((content, cIdx) => (
-                              <span
-                                key={`order-box-item-${cIdx}`}
-                                className="text-[11px] font-sans font-semibold text-brand-cocoa bg-white border border-brand-cocoa-border/40 px-2 py-0.5 rounded-lg shadow-3xs"
-                              >
-                                <span className="font-bold text-brand-pink">{content.quantity}x</span> {content.name}
-                              </span>
-                            ))}
+                        <div className="bg-brand-pink-light/25 border border-brand-pink/20 rounded-xl p-3 space-y-2 mt-2">
+                          <div className="flex items-center justify-between text-[10px] font-mono font-bold uppercase tracking-wider text-brand-pink-dark">
+                            <span>🎁 Assorted Box Contents:</span>
+                            <span>{order.boxContents.reduce((s, c) => s + c.quantity, 0)} items</span>
+                          </div>
+                          <div className="space-y-1.5 pt-0.5">
+                            {order.boxContents.map((content, cIdx) => {
+                              const linePrice = content.price !== undefined ? content.price * content.quantity : undefined;
+                              return (
+                                <div
+                                  key={`order-box-item-${cIdx}`}
+                                  className="flex items-center justify-between text-xs font-sans text-brand-cocoa bg-white border border-brand-cocoa-border/40 px-2.5 py-1.5 rounded-lg shadow-3xs"
+                                >
+                                  <span>
+                                    <strong className="text-brand-pink font-mono mr-1">{content.quantity}x</strong> {content.name}
+                                  </span>
+                                  {linePrice !== undefined ? (
+                                    <span className="text-xs font-mono font-bold text-brand-cocoa-light">
+                                      ₹{linePrice}
+                                    </span>
+                                  ) : null}
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
                       )}
