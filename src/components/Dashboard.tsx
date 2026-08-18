@@ -481,6 +481,16 @@ export default function Dashboard({
                     <p className="text-[10px] font-mono text-brand-pink-dark font-bold uppercase tracking-wider pt-1">
                       🎁 Standard size & bespoke weights starting from ₹{currentCatInfo.startingPrice} onwards
                     </p>
+                    {activeCategory === 'Cookies' && (
+                      <div className="pt-1 flex flex-wrap items-center gap-2">
+                        <span className="text-[11px] font-mono font-bold px-2.5 py-1 bg-brand-pink/10 text-brand-pink border border-brand-pink/20 rounded-lg">
+                          6 Cookies Box — Flavour Wise Pricing
+                        </span>
+                        <span className="text-[11px] font-mono font-medium px-2.5 py-1 bg-brand-cream text-brand-cocoa border border-brand-cocoa-border rounded-lg">
+                          🎁 Assorted Boxes Available: 6, 12, 18 & 24 Cookies Box
+                        </span>
+                      </div>
+                    )}
                   </div>
                   <div className="md:col-span-4 h-48 md:h-auto min-h-[140px] relative overflow-hidden">
                     <img

@@ -27,6 +27,7 @@ import imgBrowniePistachio from './assets/images/pistachio_brownie_1784434968825
 import imgCookieChocoChip from './assets/images/classic_choco_chip_cookies_1784434986464.jpg';
 import imgCookieDoubleChoco from './assets/images/double_chocolate_cookies_1784435001156.jpg';
 import imgCookieDarkChunks from './assets/images/dark_chocolate_chunks_cookies_1784435017492.jpg';
+import imgCookieTripleChoco from './assets/images/triple_brownie_cookie_1787065366431.jpg';
 import imgCookieMm from './assets/images/mm_cookies_1784435031411.jpg';
 import imgCookieRedVelvet from './assets/images/red_velvet_white_choco_cookies_1784435046208.jpg';
 
@@ -73,11 +74,11 @@ export const INITIAL_CATEGORY_INFOS: CategoryInfo[] = [
   {
     name: 'Cookies',
     emoji: '🍪',
-    description: 'Warm, crispy on the outside, and incredibly soft-chewy on the inside, stuffed with premium chocolate chunks.',
+    description: 'Freshly baked artisanal cookies — available in flavour-wise boxes of 6, as well as 6, 12, 18 & 24 cookie assorted boxes.',
     image: 'https://images.unsplash.com/photo-1499636136210-6f4ee915583e?auto=format&fit=crop&w=600&q=80',
     imageUrl: 'https://images.unsplash.com/photo-1499636136210-6f4ee915583e?auto=format&fit=crop&w=600&q=80',
-    itemCountText: 'Artisanal Chewy Cookies',
-    startingPrice: 90,
+    itemCountText: '6 Cookies Box (Flavour-Wise Pricing)',
+    startingPrice: 250,
   },
   {
     name: 'Donuts',
@@ -1008,9 +1009,9 @@ export const INITIAL_RECIPES: Recipe[] = [
   },
   {
     id: 'cookie-dark-chunks',
-    name: 'Dark Chocolate Chunks Cookies',
-    description: 'Thick, heavy bakery-style cookies packed with huge chunks of intense 70% dark chocolate couverture. A sophisticated, semi-sweet bite.',
-    image: imgCookieDarkChunks,
+    name: 'Triple Chocolate Brownie Cookies',
+    description: 'Dense, fudgy cookies built like a brownie — rich cocoa dough loaded with dark chocolate chunks and gooey chocolate chips for three layers of deep chocolate flavor in every bite.',
+    image: imgCookieTripleChoco,
     prepTime: 12,
     cookTime: 10,
     difficulty: 'Easy',
@@ -1018,24 +1019,58 @@ export const INITIAL_RECIPES: Recipe[] = [
     rating: 4.9,
     votes: 115,
     nutrients: { calories: 220, protein: '3g', carbs: '30g', fat: '11g' },
-    tags: ['Dark Chocolate', 'Couverture', 'Bakery Style', 'Thick'],
+    tags: ['Triple Chocolate', 'Brownie', 'Fudgy', 'Cookies'],
     category: 'Cookies',
     priceOptions: [
-      { label: 'Box of 6', price: 330 }
+      { label: 'Box of 6', price: 360 }
     ],
     details: [
-      '70% cocoa dark chocolate couverture chunks',
-      'Chewy, dense, classic cookie center',
-      'Perfect balance of sweet dough and bitter chocolate chunks'
+      'Three kinds of chocolate: cocoa, dark chunks, and chocolate chips',
+      'Dense, fudgy, brownie-like center',
+      'Deeply rich and intensely chocolatey'
     ],
     ingredients: [
-      { name: '70% Dark Chocolate Chunks', amount: 120, unit: 'g' },
-      { name: 'Premium Cookie Dough Base', amount: 350, unit: 'g' }
+      { name: 'Cocoa Brownie Cookie Dough', amount: 350, unit: 'g' },
+      { name: 'Dark Chocolate Chunks', amount: 70, unit: 'g' },
+      { name: 'Chocolate Chips', amount: 50, unit: 'g' }
     ],
     instructions: [
-      { step: 1, text: 'Fold 70% dark chocolate chunks into chilled butter cookie dough.', durationMs: 120000 },
-      { step: 2, text: 'Form into rustic, thick cookies to ensure a chewy center.', durationMs: 120000 },
-      { step: 3, text: 'Bake for 10 minutes at 180°C. Do not overbake.', durationMs: 600000 }
+      { step: 1, text: 'Mix a rich cocoa brownie-style cookie dough until thick and fudgy.', durationMs: 180000 },
+      { step: 2, text: 'Fold in dark chocolate chunks and chocolate chips.', durationMs: 120000 },
+      { step: 3, text: 'Bake at 175°C for 10 minutes — center should stay soft and fudgy.', durationMs: 600000 }
+    ],
+    isFavorite: false
+  },
+  {
+    id: 'cookie-red-velvet',
+    name: 'Red Velvet + White Choco Cookies',
+    description: 'Vibrant red velvet cookie dough mixed with sweet, melting white chocolate chips. Soft, cake-like, and beautiful.',
+    image: imgCookieRedVelvet,
+    prepTime: 12,
+    cookTime: 11,
+    difficulty: 'Easy',
+    servings: 6,
+    rating: 4.9,
+    votes: 110,
+    nutrients: { calories: 235, protein: '3g', carbs: '32g', fat: '11.5g' },
+    tags: ['Red Velvet', 'White Chocolate', 'Colorful', 'Chewy'],
+    category: 'Cookies',
+    priceOptions: [
+      { label: 'Box of 6', price: 390 }
+    ],
+    details: [
+      'Vibrant red velvet cookie dough',
+      'Creamy premium white chocolate chip pools',
+      'Soft-baked, brownie-like cookie texture'
+    ],
+    ingredients: [
+      { name: 'White Chocolate Chips', amount: 80, unit: 'g' },
+      { name: 'Red Velvet Cookie Dough', amount: 350, unit: 'g' }
+    ],
+    instructions: [
+      { step: 1, text: 'Mix red velvet cocoa dough and fold in sweet white chocolate chips.', durationMs: 180000 },
+      { step: 2, text: 'Chill cookie balls for 15 minutes to prevent flat spreading.', durationMs: 900000 },
+      { step: 3, text: 'Bake at 170°C for 11 minutes; cool before moving.', durationMs: 660000 }
     ],
     isFavorite: false
   },
@@ -1069,39 +1104,6 @@ export const INITIAL_RECIPES: Recipe[] = [
       { step: 1, text: 'Gently fold M&Ms into cookie dough batter, reserving some for top decoration.', durationMs: 120000 },
       { step: 2, text: 'Scoop cookies and press extra M&Ms directly into the top of each ball.', durationMs: 120000 },
       { step: 3, text: 'Bake for 10 minutes until light golden brown.', durationMs: 600000 }
-    ],
-    isFavorite: false
-  },
-  {
-    id: 'cookie-red-velvet',
-    name: 'Red Velvet + White Choco Cookies',
-    description: 'Vibrant red velvet cookie dough mixed with sweet, melting white chocolate chips. Soft, cake-like, and beautiful.',
-    image: imgCookieRedVelvet,
-    prepTime: 12,
-    cookTime: 11,
-    difficulty: 'Easy',
-    servings: 6,
-    rating: 4.9,
-    votes: 110,
-    nutrients: { calories: 235, protein: '3g', carbs: '32g', fat: '11.5g' },
-    tags: ['Red Velvet', 'White Chocolate', 'Colorful', 'Chewy'],
-    category: 'Cookies',
-    priceOptions: [
-      { label: 'Box of 6', price: 300 }
-    ],
-    details: [
-      'Vibrant red velvet cookie dough',
-      'Creamy premium white chocolate chip pools',
-      'Soft-baked, brownie-like cookie texture'
-    ],
-    ingredients: [
-      { name: 'White Chocolate Chips', amount: 80, unit: 'g' },
-      { name: 'Red Velvet Cookie Dough', amount: 350, unit: 'g' }
-    ],
-    instructions: [
-      { step: 1, text: 'Mix red velvet cocoa dough and fold in sweet white chocolate chips.', durationMs: 180000 },
-      { step: 2, text: 'Chill cookie balls for 15 minutes to prevent flat spreading.', durationMs: 900000 },
-      { step: 3, text: 'Bake at 170°C for 11 minutes; cool before moving.', durationMs: 660000 }
     ],
     isFavorite: false
   },

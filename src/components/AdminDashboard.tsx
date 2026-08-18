@@ -461,10 +461,10 @@ export default function AdminDashboard({
     return () => unsubscribeAuth();
   }, []);
 
-  // When an admin is signed in, seed products collection in Firestore if empty
+  // When an admin is signed in, seed or update products collection in Firestore
   React.useEffect(() => {
     if (!isUnlocked) return;
-    const seedProductsIfEmpty = async () => {
+    const syncProductsToFirestore = async () => {
       try {
         const productsRef = collection(db, 'products');
         const snap = await getDocs(productsRef);
@@ -473,12 +473,17 @@ export default function AdminDashboard({
             await setDoc(doc(db, 'products', recipe.id), recipe);
           }
           addAuditLog('Seeded initial products catalog into Firestore', 'success');
+        } else {
+          // Sync any updated initial recipes into Firestore to keep live database updated
+          for (const recipe of INITIAL_RECIPES) {
+            await setDoc(doc(db, 'products', recipe.id), recipe, { merge: true });
+          }
         }
       } catch (err: any) {
-        console.warn('Admin products seed notice:', err.message);
+        console.warn('Admin products sync notice:', err.message);
       }
     };
-    seedProductsIfEmpty();
+    syncProductsToFirestore();
   }, [isUnlocked]);
 
   // Subscribe to Firestore 'admins' collection live

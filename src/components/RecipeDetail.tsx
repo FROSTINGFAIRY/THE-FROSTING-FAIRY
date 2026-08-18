@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Heart, ShoppingCart, Info, Sparkles, Check, Flame, MessageSquare, Plus, Minus, Star, Gift, ChevronLeft, ChevronRight, ArrowUpDown, TrendingUp, Search, Trash2, CheckCircle2, Layers, ShoppingBag, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { Recipe, PriceOption } from '../types';
+import { INITIAL_RECIPES } from '../data';
 import { motion, AnimatePresence } from 'motion/react';
 import { getRecipeImages } from './Dashboard';
 import { auth } from '../lib/firebase';
@@ -59,11 +60,16 @@ export default function RecipeDetail({
   type BoxSortOption = 'featured' | 'price-asc' | 'price-desc' | 'alphabetical' | 'popularity' | 'rating';
   const [boxSortBy, setBoxSortBy] = useState<BoxSortOption>('featured');
 
+  // Active product catalog (guaranteeing immediate fallback to INITIAL_RECIPES if allRecipes is empty)
+  const productCatalog = React.useMemo(() => {
+    return allRecipes && allRecipes.length > 0 ? allRecipes : INITIAL_RECIPES;
+  }, [allRecipes]);
+
   // Eligible products for box building (ALL products from the entire menu, excluding this box)
   const eligibleProducts = React.useMemo(() => {
     if (!isBox) return [];
-    return allRecipes.filter((r) => r.id !== recipe.id && !r.isBuildYourBox);
-  }, [allRecipes, isBox, recipe.id, recipe.isBuildYourBox]);
+    return productCatalog.filter((r) => r.id !== recipe.id && !r.isBuildYourBox);
+  }, [productCatalog, isBox, recipe.id]);
 
   // Unique categories for filtering inside the box builder
   const boxCategories = React.useMemo(() => {
@@ -131,10 +137,10 @@ export default function RecipeDetail({
   const liveBoxTotal = React.useMemo(() => {
     if (!isBox) return 0;
     return (Object.entries(boxSelections) as [string, number][]).reduce((sum: number, [name, qty]) => {
-      const product = allRecipes.find((r) => r.name === name);
+      const product = productCatalog.find((r) => r.name === name);
       return sum + (product ? (product.priceOptions?.[0]?.price || 0) * qty : 0);
     }, 0);
-  }, [isBox, boxSelections, allRecipes]);
+  }, [isBox, boxSelections, productCatalog]);
 
   const handleBoxItemChange = (productName: string, delta: number) => {
     setBoxSelections((prev) => {
@@ -240,7 +246,7 @@ export default function RecipeDetail({
       ? (Object.entries(boxSelections) as [string, number][])
           .filter(([_, qty]) => qty > 0)
           .map(([name, quantity]) => {
-            const product = allRecipes.find((r) => r.name === name);
+            const product = productCatalog.find((r) => r.name === name);
             return { name, quantity, price: product?.priceOptions?.[0]?.price || 0 };
           })
       : undefined;
@@ -524,7 +530,7 @@ export default function RecipeDetail({
                         >
                           {(Object.entries(boxSelections) as [string, number][]).map(([itemName, count]) => {
                             if (count <= 0) return null;
-                            const itemProduct = allRecipes.find((r) => r.name === itemName);
+                            const itemProduct = productCatalog.find((r) => r.name === itemName);
                             const itemPrice = itemProduct?.priceOptions?.[0]?.price || 0;
                             const subtotal = itemPrice * count;
 

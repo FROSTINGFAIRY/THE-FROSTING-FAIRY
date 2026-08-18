@@ -96,10 +96,10 @@ const CATEGORY_INFOS = [
   {
     name: 'Cookies',
     emoji: '🍪',
-    description: 'Warm, crispy on the outside, and incredibly soft-chewy on the inside, stuffed with premium chocolate chunks.',
+    description: 'Freshly baked artisanal cookies — available in flavour-wise boxes of 6, as well as 6, 12, 18 & 24 cookie assorted boxes.',
     image: 'https://images.unsplash.com/photo-1499636136210-6f4ee915583e?auto=format&fit=crop&w=600&q=80',
-    itemCountText: 'Artisanal Chewy Cookies',
-    startingPrice: 90,
+    itemCountText: '6 Cookies Box (Flavour-Wise Pricing)',
+    startingPrice: 250,
   },
   {
     name: 'Donuts',

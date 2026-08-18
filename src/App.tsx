@@ -45,10 +45,51 @@ export default function App() {
       if (snapshot.empty) {
         setRecipes(INITIAL_RECIPES);
       } else {
+        const initialMap = new Map(INITIAL_RECIPES.map((r) => [r.id, r]));
         const loadedRecipes: Recipe[] = [];
+        const seenIds = new Set<string>();
+
         snapshot.forEach((docSnap) => {
-          loadedRecipes.push({ id: docSnap.id, ...docSnap.data() } as Recipe);
+          const docData = docSnap.data() as Partial<Recipe>;
+          const initial = initialMap.get(docSnap.id);
+          seenIds.add(docSnap.id);
+
+          if (initial) {
+            // For catalog items (especially cookies), ensure authoritative updates in INITIAL_RECIPES
+            // (e.g. cookie name renames, latest prices, updated ingredients/instructions) take precedence over stale seed in Firestore
+            const isStaleCookie = docSnap.id.startsWith('cookie-') && (
+              docData.name === 'Dark Chocolate Chunks Cookies' ||
+              (docSnap.id === 'cookie-dark-chunks' && (docData.priceOptions?.[0]?.price !== 360 || docData.image !== initial.image)) ||
+              (docSnap.id === 'cookie-red-velvet' && docData.priceOptions?.[0]?.price !== 390) ||
+              (docSnap.id === 'cookie-choco-chip' && docData.priceOptions?.[0]?.price !== 250) ||
+              (docSnap.id === 'cookie-double-choco' && docData.priceOptions?.[0]?.price !== 300) ||
+              (docSnap.id === 'cookie-mm' && docData.priceOptions?.[0]?.price !== 330)
+            );
+
+            if (isStaleCookie) {
+              loadedRecipes.push({
+                ...initial,
+                isFavorite: docData.isFavorite ?? initial.isFavorite,
+              });
+            } else {
+              loadedRecipes.push({
+                ...initial,
+                ...docData,
+                id: docSnap.id,
+              } as Recipe);
+            }
+          } else {
+            loadedRecipes.push({ id: docSnap.id, ...docData } as Recipe);
+          }
         });
+
+        // Ensure all built-in INITIAL_RECIPES exist in recipes list in their intended sequence
+        INITIAL_RECIPES.forEach((initRecipe) => {
+          if (!seenIds.has(initRecipe.id)) {
+            loadedRecipes.push(initRecipe);
+          }
+        });
+
         setRecipes(loadedRecipes);
       }
     }, (err) => {
