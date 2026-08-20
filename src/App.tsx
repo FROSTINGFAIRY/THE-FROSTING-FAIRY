@@ -13,13 +13,14 @@ import ShoppingList from './components/ShoppingList';
 import RecipeDetail from './components/RecipeDetail';
 import AdminDashboard from './components/AdminDashboard';
 import OrderSuccessModal, { OrderSuccessDetails } from './components/OrderSuccessModal';
+import { BakeryStoreMapModal } from './components/BakeryMapModal';
 import { triggerOrderSuccessConfetti } from './lib/confetti';
 import { INITIAL_RECIPES, INITIAL_CATEGORY_INFOS } from './data';
 import { Recipe, ShoppingItem, MealPlanEntry, MealType, CategoryInfo } from './types';
 import { AnimatePresence, motion } from 'motion/react';
 import { X, Instagram, ArrowLeft } from 'lucide-react';
 import { db } from './lib/firebase';
-import { collection, onSnapshot, doc, getDoc, setDoc, addDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, onSnapshot, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 
 // Local storage key names for fallback preferences
 const SHOPPING_STORAGE_KEY = 'gusto_shopping_list';
@@ -206,6 +207,7 @@ export default function App() {
 
   // Order Success Celebratory Modal State
   const [orderSuccessModalData, setOrderSuccessModalData] = useState<OrderSuccessDetails | null>(null);
+  const [isBakeryMapOpen, setIsBakeryMapOpen] = useState<boolean>(false);
 
   useEffect(() => {
     if (theme === 'dark') {
@@ -346,6 +348,55 @@ export default function App() {
       addToast('🗑️ Order Cancelled', 'The order has been removed.', 'info');
     } catch (e: any) {
       console.warn('Could not delete order from Firestore:', e);
+    }
+  };
+
+  // Re-order a previously placed custom order or past transaction
+  const handleReorder = (order: MealPlanEntry) => {
+    // Find matching catalog recipe if available
+    const matchedRecipe = recipes.find(
+      (r) => r.id === order.recipe?.id || r.name.toLowerCase() === order.cakeType.toLowerCase()
+    );
+
+    const cartItem = {
+      productId: matchedRecipe?.id || order.recipe?.id || `product-${Date.now()}`,
+      name: order.cakeType,
+      category: matchedRecipe?.category || order.recipe?.category || 'Signature Cakes',
+      selectedOption: order.weight || 'Standard',
+      price: order.estimatedPrice || (matchedRecipe?.priceOptions?.[0]?.price ?? 500),
+      amount: 1,
+      unit: 'pcs',
+      image:
+        order.recipe?.image ||
+        matchedRecipe?.image ||
+        'https://images.unsplash.com/photo-1565958011703-44f9829ba187?auto=format&fit=crop&q=80&w=300',
+      customMessage: order.message || '',
+      recipeName: order.flavor || 'Signature Flavor',
+      boxContents:
+        order.boxContents && order.boxContents.length > 0
+          ? order.boxContents.map((b) => ({ name: b.name, quantity: b.quantity, price: b.price ?? 0 }))
+          : undefined,
+    };
+
+    handleAddToCart(cartItem);
+    addToast(
+      '🛒 Re-Order Added to Cart!',
+      `"${order.cakeType}" (${order.weight}) with previous customizations has been added to your cart.`,
+      'success'
+    );
+    setActiveTab('shopping');
+  };
+
+  // Update order status in Firestore (e.g., mark received/completed)
+  const handleUpdateOrderStatus = async (orderId: string, newStatus: MealPlanEntry['status']) => {
+    setMealPlan((prev) =>
+      prev.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o))
+    );
+    try {
+      await updateDoc(doc(db, 'orders', orderId), { status: newStatus });
+      addToast('✨ Status Updated', `Order marked as ${newStatus}.`, 'success');
+    } catch (err: any) {
+      console.warn('Could not update order status in Firestore:', err);
     }
   };
 
@@ -592,9 +643,14 @@ export default function App() {
             onRemoveMeal={handleRemoveMeal}
             onAddIngredientsToShoppingList={(recipe) => recipe && handleAddIngredientsToShoppingList(recipe, recipe.servings)}
             onSelectRecipe={handleSelectRecipe}
+            onReorder={handleReorder}
+            onUpdateOrderStatus={handleUpdateOrderStatus}
+            onNavigateToShop={() => setActiveTab('discover')}
             preselectedRecipeId={preselectedRecipeId}
             clearPreselectedRecipeId={() => setPreselectedRecipeId('')}
             cashOnDeliveryEnabled={cashOnDeliveryEnabled}
+            logo={logo}
+            websiteName={websiteName}
           />
         );
       case 'shopping':
@@ -661,6 +717,7 @@ export default function App() {
         websiteSlogan={websiteSlogan}
         theme={theme}
         toggleTheme={() => setTheme((t) => (t === 'light' ? 'dark' : 'light'))}
+        onOpenMap={() => setIsBakeryMapOpen(true)}
       />
 
       {/* Main Screen Layout with AnimatePresence */}
@@ -747,6 +804,12 @@ export default function App() {
           />
         )}
       </AnimatePresence>
+
+      {/* Interactive Bakery Google Maps Modal */}
+      <BakeryStoreMapModal
+        isOpen={isBakeryMapOpen}
+        onClose={() => setIsBakeryMapOpen(false)}
+      />
 
       {/* Luxury Brand Store Footer */}
       <footer className="bg-brand-cocoa text-brand-cream border-t border-brand-cocoa-border py-12 px-6 shrink-0 mt-auto">

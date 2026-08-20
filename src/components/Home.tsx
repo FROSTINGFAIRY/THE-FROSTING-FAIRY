@@ -17,11 +17,15 @@ import {
   ChefHat,
   Flame,
   Cookie,
-  Gift
+  Gift,
+  Navigation,
+  ExternalLink
 } from 'lucide-react';
 import { Recipe, CategoryInfo } from '../types';
 import { imgBomboloniVanilla, imgPinkFrostedDonut, imgAssortedBoxes, INITIAL_CATEGORY_INFOS } from '../data';
 import { motion, AnimatePresence } from 'motion/react';
+import { APIProvider, Map, AdvancedMarker, Pin } from '@vis.gl/react-google-maps';
+import { GOOGLE_MAPS_API_KEY, hasValidMapsKey, BAKERY_LOCATIONS, MapsApiKeyBanner } from './BakeryMapModal';
 
 interface HomeProps {
   recipes: Recipe[];
@@ -803,6 +807,116 @@ export default function Home({
         </div>
       </section>
 
+      {/* --- GOOGLE MAPS BOUTIQUE & STUDIO LOCATOR SECTION --- */}
+      <section id="home-bakery-maps-section" className="py-16 bg-white border-t border-brand-cocoa-border">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-3xl mx-auto mb-10">
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-brand-pink/10 border border-brand-pink/20 rounded-full text-brand-pink text-xs font-bold font-mono uppercase tracking-wider mb-3">
+              <MapPin className="w-3.5 h-3.5" />
+              <span>Interactive Google Maps</span>
+            </div>
+            <h2 className="font-serif font-black text-3xl md:text-4xl text-brand-cocoa tracking-tight">
+              Visit Our Patisserie Boutiques
+            </h2>
+            <p className="mt-3 text-sm md:text-base text-brand-cocoa/80">
+              Experience the aroma of freshly baked confections, sample cake layers, and pick up your artisanal orders directly.
+            </p>
+          </div>
+
+          <div className="bg-brand-cream/60 rounded-3xl border border-brand-cocoa-border overflow-hidden shadow-lg grid grid-cols-1 lg:grid-cols-12">
+            {/* Left Locations Directory */}
+            <div className="lg:col-span-4 p-6 md:p-8 space-y-4 border-b lg:border-b-0 lg:border-r border-brand-cocoa-border flex flex-col justify-between">
+              <div className="space-y-4">
+                <h3 className="font-serif font-bold text-lg text-brand-cocoa">
+                  Bakery Kitchens & Studios
+                </h3>
+                {BAKERY_LOCATIONS.map((loc) => (
+                  <div
+                    key={loc.id}
+                    className="p-4 rounded-2xl bg-white border border-brand-cocoa-border/70 shadow-xs space-y-2"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-serif font-bold text-sm text-brand-cocoa">{loc.name}</span>
+                      {loc.isMain && (
+                        <span className="text-[9px] font-mono font-bold px-2 py-0.5 bg-brand-pink text-white rounded-full">
+                          Main Studio
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-brand-cocoa/80 flex items-start gap-1.5">
+                      <MapPin className="w-3.5 h-3.5 text-brand-pink shrink-0 mt-0.5" />
+                      {loc.address}
+                    </p>
+                    <div className="text-[11px] text-brand-cocoa/70 space-y-1 font-mono pt-1">
+                      <p className="flex items-center gap-1.5">
+                        <Clock className="w-3 h-3 text-brand-pink" />
+                        {loc.hours}
+                      </p>
+                      <p className="flex items-center gap-1.5">
+                        <Phone className="w-3 h-3 text-brand-pink" />
+                        {loc.phone}
+                      </p>
+                    </div>
+                    <a
+                      href={`https://www.google.com/maps/dir/?api=1&destination=${loc.position.lat},${loc.position.lng}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-brand-pink hover:text-brand-pink-dark hover:underline"
+                    >
+                      <Navigation className="w-3 h-3" />
+                      Get Directions on Google Maps
+                      <ExternalLink className="w-2.5 h-2.5" />
+                    </a>
+                  </div>
+                ))}
+              </div>
+
+              <div className="p-4 rounded-2xl bg-brand-pink/10 border border-brand-pink/20 text-xs text-brand-cocoa space-y-1 mt-4">
+                <p className="font-bold text-brand-pink flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5" /> Citywide Express Delivery
+                </p>
+                <p className="text-[11px] text-brand-cocoa/80 leading-relaxed">
+                  All cakes and custom boxes are transported in temperature-shielded delivery vehicles with real-time GPS tracking.
+                </p>
+              </div>
+            </div>
+
+            {/* Right Map Canvas Container */}
+            <div className="lg:col-span-8 min-h-[420px] relative bg-brand-cream flex flex-col justify-center">
+              {hasValidMapsKey ? (
+                <APIProvider apiKey={GOOGLE_MAPS_API_KEY} version="weekly">
+                  <Map
+                    defaultCenter={BAKERY_LOCATIONS[0].position}
+                    defaultZoom={12}
+                    mapId="FROSTING_FAIRY_HOME_MAP"
+                    internalUsageAttributionIds={['gmp_mcp_codeassist_v1_aistudio']}
+                    style={{ width: '100%', height: '100%', minHeight: '420px' }}
+                  >
+                    {BAKERY_LOCATIONS.map((loc) => (
+                      <AdvancedMarker
+                        key={loc.id}
+                        position={loc.position}
+                        title={loc.name}
+                      >
+                        <Pin
+                          background={loc.isMain ? '#D45B7A' : '#6B3E26'}
+                          glyphColor="#FFFFFF"
+                          borderColor="#FFFFFF"
+                          scale={1.1}
+                        />
+                      </AdvancedMarker>
+                    ))}
+                  </Map>
+                </APIProvider>
+              ) : (
+                <div className="p-8">
+                  <MapsApiKeyBanner />
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
 
     </div>
   );

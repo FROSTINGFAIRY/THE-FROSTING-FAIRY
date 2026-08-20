@@ -41,7 +41,27 @@ import imgDonutCaramel from './assets/images/caramel_glazed_donuts_1785429045626
 import imgDonutOreos from './assets/images/cookies_cream_donuts_1785429058056.jpg';
 import imgAssortedBoxes from './assets/images/assorted_boxes_collection_1786875438455.jpg';
 
-export { imgBomboloniVanilla, imgBomboloniHazelnut, imgBomboloniStrawberry, imgPinkFrostedDonut, imgDonutGlazed, imgDonutCaramel, imgDonutOreos, imgAssortedBoxes };
+import imgOverloadedTubsCollection from './assets/images/overloaded_tubs_collection_1787220599283.jpg';
+import imgTubChocoBrownie from './assets/images/tub_choco_brownie_1787220620586.jpg';
+import imgTubTiramisu from './assets/images/tub_tiramisu_1787220638007.jpg';
+import imgTubBiscoffCaramel from './assets/images/tub_biscoff_caramel_1787220652387.jpg';
+import imgTubStrawberryCream from './assets/images/tub_strawberry_cream_1787220668306.jpg';
+
+export {
+  imgBomboloniVanilla,
+  imgBomboloniHazelnut,
+  imgBomboloniStrawberry,
+  imgPinkFrostedDonut,
+  imgDonutGlazed,
+  imgDonutCaramel,
+  imgDonutOreos,
+  imgAssortedBoxes,
+  imgOverloadedTubsCollection,
+  imgTubChocoBrownie,
+  imgTubTiramisu,
+  imgTubBiscoffCaramel,
+  imgTubStrawberryCream,
+};
 
 export const INITIAL_CATEGORY_INFOS: CategoryInfo[] = [
   {
@@ -97,6 +117,15 @@ export const INITIAL_CATEGORY_INFOS: CategoryInfo[] = [
     imageUrl: imgBomboloniVanilla,
     itemCountText: 'Box of 6 Filled Bombolonis',
     startingPrice: 420,
+  },
+  {
+    name: 'Overloaded Tubs',
+    emoji: '🥣',
+    description: 'Decadent layered dessert tubs piled high with rich mousses, crumbles, and toppings — an indulgent treat in every spoonful.',
+    image: imgOverloadedTubsCollection,
+    imageUrl: imgOverloadedTubsCollection,
+    itemCountText: '4 Flavours in 250ml & 500ml Tubs',
+    startingPrice: 220,
   },
   {
     name: 'New Additions',
@@ -1206,6 +1235,149 @@ export const INITIAL_RECIPES: Recipe[] = [
       { step: 1, text: 'Proof and fry donuts. Allow to cool slightly so jam filling does not run.', durationMs: 300000 },
       { step: 2, text: 'Roll in sweet caster sugar dust.', durationMs: 60000 },
       { step: 3, text: 'Pipe strawberry preserve filling until it overflows from the top.', durationMs: 120000 }
+    ],
+    isFavorite: false
+  },
+  // --- OVERLOADED TUBS ---
+  {
+    id: 'tub-choco-brownie',
+    name: 'Choco Brownie Overloaded',
+    description: 'Layers of fudgy baked brownie chunks folded through silky chocolate mousse and rich ganache, crowned with a generous heap of chocolate chunks.',
+    image: imgTubChocoBrownie,
+    prepTime: 20,
+    cookTime: 25,
+    difficulty: 'Medium',
+    servings: 1,
+    rating: 4.8,
+    votes: 0,
+    nutrients: { calories: 420, protein: '6g', carbs: '48g', fat: '22g' },
+    tags: ['Chocolate', 'Brownie', 'Overloaded', 'Tub'],
+    category: 'Overloaded Tubs',
+    priceOptions: [
+      { label: '250 ml', price: 250 },
+      { label: '500 ml', price: 450 }
+    ],
+    details: [
+      'Fudgy baked brownie chunks folded through every layer',
+      'Silky chocolate mousse and rich ganache swirl',
+      'Finished with a generous crown of chocolate chunks'
+    ],
+    ingredients: [
+      { name: 'Fudge Brownie Chunks', amount: 100, unit: 'g' },
+      { name: 'Chocolate Mousse', amount: 100, unit: 'g' },
+      { name: 'Dark Chocolate Chunks', amount: 40, unit: 'g' }
+    ],
+    instructions: [
+      { step: 1, text: 'Bake a small batch of fudgy brownies and let cool completely before cutting into chunks.', durationMs: 1500000 },
+      { step: 2, text: 'Layer brownie chunks and chocolate mousse alternately in a clear tub.', durationMs: 300000 },
+      { step: 3, text: 'Top generously with chopped dark chocolate chunks before sealing.', durationMs: 120000 }
+    ],
+    isFavorite: false
+  },
+  {
+    id: 'tub-tiramisu',
+    name: 'Tiramisu Overloaded',
+    description: 'Classic Italian tiramisu reimagined in a tub — espresso-soaked sponge layered with whipped mascarpone cream and a generous dusting of cocoa.',
+    image: imgTubTiramisu,
+    prepTime: 30,
+    cookTime: 0,
+    difficulty: 'Medium',
+    servings: 1,
+    rating: 4.9,
+    votes: 0,
+    nutrients: { calories: 380, protein: '5g', carbs: '40g', fat: '20g' },
+    tags: ['Tiramisu', 'Coffee', 'Mascarpone', 'Tub'],
+    category: 'Overloaded Tubs',
+    priceOptions: [
+      { label: '250 ml', price: 250 },
+      { label: '500 ml', price: 450 }
+    ],
+    details: [
+      'Espresso-soaked sponge in every layer',
+      'Whipped mascarpone cream, light and airy',
+      'Finished with a generous dusting of cocoa powder'
+    ],
+    ingredients: [
+      { name: 'Espresso-Soaked Sponge', amount: 90, unit: 'g' },
+      { name: 'Whipped Mascarpone Cream', amount: 120, unit: 'g' },
+      { name: 'Cocoa Powder', amount: 5, unit: 'g' }
+    ],
+    instructions: [
+      { step: 1, text: 'Dip sponge fingers briefly in freshly brewed espresso, avoiding oversoaking.', durationMs: 180000 },
+      { step: 2, text: 'Whip mascarpone with cream until soft peaks form.', durationMs: 300000 },
+      { step: 3, text: 'Layer soaked sponge and mascarpone cream in a tub, then dust generously with cocoa.', durationMs: 300000 }
+    ],
+    isFavorite: false
+  },
+  {
+    id: 'tub-biscoff-caramel',
+    name: 'Biscoff Caramel Overloaded',
+    description: 'Buttery Biscoff cookie crumble layered with silky salted caramel and whipped cream, topped with a whole Lotus Biscoff biscuit.',
+    image: imgTubBiscoffCaramel,
+    prepTime: 20,
+    cookTime: 0,
+    difficulty: 'Easy',
+    servings: 1,
+    rating: 4.9,
+    votes: 0,
+    nutrients: { calories: 450, protein: '5g', carbs: '52g', fat: '23g' },
+    tags: ['Biscoff', 'Caramel', 'Lotus', 'Tub'],
+    category: 'Overloaded Tubs',
+    priceOptions: [
+      { label: '250 ml', price: 280 },
+      { label: '500 ml', price: 500 }
+    ],
+    details: [
+      'Buttery Biscoff cookie crumble in every layer',
+      'Silky salted caramel sauce drizzled throughout',
+      'Topped with a whole Lotus Biscoff biscuit'
+    ],
+    ingredients: [
+      { name: 'Biscoff Cookie Crumble', amount: 60, unit: 'g' },
+      { name: 'Salted Caramel Sauce', amount: 50, unit: 'ml' },
+      { name: 'Whipped Cream', amount: 100, unit: 'g' },
+      { name: 'Lotus Biscoff Biscuit', amount: 1, unit: 'pc' }
+    ],
+    instructions: [
+      { step: 1, text: 'Crush Biscoff cookies into a coarse crumble, reserving one whole biscuit for topping.', durationMs: 180000 },
+      { step: 2, text: 'Layer the crumble with whipped cream, drizzling salted caramel between each layer.', durationMs: 300000 },
+      { step: 3, text: 'Finish with a final caramel drizzle and the whole Biscoff biscuit before sealing.', durationMs: 120000 }
+    ],
+    isFavorite: false
+  },
+  {
+    id: 'tub-strawberry-cream',
+    name: 'Strawberry Whipped Cream Overloaded',
+    description: 'Fresh strawberry compote layered with clouds of whipped cream, finished with freeze-dried strawberry crumble and a fresh strawberry half.',
+    image: imgTubStrawberryCream,
+    prepTime: 20,
+    cookTime: 0,
+    difficulty: 'Easy',
+    servings: 1,
+    rating: 4.7,
+    votes: 0,
+    nutrients: { calories: 340, protein: '3g', carbs: '38g', fat: '17g' },
+    tags: ['Strawberry', 'Whipped Cream', 'Fruity', 'Tub'],
+    category: 'Overloaded Tubs',
+    priceOptions: [
+      { label: '250 ml', price: 220 },
+      { label: '500 ml', price: 400 }
+    ],
+    details: [
+      'Fresh strawberry compote in every layer',
+      'Clouds of freshly whipped cream',
+      'Topped with freeze-dried strawberry crumble and a fresh strawberry half'
+    ],
+    ingredients: [
+      { name: 'Fresh Strawberry Compote', amount: 90, unit: 'g' },
+      { name: 'Whipped Cream', amount: 120, unit: 'g' },
+      { name: 'Freeze-Dried Strawberry Crumble', amount: 10, unit: 'g' },
+      { name: 'Fresh Strawberry', amount: 1, unit: 'pc' }
+    ],
+    instructions: [
+      { step: 1, text: 'Simmer fresh strawberries with a little sugar until softened into a chunky compote, then cool.', durationMs: 600000 },
+      { step: 2, text: 'Whip cream to soft peaks and layer with compote in a clear tub.', durationMs: 300000 },
+      { step: 3, text: 'Top with freeze-dried strawberry crumble and a halved fresh strawberry before sealing.', durationMs: 120000 }
     ],
     isFavorite: false
   },

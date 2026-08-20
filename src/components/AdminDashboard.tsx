@@ -44,7 +44,7 @@ import { motion } from 'motion/react';
 import { INITIAL_RECIPES, INITIAL_CATEGORY_INFOS } from '../data';
 import defaultLogoImg from '../assets/images/frosting_fairy_logo_1784129178255.jpg';
 import { PerformanceDashboard } from './PerformanceDashboard';
-import { db, auth, signInWithGoogle, logOutAdmin, checkIsAdminInFirestore } from '../lib/firebase';
+import { db, auth, signInWithGoogle, logOutAdmin, checkIsAdminInFirestore, cleanFirestoreData } from '../lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { collection, onSnapshot, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, addDoc, serverTimestamp, query, orderBy, limit } from 'firebase/firestore';
 
@@ -470,13 +470,13 @@ export default function AdminDashboard({
         const snap = await getDocs(productsRef);
         if (snap.empty) {
           for (const recipe of INITIAL_RECIPES) {
-            await setDoc(doc(db, 'products', recipe.id), recipe);
+            await setDoc(doc(db, 'products', recipe.id), cleanFirestoreData(recipe));
           }
           addAuditLog('Seeded initial products catalog into Firestore', 'success');
         } else {
           // Sync any updated initial recipes into Firestore to keep live database updated
           for (const recipe of INITIAL_RECIPES) {
-            await setDoc(doc(db, 'products', recipe.id), recipe, { merge: true });
+            await setDoc(doc(db, 'products', recipe.id), cleanFirestoreData(recipe), { merge: true });
           }
         }
       } catch (err: any) {
@@ -694,7 +694,7 @@ export default function AdminDashboard({
     };
 
     try {
-      await setDoc(doc(db, 'products', newId), newRecipe);
+      await setDoc(doc(db, 'products', newId), cleanFirestoreData(newRecipe));
       setSelectedProductId(newId);
       setIsAddingNewProduct(false);
       addAuditLog(`Created new bakery item in Firestore: "${editName}"`);
@@ -992,7 +992,7 @@ export default function AdminDashboard({
     };
 
     try {
-      await setDoc(doc(db, 'products', activeProduct.id), updatedRecipe, { merge: true });
+      await setDoc(doc(db, 'products', activeProduct.id), cleanFirestoreData(updatedRecipe), { merge: true });
       addAuditLog(`Updated product "${editName}" in Firestore`);
       triggerToast(`✨ Successfully updated "${editName}" in Firestore!`);
     } catch (err: any) {

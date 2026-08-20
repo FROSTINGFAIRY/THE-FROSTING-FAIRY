@@ -1,5 +1,5 @@
 import React from 'react';
-import { Cake, ShoppingBag, Calendar, Heart, Menu, X, Sparkles, Settings, Mail, Instagram, Sun, Moon } from 'lucide-react';
+import { Cake, ShoppingBag, Calendar, Heart, Menu, X, Sparkles, Settings, Mail, Instagram, Sun, Moon, MapPin } from 'lucide-react';
 
 interface NavbarProps {
   activeTab: string;
@@ -11,6 +11,7 @@ interface NavbarProps {
   websiteSlogan: string;
   theme: 'light' | 'dark';
   toggleTheme: () => void;
+  onOpenMap?: () => void;
 }
 
 export default function Navbar({
@@ -23,6 +24,7 @@ export default function Navbar({
   websiteSlogan,
   theme,
   toggleTheme,
+  onOpenMap,
 }: NavbarProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   const [showContactDropdown, setShowContactDropdown] = React.useState(false);
@@ -77,6 +79,16 @@ export default function Navbar({
             >
               Our Menu
             </button>
+            {onOpenMap && (
+              <button
+                onClick={onOpenMap}
+                className="px-3.5 py-2 rounded-xl text-sm font-semibold transition-all cursor-pointer flex items-center gap-1.5 text-brand-cocoa-light hover:text-brand-pink hover:bg-brand-pink-light/20"
+                title="View Bakery Locations & Google Maps"
+              >
+                <MapPin className="w-4 h-4 text-brand-pink" />
+                <span>Find Us</span>
+              </button>
+            )}
             <button
               onClick={() => setActiveTab('planner')}
               className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
@@ -250,6 +262,18 @@ export default function Navbar({
           >
             Our Menu
           </button>
+          {onOpenMap && (
+            <button
+              onClick={() => {
+                onOpenMap();
+                setIsOpen(false);
+              }}
+              className="w-full text-left px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 text-brand-cocoa-light hover:text-brand-pink"
+            >
+              <MapPin className="w-4 h-4 text-brand-pink" />
+              <span>Find Us (Google Maps)</span>
+            </button>
+          )}
           <button
             onClick={() => {
               setActiveTab('planner');

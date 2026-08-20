@@ -55,6 +55,26 @@ export const logOutAdmin = async (): Promise<void> => {
   await signOut(auth);
 };
 
+// Recursively strip undefined values so Firestore setDoc/updateDoc never fails
+export function cleanFirestoreData<T>(obj: T): T {
+  if (obj === null || obj === undefined) {
+    return obj;
+  }
+  if (Array.isArray(obj)) {
+    return obj.map((item) => cleanFirestoreData(item)) as unknown as T;
+  }
+  if (typeof obj === 'object' && !(obj instanceof Date)) {
+    const cleaned: Record<string, any> = {};
+    for (const [key, value] of Object.entries(obj)) {
+      if (value !== undefined) {
+        cleaned[key] = cleanFirestoreData(value);
+      }
+    }
+    return cleaned as T;
+  }
+  return obj;
+}
+
 export const DEFAULT_ADMIN_EMAILS = ['kiddepressed03@gmail.com', 'hellofrostingfairy@gmail.com'];
 
 // Verify if a user's email is an authorized admin
