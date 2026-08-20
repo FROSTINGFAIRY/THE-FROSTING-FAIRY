@@ -22,6 +22,9 @@ import {
   imgBrownieKitkat,
   imgBrownieTriple,
   imgBrownieBiscoff,
+  imgBrownieBiscoffSwirl,
+  imgBrownieBiscoffStack,
+  imgBrownieBiscoffBite,
   imgBrowniePistachio,
   imgCookieChocoChip,
   imgCookieDoubleChoco,
@@ -39,9 +42,17 @@ import {
   imgAssortedBoxes,
   imgOverloadedTubsCollection,
   imgTubChocoBrownie,
+  imgTubChocoSpoon,
+  imgTubChocoAngle,
   imgTubTiramisu,
+  imgTubTiramisuSpoon,
+  imgTubTiramisuAngle,
   imgTubBiscoffCaramel,
+  imgTubBiscoffSpoon,
+  imgTubBiscoffAngle,
   imgTubStrawberryCream,
+  imgTubStrawSpoon,
+  imgTubStrawAngle,
   INITIAL_CATEGORY_INFOS,
 } from '../data';
 import { motion } from 'motion/react';
@@ -81,391 +92,63 @@ const getCategoryIcon = (name: string, isActive: boolean) => {
 
 // Item-specific multi-angle image gallery matching each exact flavour and confectionery item
 const ITEM_SPECIFIC_IMAGES: Record<string, string[]> = {
-  // Overloaded Tubs
+  // Overloaded Tubs (Authentic multi-angle dessert tub photography)
   'tub-choco-brownie': [
     imgTubChocoBrownie,
-    'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1564355808539-22fda35bed7e?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1624353365286-3f8d62dade37?auto=format&fit=crop&w=800&q=80',
+    imgTubChocoSpoon,
+    imgTubChocoAngle,
+    imgOverloadedTubsCollection,
   ],
   'tub-tiramisu': [
     imgTubTiramisu,
-    'https://images.unsplash.com/photo-1571877227200-a0d98ea607e9?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1586040140378-b5634cb4c8fc?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=800&q=80',
+    imgTubTiramisuSpoon,
+    imgTubTiramisuAngle,
+    imgOverloadedTubsCollection,
   ],
   'tub-biscoff-caramel': [
     imgTubBiscoffCaramel,
-    'https://images.unsplash.com/photo-1587314168485-3236d6710814?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1551024601-bec78aea704b?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1579372786545-d24232daf58c?auto=format&fit=crop&w=800&q=80',
+    imgTubBiscoffSpoon,
+    imgTubBiscoffAngle,
+    imgOverloadedTubsCollection,
   ],
   'tub-strawberry-cream': [
     imgTubStrawberryCream,
-    'https://images.unsplash.com/photo-1488477181946-6428a0291777?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1565958011703-44f9829ba187?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=800&q=80',
+    imgTubStrawSpoon,
+    imgTubStrawAngle,
+    imgOverloadedTubsCollection,
   ],
 
-  // Signature Cakes
-  'cake-vanilla': [
-    imgCakeVanilla,
-    'https://images.unsplash.com/photo-1535254973040-607b474cb50d?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1588195538326-c5b1e9f80a1b?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=800&q=80',
-  ],
-  'cake-chocolate': [
-    imgCakeChocolate,
-    'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1606890737304-57a1ca8a5b62?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1586985289688-ca9cf499150a?auto=format&fit=crop&w=800&q=80',
-  ],
-  'cake-strawberry': [
-    imgCakeStrawberry,
-    'https://images.unsplash.com/photo-1565958011703-44f9829ba187?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1464349095431-e9a21285b5f3?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1542826438-bd32f43d626f?auto=format&fit=crop&w=800&q=80',
-  ],
-  'cake-pineapple': [
-    imgCakePineapple,
-    'https://images.unsplash.com/photo-1535254973040-607b474cb50d?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1588195538326-c5b1e9f80a1b?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1565958011703-44f9829ba187?auto=format&fit=crop&w=800&q=80',
-  ],
-  'cake-butterscotch': [
-    imgCakeButterscotch,
-    'https://images.unsplash.com/photo-1588195538326-c5b1e9f80a1b?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1535254973040-607b474cb50d?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=800&q=80',
-  ],
-  'cake-caramel': [
-    imgCakeCaramel,
-    'https://images.unsplash.com/photo-1588195538326-c5b1e9f80a1b?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1606890737304-57a1ca8a5b62?auto=format&fit=crop&w=800&q=80',
-  ],
-  'cake-truffle': [
-    imgCakeTruffle,
-    'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1606890737304-57a1ca8a5b62?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1586985289688-ca9cf499150a?auto=format&fit=crop&w=800&q=80',
-  ],
-  'cake-lemon-cream': [
-    imgCakeLemonCream,
-    'https://images.unsplash.com/photo-1535254973040-607b474cb50d?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1588195538326-c5b1e9f80a1b?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1565958011703-44f9829ba187?auto=format&fit=crop&w=800&q=80',
-  ],
-
-  // Cupcakes
-  'cupcake-vanilla': [
-    imgCupcakeVanilla,
-    'https://images.unsplash.com/photo-1576618148400-f54bed99fcfd?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1519869325930-281384150729?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1550617931-e17a7b70dce2?auto=format&fit=crop&w=800&q=80',
-  ],
-  'cupcake-strawberry': [
-    imgCupcakeStrawberry,
-    'https://images.unsplash.com/photo-1576618148400-f54bed99fcfd?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1550617931-e17a7b70dce2?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1519869325930-281384150729?auto=format&fit=crop&w=800&q=80',
-  ],
-  'cupcake-lemon': [
-    imgCupcakeLemon,
-    'https://images.unsplash.com/photo-1576618148400-f54bed99fcfd?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1519869325930-281384150729?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1550617931-e17a7b70dce2?auto=format&fit=crop&w=800&q=80',
-  ],
-  'cupcake-red-velvet': [
-    imgCupcakeRedVelvet,
-    'https://images.unsplash.com/photo-1614707267537-b85acf00c4b8?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1576618148400-f54bed99fcfd?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1519869325930-281384150729?auto=format&fit=crop&w=800&q=80',
-  ],
-  'cupcake-oreo': [
-    imgCupcakeOreo,
-    'https://images.unsplash.com/photo-1576618148400-f54bed99fcfd?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1519869325930-281384150729?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1614707267537-b85acf00c4b8?auto=format&fit=crop&w=800&q=80',
-  ],
-  'cupcake-nutella': [
-    imgCupcakeNutella,
-    'https://images.unsplash.com/photo-1576618148400-f54bed99fcfd?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1519869325930-281384150729?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1614707267537-b85acf00c4b8?auto=format&fit=crop&w=800&q=80',
-  ],
-
-  // Brownies
-  'brownie-classic': [
-    imgBrownieClassic,
-    'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1564355808539-22fda35bed7e?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1624353365286-3f8d62dade37?auto=format&fit=crop&w=800&q=80',
-  ],
-  'brownie-oreo': [
-    imgBrownieOreo,
-    'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1564355808539-22fda35bed7e?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1624353365286-3f8d62dade37?auto=format&fit=crop&w=800&q=80',
-  ],
-  'brownie-nutella': [
-    imgBrownieNutella,
-    'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1564355808539-22fda35bed7e?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1624353365286-3f8d62dade37?auto=format&fit=crop&w=800&q=80',
-  ],
-  'brownie-kitkat': [
-    imgBrownieKitkat,
-    'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1564355808539-22fda35bed7e?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1624353365286-3f8d62dade37?auto=format&fit=crop&w=800&q=80',
-  ],
-  'brownie-triple-choco': [
-    imgBrownieTriple,
-    'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1564355808539-22fda35bed7e?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1624353365286-3f8d62dade37?auto=format&fit=crop&w=800&q=80',
-  ],
+  // Biscoff Brownie (Authentic speculoos swirl & cross-section photography)
   'brownie-biscoff': [
     imgBrownieBiscoff,
-    'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1587314168485-3236d6710814?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1564355808539-22fda35bed7e?auto=format&fit=crop&w=800&q=80',
-  ],
-  'brownie-pistachio': [
-    imgBrowniePistachio,
-    'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1564355808539-22fda35bed7e?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1624353365286-3f8d62dade37?auto=format&fit=crop&w=800&q=80',
-  ],
-
-  // Cookies
-  'cookie-choco-chip': [
-    imgCookieChocoChip,
-    'https://images.unsplash.com/photo-1499636136210-6f4ee915583e?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1558961309-dbdf03b33fc9?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1590080875515-8a3a8dc5735e?auto=format&fit=crop&w=800&q=80',
-  ],
-  'cookie-double-choco': [
-    imgCookieDoubleChoco,
-    'https://images.unsplash.com/photo-1558961309-dbdf03b33fc9?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1590080875515-8a3a8dc5735e?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1499636136210-6f4ee915583e?auto=format&fit=crop&w=800&q=80',
-  ],
-  'cookie-dark-chunks': [
-    imgCookieDarkChunks,
-    'https://images.unsplash.com/photo-1499636136210-6f4ee915583e?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1558961309-dbdf03b33fc9?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1590080875515-8a3a8dc5735e?auto=format&fit=crop&w=800&q=80',
-  ],
-  'cookie-triple-choco': [
-    imgCookieTripleChoco,
-    'https://images.unsplash.com/photo-1558961309-dbdf03b33fc9?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1590080875515-8a3a8dc5735e?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1499636136210-6f4ee915583e?auto=format&fit=crop&w=800&q=80',
-  ],
-  'cookie-mm': [
-    imgCookieMm,
-    'https://images.unsplash.com/photo-1499636136210-6f4ee915583e?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1558961309-dbdf03b33fc9?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1590080875515-8a3a8dc5735e?auto=format&fit=crop&w=800&q=80',
-  ],
-  'cookie-red-velvet': [
-    imgCookieRedVelvet,
-    'https://images.unsplash.com/photo-1499636136210-6f4ee915583e?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1558961309-dbdf03b33fc9?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1590080875515-8a3a8dc5735e?auto=format&fit=crop&w=800&q=80',
-  ],
-
-  // Donuts
-  'add-donut-glazed': [
-    imgDonutGlazed,
-    'https://images.unsplash.com/photo-1551024601-bec78aea704b?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1614088685112-0a760b71a3c8?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1612240498936-65f5101365d2?auto=format&fit=crop&w=800&q=80',
-  ],
-  'add-donut-pink-frosted': [
-    imgPinkFrostedDonut,
-    'https://images.unsplash.com/photo-1551024601-bec78aea704b?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1614088685112-0a760b71a3c8?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1612240498936-65f5101365d2?auto=format&fit=crop&w=800&q=80',
-  ],
-  'add-donut-caramel': [
-    imgDonutCaramel,
-    'https://images.unsplash.com/photo-1551024601-bec78aea704b?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1614088685112-0a760b71a3c8?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1612240498936-65f5101365d2?auto=format&fit=crop&w=800&q=80',
-  ],
-  'add-donut-oreo': [
-    imgDonutOreos,
-    'https://images.unsplash.com/photo-1551024601-bec78aea704b?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1614088685112-0a760b71a3c8?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1612240498936-65f5101365d2?auto=format&fit=crop&w=800&q=80',
-  ],
-
-  // Bombolonis
-  'add-bomboloni-vanilla': [
-    imgBomboloniVanilla,
-    'https://images.unsplash.com/photo-1557827983-012eb6ea8dc1?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1579372786545-d24232daf58c?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1530631673369-bc20fdb3228d?auto=format&fit=crop&w=800&q=80',
-  ],
-  'add-bomboloni-hazelnut': [
-    imgBomboloniHazelnut,
-    'https://images.unsplash.com/photo-1557827983-012eb6ea8dc1?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1579372786545-d24232daf58c?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1530631673369-bc20fdb3228d?auto=format&fit=crop&w=800&q=80',
-  ],
-  'add-bomboloni-strawberry': [
-    imgBomboloniStrawberry,
-    'https://images.unsplash.com/photo-1557827983-012eb6ea8dc1?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1579372786545-d24232daf58c?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1530631673369-bc20fdb3228d?auto=format&fit=crop&w=800&q=80',
-  ],
-
-  // New Additions (Cinnamon Rolls)
-  'add-cinnamon-classic': [
-    'https://images.unsplash.com/photo-1544982503-9f984c14501a?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1608039829572-78524f79c4c7?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=800&q=80',
-  ],
-  'add-cinnamon-nutella': [
-    'https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1544982503-9f984c14501a?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1608039829572-78524f79c4c7?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=800&q=80',
-  ],
-  'add-cinnamon-caramel': [
-    'https://images.unsplash.com/photo-1608039829572-78524f79c4c7?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1544982503-9f984c14501a?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1587314168485-3236d6710814?auto=format&fit=crop&w=800&q=80',
-  ],
-  'add-cinnamon-berries': [
-    'https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1565958011703-44f9829ba187?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1544982503-9f984c14501a?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1488477181946-6428a0291777?auto=format&fit=crop&w=800&q=80',
-  ],
-
-  // Assorted Boxes
-  'box-assorted-pastry': [
-    imgAssortedBoxes,
-    'https://images.unsplash.com/photo-1587668178277-295251f900ce?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1551024601-bec78aea704b?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1579372786545-d24232daf58c?auto=format&fit=crop&w=800&q=80',
-  ],
-  'box-cookie-collection': [
-    imgAssortedBoxes,
-    imgCookieChocoChip,
-    'https://images.unsplash.com/photo-1499636136210-6f4ee915583e?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1587668178277-295251f900ce?auto=format&fit=crop&w=800&q=80',
-  ],
-  'box-cupcake-tasting': [
-    imgAssortedBoxes,
-    imgCupcakeVanilla,
-    'https://images.unsplash.com/photo-1576618148400-f54bed99fcfd?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1587668178277-295251f900ce?auto=format&fit=crop&w=800&q=80',
-  ],
-  'box-donut-bomboloni': [
-    imgAssortedBoxes,
-    imgPinkFrostedDonut,
-    imgBomboloniVanilla,
-    'https://images.unsplash.com/photo-1551024601-bec78aea704b?auto=format&fit=crop&w=800&q=80',
+    imgBrownieBiscoffSwirl,
+    imgBrownieBiscoffStack,
+    imgBrownieBiscoffBite,
   ],
 };
 
-const CATEGORY_FALLBACK_IMAGES: Record<string, string[]> = {
-  'Overloaded Tubs': [
-    imgOverloadedTubsCollection,
-    imgTubChocoBrownie,
-    imgTubTiramisu,
-    imgTubBiscoffCaramel,
-    imgTubStrawberryCream,
-  ],
-  'Signature Cakes': [
-    imgCakeVanilla,
-    imgCakeChocolate,
-    imgCakeStrawberry,
-    'https://images.unsplash.com/photo-1535254973040-607b474cb50d?auto=format&fit=crop&w=800&q=80',
-  ],
-  'Cupcakes': [
-    imgCupcakeVanilla,
-    imgCupcakeStrawberry,
-    imgCupcakeRedVelvet,
-    'https://images.unsplash.com/photo-1576618148400-f54bed99fcfd?auto=format&fit=crop&w=800&q=80',
-  ],
-  'Brownies': [
-    imgBrownieClassic,
-    imgBrownieTriple,
-    imgBrownieNutella,
-    'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=800&q=80',
-  ],
-  'Cookies': [
-    imgCookieChocoChip,
-    imgCookieDoubleChoco,
-    imgCookieTripleChoco,
-    'https://images.unsplash.com/photo-1499636136210-6f4ee915583e?auto=format&fit=crop&w=800&q=80',
-  ],
-  'Donuts': [
-    imgPinkFrostedDonut,
-    imgDonutGlazed,
-    imgDonutCaramel,
-    imgDonutOreos,
-  ],
-  'Bombolonis': [
-    imgBomboloniVanilla,
-    imgBomboloniHazelnut,
-    imgBomboloniStrawberry,
-    'https://images.unsplash.com/photo-1557827983-012eb6ea8dc1?auto=format&fit=crop&w=800&q=80',
-  ],
-  'New Additions': [
-    'https://images.unsplash.com/photo-1544982503-9f984c14501a?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1608039829572-78524f79c4c7?auto=format&fit=crop&w=800&q=80',
-  ],
-  'Assorted Boxes': [
-    imgAssortedBoxes,
-    'https://images.unsplash.com/photo-1587668178277-295251f900ce?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1551024601-bec78aea704b?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1579372786545-d24232daf58c?auto=format&fit=crop&w=800&q=80',
-  ]
-};
+// Returns accurate, high-resolution photos matching the product or flavour
+export function getRecipeImages(recipe: { id: string; category?: string; image: string; images?: string[] }): string[] {
+  // If the recipe has explicit images array attached (e.g. custom admin-uploaded images)
+  if (Array.isArray((recipe as any).images) && (recipe as any).images.length > 0) {
+    const valid = (recipe as any).images.filter((img: string) => Boolean(img));
+    if (valid.length > 0) return valid;
+  }
 
-// Returns accurate, high-resolution photos matching the product or flavour when sliding
-export function getRecipeImages(recipe: { id: string; category: string; image: string }): string[] {
-  // If we have an item-specific gallery tailored to this exact confection
-  if (recipe.id && ITEM_SPECIFIC_IMAGES[recipe.id]) {
+  // If we have an authentic, item-specific multi-photo gallery matching this exact treat
+  if (recipe.id && ITEM_SPECIFIC_IMAGES[recipe.id] && ITEM_SPECIFIC_IMAGES[recipe.id].length > 0) {
     const list = ITEM_SPECIFIC_IMAGES[recipe.id];
-    const result: string[] = [recipe.image || list[0]];
+    const result: string[] = [];
     for (const img of list) {
-      if (img && !result.includes(img) && result.length < 4) {
+      if (img && !result.includes(img)) {
         result.push(img);
       }
     }
-    while (result.length < 4 && list.length > 0) {
-      result.push(list[result.length % list.length]);
-    }
-    return result;
+    if (result.length > 0) return result;
   }
 
-  // Category fallback for custom or new products
-  const cat = recipe.category || 'New Additions';
-  const list = CATEGORY_FALLBACK_IMAGES[cat] || CATEGORY_FALLBACK_IMAGES['New Additions'];
-
-  const result: string[] = [recipe.image];
-  for (const img of list) {
-    if (img && !result.includes(img) && result.length < 4) {
-      result.push(img);
-    }
-  }
-
-  while (result.length < 4 && list.length > 0) {
-    result.push(list[result.length % list.length]);
-  }
-
-  return result;
+  // Strictly return the authentic product's own photo — never mix unrelated flavours or random placeholder URLs
+  return recipe.image ? [recipe.image] : [];
 }
 
 interface DashboardProps {
@@ -915,46 +598,50 @@ export default function Dashboard({
                         onClick={() => onSelectRecipe(recipe)}
                       />
 
-                      {/* Left and Right hover slider control overlays */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const prevIdx = (currentImgIdx - 1 + images.length) % images.length;
-                          setRecipeImageIndexes(prev => ({ ...prev, [recipe.id]: prevIdx }));
-                        }}
-                        className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/90 border border-brand-cocoa-border/30 flex items-center justify-center text-brand-cocoa shadow-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white cursor-pointer z-10"
-                        title="Previous Image"
-                      >
-                        <ChevronLeft className="w-4 h-4" />
-                      </button>
-
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const nextIdx = (currentImgIdx + 1) % images.length;
-                          setRecipeImageIndexes(prev => ({ ...prev, [recipe.id]: nextIdx }));
-                        }}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/90 border border-brand-cocoa-border/30 flex items-center justify-center text-brand-cocoa shadow-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white cursor-pointer z-10"
-                        title="Next Image"
-                      >
-                        <ChevronRight className="w-4 h-4" />
-                      </button>
-
-                      {/* Slider Indicator Dots overlay */}
-                      <div className="absolute bottom-3 inset-x-0 flex items-center justify-center gap-1 z-10">
-                        {images.map((_, dotIdx) => (
+                      {/* Left and Right hover slider control overlays (only if multiple images) */}
+                      {images.length > 1 && (
+                        <>
                           <button
-                            key={`dash-dot-${recipe.id}-${dotIdx}`}
                             onClick={(e) => {
                               e.stopPropagation();
-                              setRecipeImageIndexes(prev => ({ ...prev, [recipe.id]: dotIdx }));
+                              const prevIdx = (currentImgIdx - 1 + images.length) % images.length;
+                              setRecipeImageIndexes(prev => ({ ...prev, [recipe.id]: prevIdx }));
                             }}
-                            className={`w-2 h-2 rounded-full border border-white transition-all cursor-pointer ${
-                              currentImgIdx === dotIdx ? 'bg-brand-pink w-4' : 'bg-white/60'
-                            }`}
-                          />
-                        ))}
-                      </div>
+                            className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/90 border border-brand-cocoa-border/30 flex items-center justify-center text-brand-cocoa shadow-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white cursor-pointer z-10"
+                            title="Previous Image"
+                          >
+                            <ChevronLeft className="w-4 h-4" />
+                          </button>
+
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const nextIdx = (currentImgIdx + 1) % images.length;
+                              setRecipeImageIndexes(prev => ({ ...prev, [recipe.id]: nextIdx }));
+                            }}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/90 border border-brand-cocoa-border/30 flex items-center justify-center text-brand-cocoa shadow-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white cursor-pointer z-10"
+                            title="Next Image"
+                          >
+                            <ChevronRight className="w-4 h-4" />
+                          </button>
+
+                          {/* Slider Indicator Dots overlay */}
+                          <div className="absolute bottom-3 inset-x-0 flex items-center justify-center gap-1 z-10">
+                            {images.map((_, dotIdx) => (
+                              <button
+                                key={`dash-dot-${recipe.id}-${dotIdx}`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setRecipeImageIndexes(prev => ({ ...prev, [recipe.id]: dotIdx }));
+                                }}
+                                className={`w-2 h-2 rounded-full border border-white transition-all cursor-pointer ${
+                                  currentImgIdx === dotIdx ? 'bg-brand-pink w-4' : 'bg-white/60'
+                                }`}
+                              />
+                            ))}
+                          </div>
+                        </>
+                      )}
                       
                       {/* Category Badge overlay */}
                       <div id={`recipe-card-badges-${recipe.id}`} className="absolute top-3 left-3 flex flex-col gap-1.5 z-1">
@@ -1001,23 +688,25 @@ export default function Dashboard({
                           {recipe.description}
                         </p>
 
-                        {/* Interactive Thumbnails previews line (Multiple attractive pictures of that item!) */}
-                        <div className="flex gap-1 mt-3 overflow-x-auto pb-1 scrollbar-none">
-                          {images.map((thumbUrl, thumbIdx) => (
-                            <button
-                              key={`dash-thumb-${recipe.id}-${thumbIdx}`}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setRecipeImageIndexes(prev => ({ ...prev, [recipe.id]: thumbIdx }));
-                              }}
-                              className={`w-9 h-7 rounded border overflow-hidden transition-all shrink-0 cursor-pointer ${
-                                currentImgIdx === thumbIdx ? 'border-brand-pink ring-1 ring-brand-pink' : 'border-brand-cocoa-border/50 hover:border-brand-pink/50'
-                              }`}
-                            >
-                              <img src={thumbUrl} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
-                            </button>
-                          ))}
-                        </div>
+                        {/* Interactive Thumbnails previews line (Only if multiple authentic images exist) */}
+                        {images.length > 1 && (
+                          <div className="flex gap-1 mt-3 overflow-x-auto pb-1 scrollbar-none">
+                            {images.map((thumbUrl, thumbIdx) => (
+                              <button
+                                key={`dash-thumb-${recipe.id}-${thumbIdx}`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setRecipeImageIndexes(prev => ({ ...prev, [recipe.id]: thumbIdx }));
+                                }}
+                                className={`w-9 h-7 rounded border overflow-hidden transition-all shrink-0 cursor-pointer ${
+                                  currentImgIdx === thumbIdx ? 'border-brand-pink ring-1 ring-brand-pink' : 'border-brand-cocoa-border/50 hover:border-brand-pink/50'
+                                }`}
+                              >
+                                <img src={thumbUrl} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </div>
 
                       {/* Prices display and action button */}

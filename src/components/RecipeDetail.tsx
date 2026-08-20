@@ -310,28 +310,32 @@ export default function RecipeDetail({
               className="w-full h-full object-cover transition-transform duration-500 hover:scale-102"
             />
             
-            {/* Left and Right navigation buttons */}
-            <button
-              onClick={() => {
-                const prevIdx = (activeImgIdx - 1 + images.length) % images.length;
-                setActiveImgIdx(prevIdx);
-              }}
-              className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/95 border border-brand-cocoa-border/40 flex items-center justify-center text-brand-cocoa hover:bg-white shadow-sm cursor-pointer z-10"
-              title="Previous Image"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
+            {/* Left and Right navigation buttons (only if multiple images) */}
+            {images.length > 1 && (
+              <>
+                <button
+                  onClick={() => {
+                    const prevIdx = (activeImgIdx - 1 + images.length) % images.length;
+                    setActiveImgIdx(prevIdx);
+                  }}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/95 border border-brand-cocoa-border/40 flex items-center justify-center text-brand-cocoa hover:bg-white shadow-sm cursor-pointer z-10"
+                  title="Previous Image"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
 
-            <button
-              onClick={() => {
-                const nextIdx = (activeImgIdx + 1) % images.length;
-                setActiveImgIdx(nextIdx);
-              }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/95 border border-brand-cocoa-border/40 flex items-center justify-center text-brand-cocoa hover:bg-white shadow-sm cursor-pointer z-10"
-              title="Next Image"
-            >
-              <ChevronRight className="w-5 h-5" />
-            </button>
+                <button
+                  onClick={() => {
+                    const nextIdx = (activeImgIdx + 1) % images.length;
+                    setActiveImgIdx(nextIdx);
+                  }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/95 border border-brand-cocoa-border/40 flex items-center justify-center text-brand-cocoa hover:bg-white shadow-sm cursor-pointer z-10"
+                  title="Next Image"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </>
+            )}
 
             {/* Category tag */}
             <span className="absolute top-4 left-4 bg-brand-pink text-white text-[10px] font-bold font-mono uppercase tracking-wider px-3 py-1 rounded-full shadow-sm z-10">
@@ -351,22 +355,24 @@ export default function RecipeDetail({
             </button>
           </div>
 
-          {/* Interactive Thumbnails List (Multiple attractive pictures!) */}
-          <div className="flex gap-2.5 overflow-x-auto pb-2 scrollbar-none justify-start">
-            {images.map((imgUrl, idx) => (
-              <button
-                key={`recipe-thumb-${recipe.id}-${idx}`}
-                onClick={() => setActiveImgIdx(idx)}
-                className={`w-20 h-16 rounded-xl border-2 overflow-hidden transition-all shrink-0 cursor-pointer ${
-                  activeImgIdx === idx
-                    ? 'border-brand-pink ring-2 ring-brand-pink-light/50 scale-102 shadow-xs'
-                    : 'border-brand-cocoa-border hover:border-brand-pink-accent/50 hover:scale-101'
-                }`}
-              >
-                <img src={imgUrl} alt={`${recipe.name} view ${idx + 1}`} loading="lazy" decoding="async" className="w-full h-full object-cover" />
-              </button>
-            ))}
-          </div>
+          {/* Interactive Thumbnails List (Only if multiple authentic pictures exist) */}
+          {images.length > 1 && (
+            <div className="flex gap-2.5 overflow-x-auto pb-2 scrollbar-none justify-start">
+              {images.map((imgUrl, idx) => (
+                <button
+                  key={`recipe-thumb-${recipe.id}-${idx}`}
+                  onClick={() => setActiveImgIdx(idx)}
+                  className={`w-20 h-16 rounded-xl border-2 overflow-hidden transition-all shrink-0 cursor-pointer ${
+                    activeImgIdx === idx
+                      ? 'border-brand-pink ring-2 ring-brand-pink-light/50 scale-102 shadow-xs'
+                      : 'border-brand-cocoa-border hover:border-brand-pink-accent/50 hover:scale-101'
+                  }`}
+                >
+                  <img src={imgUrl} alt={`${recipe.name} view ${idx + 1}`} loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Product Story & Description */}
           <div className="bg-white border border-brand-cocoa-border rounded-2xl p-6 text-left space-y-4">

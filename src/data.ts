@@ -22,6 +22,9 @@ import imgBrownieNutella from './assets/images/nutella_brownie_1784434912033.jpg
 import imgBrownieKitkat from './assets/images/kitkat_brownie_1784434926370.jpg';
 import imgBrownieTriple from './assets/images/triple_chocolate_brownie_1784434940621.jpg';
 import imgBrownieBiscoff from './assets/images/biscoff_brownie_1784434954807.jpg';
+import imgBrownieBiscoffSwirl from './assets/images/biscoff_brownie_swirl_1787240182609.jpg';
+import imgBrownieBiscoffStack from './assets/images/biscoff_brownie_stack_1787240197373.jpg';
+import imgBrownieBiscoffBite from './assets/images/biscoff_brownie_bite_1787240210438.jpg';
 import imgBrowniePistachio from './assets/images/pistachio_brownie_1784434968825.jpg';
 
 import imgCookieChocoChip from './assets/images/classic_choco_chip_cookies_1784434986464.jpg';
@@ -43,9 +46,17 @@ import imgAssortedBoxes from './assets/images/assorted_boxes_collection_17868754
 
 import imgOverloadedTubsCollection from './assets/images/overloaded_tubs_collection_1787220599283.jpg';
 import imgTubChocoBrownie from './assets/images/tub_choco_brownie_1787220620586.jpg';
+import imgTubChocoSpoon from './assets/images/tub_choco_spoon_1787224988044.jpg';
+import imgTubChocoAngle from './assets/images/tub_choco_angle_1787225000402.jpg';
 import imgTubTiramisu from './assets/images/tub_tiramisu_1787220638007.jpg';
+import imgTubTiramisuSpoon from './assets/images/tub_tiramisu_spoon_1787225012119.jpg';
+import imgTubTiramisuAngle from './assets/images/tub_tiramisu_angle_1787225023023.jpg';
 import imgTubBiscoffCaramel from './assets/images/tub_biscoff_caramel_1787220652387.jpg';
+import imgTubBiscoffSpoon from './assets/images/tub_biscoff_spoon_1787225033461.jpg';
+import imgTubBiscoffAngle from './assets/images/tub_biscoff_angle_1787225046011.jpg';
 import imgTubStrawberryCream from './assets/images/tub_strawberry_cream_1787220668306.jpg';
+import imgTubStrawSpoon from './assets/images/tub_straw_spoon_1787225061259.jpg';
+import imgTubStrawAngle from './assets/images/tub_straw_angle_1787225074027.jpg';
 
 export {
   imgCakeVanilla,
@@ -68,6 +79,9 @@ export {
   imgBrownieKitkat,
   imgBrownieTriple,
   imgBrownieBiscoff,
+  imgBrownieBiscoffSwirl,
+  imgBrownieBiscoffStack,
+  imgBrownieBiscoffBite,
   imgBrowniePistachio,
   imgCookieChocoChip,
   imgCookieDoubleChoco,
@@ -85,9 +99,17 @@ export {
   imgAssortedBoxes,
   imgOverloadedTubsCollection,
   imgTubChocoBrownie,
+  imgTubChocoSpoon,
+  imgTubChocoAngle,
   imgTubTiramisu,
+  imgTubTiramisuSpoon,
+  imgTubTiramisuAngle,
   imgTubBiscoffCaramel,
+  imgTubBiscoffSpoon,
+  imgTubBiscoffAngle,
   imgTubStrawberryCream,
+  imgTubStrawSpoon,
+  imgTubStrawAngle,
 };
 
 export const INITIAL_CATEGORY_INFOS: CategoryInfo[] = [
