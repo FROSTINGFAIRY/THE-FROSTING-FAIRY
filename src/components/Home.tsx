@@ -22,7 +22,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { Recipe, CategoryInfo } from '../types';
-import { imgBomboloniVanilla, imgPinkFrostedDonut, imgAssortedBoxes, INITIAL_CATEGORY_INFOS } from '../data';
+import { imgBomboloniVanilla, imgPinkFrostedDonut, imgAssortedBoxes, imgOverloadedTubsCollection, INITIAL_CATEGORY_INFOS } from '../data';
 import { motion, AnimatePresence } from 'motion/react';
 import { APIProvider, Map, AdvancedMarker, Pin } from '@vis.gl/react-google-maps';
 import { GOOGLE_MAPS_API_KEY, hasValidMapsKey, BAKERY_LOCATIONS, MapsApiKeyBanner } from './BakeryMapModal';
@@ -122,6 +122,14 @@ const CATEGORY_INFOS = [
     startingPrice: 420,
   },
   {
+    name: 'Overloaded Tubs',
+    emoji: '🥣',
+    description: 'Decadent layered dessert tubs piled high with rich mousses, crumbles, and toppings — an indulgent treat in every spoonful.',
+    image: imgOverloadedTubsCollection,
+    itemCountText: '4 Flavours in 250ml & 500ml Tubs',
+    startingPrice: 220,
+  },
+  {
     name: 'New Additions',
     emoji: '✨',
     description: 'Warm, soft, pillowy rolls swirled with sweet cassia cinnamon butter and covered with gourmet glazes.',
@@ -156,6 +164,8 @@ const getCategoryIcon = (name: string) => {
       return <Sparkles className={iconClass} />;
     case 'Bombolonis':
       return <ChefHat className={iconClass} />;
+    case 'Overloaded Tubs':
+      return <Sparkles className={iconClass} />;
     case 'New Additions':
       return <Sparkles className={iconClass} />;
     case 'Assorted Boxes':

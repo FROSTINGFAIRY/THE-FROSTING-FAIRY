@@ -1,7 +1,49 @@
 import React, { useState, useMemo } from 'react';
 import { Search, Flame, Clock, ChefHat, Star, Heart, ArrowRight, ChevronLeft, ChevronRight, ArrowLeft, Sparkles, LayoutGrid, Cake, Cookie, Gift } from 'lucide-react';
 import { Recipe, CategoryInfo } from '../types';
-import { imgBomboloniVanilla, imgPinkFrostedDonut, imgAssortedBoxes, INITIAL_CATEGORY_INFOS } from '../data';
+import {
+  imgCakeVanilla,
+  imgCakeChocolate,
+  imgCakeStrawberry,
+  imgCakePineapple,
+  imgCakeButterscotch,
+  imgCakeCaramel,
+  imgCakeTruffle,
+  imgCakeLemonCream,
+  imgCupcakeVanilla,
+  imgCupcakeStrawberry,
+  imgCupcakeLemon,
+  imgCupcakeRedVelvet,
+  imgCupcakeOreo,
+  imgCupcakeNutella,
+  imgBrownieClassic,
+  imgBrownieOreo,
+  imgBrownieNutella,
+  imgBrownieKitkat,
+  imgBrownieTriple,
+  imgBrownieBiscoff,
+  imgBrowniePistachio,
+  imgCookieChocoChip,
+  imgCookieDoubleChoco,
+  imgCookieDarkChunks,
+  imgCookieTripleChoco,
+  imgCookieMm,
+  imgCookieRedVelvet,
+  imgBomboloniVanilla,
+  imgBomboloniHazelnut,
+  imgBomboloniStrawberry,
+  imgPinkFrostedDonut,
+  imgDonutGlazed,
+  imgDonutCaramel,
+  imgDonutOreos,
+  imgAssortedBoxes,
+  imgOverloadedTubsCollection,
+  imgTubChocoBrownie,
+  imgTubTiramisu,
+  imgTubBiscoffCaramel,
+  imgTubStrawberryCream,
+  INITIAL_CATEGORY_INFOS,
+} from '../data';
 import { motion } from 'motion/react';
 
 // Custom helper to render premium SVG icons for categories instead of emojis
@@ -24,6 +66,8 @@ const getCategoryIcon = (name: string, isActive: boolean) => {
       return <Sparkles className={iconClass} />;
     case 'Bombolonis':
       return <ChefHat className={iconClass} />;
+    case 'Overloaded Tubs':
+      return <Sparkles className={iconClass} />;
     case 'Favorites':
       return <Heart className={iconClass} />;
     case 'New Additions':
@@ -35,63 +79,384 @@ const getCategoryIcon = (name: string, isActive: boolean) => {
   }
 };
 
-// Predefined extra images for each category to guarantee that every confection 
-// has multiple gorgeous, high-resolution product photos.
+// Item-specific multi-angle image gallery matching each exact flavour and confectionery item
+const ITEM_SPECIFIC_IMAGES: Record<string, string[]> = {
+  // Overloaded Tubs
+  'tub-choco-brownie': [
+    imgTubChocoBrownie,
+    'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1564355808539-22fda35bed7e?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1624353365286-3f8d62dade37?auto=format&fit=crop&w=800&q=80',
+  ],
+  'tub-tiramisu': [
+    imgTubTiramisu,
+    'https://images.unsplash.com/photo-1571877227200-a0d98ea607e9?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1586040140378-b5634cb4c8fc?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=800&q=80',
+  ],
+  'tub-biscoff-caramel': [
+    imgTubBiscoffCaramel,
+    'https://images.unsplash.com/photo-1587314168485-3236d6710814?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1551024601-bec78aea704b?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1579372786545-d24232daf58c?auto=format&fit=crop&w=800&q=80',
+  ],
+  'tub-strawberry-cream': [
+    imgTubStrawberryCream,
+    'https://images.unsplash.com/photo-1488477181946-6428a0291777?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1565958011703-44f9829ba187?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=800&q=80',
+  ],
+
+  // Signature Cakes
+  'cake-vanilla': [
+    imgCakeVanilla,
+    'https://images.unsplash.com/photo-1535254973040-607b474cb50d?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1588195538326-c5b1e9f80a1b?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=800&q=80',
+  ],
+  'cake-chocolate': [
+    imgCakeChocolate,
+    'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1606890737304-57a1ca8a5b62?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1586985289688-ca9cf499150a?auto=format&fit=crop&w=800&q=80',
+  ],
+  'cake-strawberry': [
+    imgCakeStrawberry,
+    'https://images.unsplash.com/photo-1565958011703-44f9829ba187?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1464349095431-e9a21285b5f3?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1542826438-bd32f43d626f?auto=format&fit=crop&w=800&q=80',
+  ],
+  'cake-pineapple': [
+    imgCakePineapple,
+    'https://images.unsplash.com/photo-1535254973040-607b474cb50d?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1588195538326-c5b1e9f80a1b?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1565958011703-44f9829ba187?auto=format&fit=crop&w=800&q=80',
+  ],
+  'cake-butterscotch': [
+    imgCakeButterscotch,
+    'https://images.unsplash.com/photo-1588195538326-c5b1e9f80a1b?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1535254973040-607b474cb50d?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=800&q=80',
+  ],
+  'cake-caramel': [
+    imgCakeCaramel,
+    'https://images.unsplash.com/photo-1588195538326-c5b1e9f80a1b?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1606890737304-57a1ca8a5b62?auto=format&fit=crop&w=800&q=80',
+  ],
+  'cake-truffle': [
+    imgCakeTruffle,
+    'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1606890737304-57a1ca8a5b62?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1586985289688-ca9cf499150a?auto=format&fit=crop&w=800&q=80',
+  ],
+  'cake-lemon-cream': [
+    imgCakeLemonCream,
+    'https://images.unsplash.com/photo-1535254973040-607b474cb50d?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1588195538326-c5b1e9f80a1b?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1565958011703-44f9829ba187?auto=format&fit=crop&w=800&q=80',
+  ],
+
+  // Cupcakes
+  'cupcake-vanilla': [
+    imgCupcakeVanilla,
+    'https://images.unsplash.com/photo-1576618148400-f54bed99fcfd?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1519869325930-281384150729?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1550617931-e17a7b70dce2?auto=format&fit=crop&w=800&q=80',
+  ],
+  'cupcake-strawberry': [
+    imgCupcakeStrawberry,
+    'https://images.unsplash.com/photo-1576618148400-f54bed99fcfd?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1550617931-e17a7b70dce2?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1519869325930-281384150729?auto=format&fit=crop&w=800&q=80',
+  ],
+  'cupcake-lemon': [
+    imgCupcakeLemon,
+    'https://images.unsplash.com/photo-1576618148400-f54bed99fcfd?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1519869325930-281384150729?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1550617931-e17a7b70dce2?auto=format&fit=crop&w=800&q=80',
+  ],
+  'cupcake-red-velvet': [
+    imgCupcakeRedVelvet,
+    'https://images.unsplash.com/photo-1614707267537-b85acf00c4b8?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1576618148400-f54bed99fcfd?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1519869325930-281384150729?auto=format&fit=crop&w=800&q=80',
+  ],
+  'cupcake-oreo': [
+    imgCupcakeOreo,
+    'https://images.unsplash.com/photo-1576618148400-f54bed99fcfd?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1519869325930-281384150729?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1614707267537-b85acf00c4b8?auto=format&fit=crop&w=800&q=80',
+  ],
+  'cupcake-nutella': [
+    imgCupcakeNutella,
+    'https://images.unsplash.com/photo-1576618148400-f54bed99fcfd?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1519869325930-281384150729?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1614707267537-b85acf00c4b8?auto=format&fit=crop&w=800&q=80',
+  ],
+
+  // Brownies
+  'brownie-classic': [
+    imgBrownieClassic,
+    'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1564355808539-22fda35bed7e?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1624353365286-3f8d62dade37?auto=format&fit=crop&w=800&q=80',
+  ],
+  'brownie-oreo': [
+    imgBrownieOreo,
+    'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1564355808539-22fda35bed7e?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1624353365286-3f8d62dade37?auto=format&fit=crop&w=800&q=80',
+  ],
+  'brownie-nutella': [
+    imgBrownieNutella,
+    'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1564355808539-22fda35bed7e?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1624353365286-3f8d62dade37?auto=format&fit=crop&w=800&q=80',
+  ],
+  'brownie-kitkat': [
+    imgBrownieKitkat,
+    'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1564355808539-22fda35bed7e?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1624353365286-3f8d62dade37?auto=format&fit=crop&w=800&q=80',
+  ],
+  'brownie-triple-choco': [
+    imgBrownieTriple,
+    'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1564355808539-22fda35bed7e?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1624353365286-3f8d62dade37?auto=format&fit=crop&w=800&q=80',
+  ],
+  'brownie-biscoff': [
+    imgBrownieBiscoff,
+    'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1587314168485-3236d6710814?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1564355808539-22fda35bed7e?auto=format&fit=crop&w=800&q=80',
+  ],
+  'brownie-pistachio': [
+    imgBrowniePistachio,
+    'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1564355808539-22fda35bed7e?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1624353365286-3f8d62dade37?auto=format&fit=crop&w=800&q=80',
+  ],
+
+  // Cookies
+  'cookie-choco-chip': [
+    imgCookieChocoChip,
+    'https://images.unsplash.com/photo-1499636136210-6f4ee915583e?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1558961309-dbdf03b33fc9?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1590080875515-8a3a8dc5735e?auto=format&fit=crop&w=800&q=80',
+  ],
+  'cookie-double-choco': [
+    imgCookieDoubleChoco,
+    'https://images.unsplash.com/photo-1558961309-dbdf03b33fc9?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1590080875515-8a3a8dc5735e?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1499636136210-6f4ee915583e?auto=format&fit=crop&w=800&q=80',
+  ],
+  'cookie-dark-chunks': [
+    imgCookieDarkChunks,
+    'https://images.unsplash.com/photo-1499636136210-6f4ee915583e?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1558961309-dbdf03b33fc9?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1590080875515-8a3a8dc5735e?auto=format&fit=crop&w=800&q=80',
+  ],
+  'cookie-triple-choco': [
+    imgCookieTripleChoco,
+    'https://images.unsplash.com/photo-1558961309-dbdf03b33fc9?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1590080875515-8a3a8dc5735e?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1499636136210-6f4ee915583e?auto=format&fit=crop&w=800&q=80',
+  ],
+  'cookie-mm': [
+    imgCookieMm,
+    'https://images.unsplash.com/photo-1499636136210-6f4ee915583e?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1558961309-dbdf03b33fc9?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1590080875515-8a3a8dc5735e?auto=format&fit=crop&w=800&q=80',
+  ],
+  'cookie-red-velvet': [
+    imgCookieRedVelvet,
+    'https://images.unsplash.com/photo-1499636136210-6f4ee915583e?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1558961309-dbdf03b33fc9?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1590080875515-8a3a8dc5735e?auto=format&fit=crop&w=800&q=80',
+  ],
+
+  // Donuts
+  'add-donut-glazed': [
+    imgDonutGlazed,
+    'https://images.unsplash.com/photo-1551024601-bec78aea704b?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1614088685112-0a760b71a3c8?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1612240498936-65f5101365d2?auto=format&fit=crop&w=800&q=80',
+  ],
+  'add-donut-pink-frosted': [
+    imgPinkFrostedDonut,
+    'https://images.unsplash.com/photo-1551024601-bec78aea704b?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1614088685112-0a760b71a3c8?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1612240498936-65f5101365d2?auto=format&fit=crop&w=800&q=80',
+  ],
+  'add-donut-caramel': [
+    imgDonutCaramel,
+    'https://images.unsplash.com/photo-1551024601-bec78aea704b?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1614088685112-0a760b71a3c8?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1612240498936-65f5101365d2?auto=format&fit=crop&w=800&q=80',
+  ],
+  'add-donut-oreo': [
+    imgDonutOreos,
+    'https://images.unsplash.com/photo-1551024601-bec78aea704b?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1614088685112-0a760b71a3c8?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1612240498936-65f5101365d2?auto=format&fit=crop&w=800&q=80',
+  ],
+
+  // Bombolonis
+  'add-bomboloni-vanilla': [
+    imgBomboloniVanilla,
+    'https://images.unsplash.com/photo-1557827983-012eb6ea8dc1?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1579372786545-d24232daf58c?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1530631673369-bc20fdb3228d?auto=format&fit=crop&w=800&q=80',
+  ],
+  'add-bomboloni-hazelnut': [
+    imgBomboloniHazelnut,
+    'https://images.unsplash.com/photo-1557827983-012eb6ea8dc1?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1579372786545-d24232daf58c?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1530631673369-bc20fdb3228d?auto=format&fit=crop&w=800&q=80',
+  ],
+  'add-bomboloni-strawberry': [
+    imgBomboloniStrawberry,
+    'https://images.unsplash.com/photo-1557827983-012eb6ea8dc1?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1579372786545-d24232daf58c?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1530631673369-bc20fdb3228d?auto=format&fit=crop&w=800&q=80',
+  ],
+
+  // New Additions (Cinnamon Rolls)
+  'add-cinnamon-classic': [
+    'https://images.unsplash.com/photo-1544982503-9f984c14501a?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1608039829572-78524f79c4c7?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=800&q=80',
+  ],
+  'add-cinnamon-nutella': [
+    'https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1544982503-9f984c14501a?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1608039829572-78524f79c4c7?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=800&q=80',
+  ],
+  'add-cinnamon-caramel': [
+    'https://images.unsplash.com/photo-1608039829572-78524f79c4c7?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1544982503-9f984c14501a?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1587314168485-3236d6710814?auto=format&fit=crop&w=800&q=80',
+  ],
+  'add-cinnamon-berries': [
+    'https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1565958011703-44f9829ba187?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1544982503-9f984c14501a?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1488477181946-6428a0291777?auto=format&fit=crop&w=800&q=80',
+  ],
+
+  // Assorted Boxes
+  'box-assorted-pastry': [
+    imgAssortedBoxes,
+    'https://images.unsplash.com/photo-1587668178277-295251f900ce?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1551024601-bec78aea704b?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1579372786545-d24232daf58c?auto=format&fit=crop&w=800&q=80',
+  ],
+  'box-cookie-collection': [
+    imgAssortedBoxes,
+    imgCookieChocoChip,
+    'https://images.unsplash.com/photo-1499636136210-6f4ee915583e?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1587668178277-295251f900ce?auto=format&fit=crop&w=800&q=80',
+  ],
+  'box-cupcake-tasting': [
+    imgAssortedBoxes,
+    imgCupcakeVanilla,
+    'https://images.unsplash.com/photo-1576618148400-f54bed99fcfd?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1587668178277-295251f900ce?auto=format&fit=crop&w=800&q=80',
+  ],
+  'box-donut-bomboloni': [
+    imgAssortedBoxes,
+    imgPinkFrostedDonut,
+    imgBomboloniVanilla,
+    'https://images.unsplash.com/photo-1551024601-bec78aea704b?auto=format&fit=crop&w=800&q=80',
+  ],
+};
+
+const CATEGORY_FALLBACK_IMAGES: Record<string, string[]> = {
+  'Overloaded Tubs': [
+    imgOverloadedTubsCollection,
+    imgTubChocoBrownie,
+    imgTubTiramisu,
+    imgTubBiscoffCaramel,
+    imgTubStrawberryCream,
+  ],
+  'Signature Cakes': [
+    imgCakeVanilla,
+    imgCakeChocolate,
+    imgCakeStrawberry,
+    'https://images.unsplash.com/photo-1535254973040-607b474cb50d?auto=format&fit=crop&w=800&q=80',
+  ],
+  'Cupcakes': [
+    imgCupcakeVanilla,
+    imgCupcakeStrawberry,
+    imgCupcakeRedVelvet,
+    'https://images.unsplash.com/photo-1576618148400-f54bed99fcfd?auto=format&fit=crop&w=800&q=80',
+  ],
+  'Brownies': [
+    imgBrownieClassic,
+    imgBrownieTriple,
+    imgBrownieNutella,
+    'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=800&q=80',
+  ],
+  'Cookies': [
+    imgCookieChocoChip,
+    imgCookieDoubleChoco,
+    imgCookieTripleChoco,
+    'https://images.unsplash.com/photo-1499636136210-6f4ee915583e?auto=format&fit=crop&w=800&q=80',
+  ],
+  'Donuts': [
+    imgPinkFrostedDonut,
+    imgDonutGlazed,
+    imgDonutCaramel,
+    imgDonutOreos,
+  ],
+  'Bombolonis': [
+    imgBomboloniVanilla,
+    imgBomboloniHazelnut,
+    imgBomboloniStrawberry,
+    'https://images.unsplash.com/photo-1557827983-012eb6ea8dc1?auto=format&fit=crop&w=800&q=80',
+  ],
+  'New Additions': [
+    'https://images.unsplash.com/photo-1544982503-9f984c14501a?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1608039829572-78524f79c4c7?auto=format&fit=crop&w=800&q=80',
+  ],
+  'Assorted Boxes': [
+    imgAssortedBoxes,
+    'https://images.unsplash.com/photo-1587668178277-295251f900ce?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1551024601-bec78aea704b?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1579372786545-d24232daf58c?auto=format&fit=crop&w=800&q=80',
+  ]
+};
+
+// Returns accurate, high-resolution photos matching the product or flavour when sliding
 export function getRecipeImages(recipe: { id: string; category: string; image: string }): string[] {
-  const defaultImages = {
-    'Signature Cakes': [
-      'https://images.unsplash.com/photo-1535254973040-607b474cb50d?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1565958011703-44f9829ba187?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1586985289688-ca9cf499150a?auto=format&fit=crop&w=800&q=80',
-    ],
-    'Cupcakes': [
-      'https://images.unsplash.com/photo-1576618148400-f54bed99fcfd?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1519869325930-281384150729?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1550617931-e17a7b70dce2?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1614707267537-b85acf00c4b8?auto=format&fit=crop&w=800&q=80',
-    ],
-    'Brownies': [
-      'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1564355808539-22fda35bed7e?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1624353365286-3f8d62dade37?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1515003844-1098154e7f54?auto=format&fit=crop&w=800&q=80',
-    ],
-    'Cookies': [
-      'https://images.unsplash.com/photo-1499636136210-6f4ee915583e?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1558961309-dbdf03b33fc9?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1590080875515-8a3a8dc5735e?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=800&q=80',
-    ],
-    'Donuts': [
-      'https://images.unsplash.com/photo-1551024601-bec78aea704b?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1614088685112-0a760b71a3c8?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1612240498936-65f5101365d2?auto=format&fit=crop&w=800&q=80',
-    ],
-    'Bombolonis': [
-      'https://images.unsplash.com/photo-1557827983-012eb6ea8dc1?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1579372786545-d24232daf58c?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1530631673369-bc20fdb3228d?auto=format&fit=crop&w=800&q=80',
-    ],
-    'New Additions': [
-      'https://images.unsplash.com/photo-1544982503-9f984c14501a?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1608039829572-78524f79c4c7?auto=format&fit=crop&w=800&q=80',
-    ],
-    'Assorted Boxes': [
-      imgAssortedBoxes,
-      'https://images.unsplash.com/photo-1587668178277-295251f900ce?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1551024601-bec78aea704b?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1579372786545-d24232daf58c?auto=format&fit=crop&w=800&q=80',
-    ]
-  };
+  // If we have an item-specific gallery tailored to this exact confection
+  if (recipe.id && ITEM_SPECIFIC_IMAGES[recipe.id]) {
+    const list = ITEM_SPECIFIC_IMAGES[recipe.id];
+    const result: string[] = [recipe.image || list[0]];
+    for (const img of list) {
+      if (img && !result.includes(img) && result.length < 4) {
+        result.push(img);
+      }
+    }
+    while (result.length < 4 && list.length > 0) {
+      result.push(list[result.length % list.length]);
+    }
+    return result;
+  }
 
+  // Category fallback for custom or new products
   const cat = recipe.category || 'New Additions';
-  const list = defaultImages[cat as keyof typeof defaultImages] || defaultImages['New Additions'];
+  const list = CATEGORY_FALLBACK_IMAGES[cat] || CATEGORY_FALLBACK_IMAGES['New Additions'];
 
-  const result = [recipe.image];
+  const result: string[] = [recipe.image];
   for (const img of list) {
-    if (img !== recipe.image && result.length < 4) {
+    if (img && !result.includes(img) && result.length < 4) {
       result.push(img);
     }
   }
@@ -145,6 +510,7 @@ export default function Dashboard({
     { name: 'Cupcakes', emoji: '🧁' },
     { name: 'Brownies', emoji: '🍫' },
     { name: 'Cookies', emoji: '🍪' },
+    { name: 'Overloaded Tubs', emoji: '🥣' },
     { name: 'Donuts', emoji: '🍩' },
     { name: 'Bombolonis', emoji: '🥯' },
     { name: 'New Additions', emoji: '✨' },
@@ -305,32 +671,34 @@ export default function Dashboard({
         </motion.div>
       )}
 
-      {/* Category Tabs Selection */}
-      <section id="categories-section" className="mb-8">
-        <h4 id="categories-title" className="text-xs font-bold font-mono uppercase tracking-widest text-brand-cocoa-light mb-4">
-          Quick Category Filter
-        </h4>
-        <div id="categories-tabs-wrapper" className="flex flex-col sm:flex-row gap-3 pb-3 pt-1 w-full max-w-sm sm:max-w-none">
-          {categories.map((cat, catIdx) => {
-            const isActive = activeCategory === cat.name;
-            return (
-              <button
-                key={`dash-cat-tab-${cat.name}-${catIdx}`}
-                id={`category-tab-${cat.name}`}
-                onClick={() => setActiveCategory(cat.name)}
-                className={`group flex items-center justify-center sm:justify-start gap-2.5 px-6 py-3.5 rounded-2xl text-sm md:text-base font-sans font-extrabold border-2 transition-all duration-300 w-full sm:w-auto cursor-pointer ${
-                  isActive
-                    ? 'bg-brand-pink border-brand-pink text-white shadow-md shadow-brand-pink/20 scale-[1.03]'
-                    : 'bg-white border-brand-cocoa-border text-brand-cocoa-light hover:border-brand-pink hover:text-brand-cocoa hover:shadow-sm'
-                }`}
-              >
-                {getCategoryIcon(cat.name, isActive)}
-                <span id={`category-label-${cat.name}`}>{cat.name}</span>
-              </button>
-            );
-          })}
-        </div>
-      </section>
+      {/* Category Tabs Selection - Shown on main overview (All) so users can quickly pick a category, but hidden on dedicated category pages to keep the view clean and focused */}
+      {activeCategory === 'All' && (
+        <section id="categories-section" className="mb-8">
+          <h4 id="categories-title" className="text-xs font-bold font-mono uppercase tracking-widest text-brand-cocoa-light mb-4">
+            Quick Category Filter
+          </h4>
+          <div id="categories-tabs-wrapper" className="flex flex-col sm:flex-row gap-3 pb-3 pt-1 w-full max-w-sm sm:max-w-none">
+            {categories.map((cat, catIdx) => {
+              const isActive = activeCategory === cat.name;
+              return (
+                <button
+                  key={`dash-cat-tab-${cat.name}-${catIdx}`}
+                  id={`category-tab-${cat.name}`}
+                  onClick={() => setActiveCategory(cat.name)}
+                  className={`group flex items-center justify-center sm:justify-start gap-2.5 px-6 py-3.5 rounded-2xl text-sm md:text-base font-sans font-extrabold border-2 transition-all duration-300 w-full sm:w-auto cursor-pointer ${
+                    isActive
+                      ? 'bg-brand-pink border-brand-pink text-white shadow-md shadow-brand-pink/20 scale-[1.03]'
+                      : 'bg-white border-brand-cocoa-border text-brand-cocoa-light hover:border-brand-pink hover:text-brand-cocoa hover:shadow-sm'
+                  }`}
+                >
+                  {getCategoryIcon(cat.name, isActive)}
+                  <span id={`category-label-${cat.name}`}>{cat.name}</span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* Category Cover Page Grid - Display only when activeCategory is 'All' and no search query is active */}
       {searchQuery === '' && activeCategory === 'All' ? (
