@@ -104,10 +104,19 @@ export interface MealPlanEntry {
   deliveryAddress?: string;
   gpsCoordinates?: string;
   paymentMethod?: 'Card' | 'UPI' | 'COD';
+  paymentStatus?: 'Unpaid' | 'Paid' | 'Pending' | 'Failed' | 'Refunded';
+  transactionId?: string;
+  paymentTimestamp?: string;
+  paidAmount?: number;
   paymentDetails?: {
     cardHolder?: string;
     cardNumber?: string;
     upiId?: string;
+    customerUpiId?: string;
+    upiTransactionId?: string;
+    paidAt?: string;
+    gatewayRef?: string;
+    verifiedOnServer?: boolean;
   };
   adminNotes?: string[];
   boxContents?: { name: string; quantity: number; price?: number }[]; // assorted box item selections with price

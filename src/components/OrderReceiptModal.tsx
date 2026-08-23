@@ -125,8 +125,16 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
               </p>
               <p className="text-brand-cocoa-light flex items-center gap-1.5 mt-0.5">
                 <CreditCard className="w-3 h-3 text-brand-pink" />
-                <span>Payment: {order.paymentMethod === 'Card' ? 'Credit / Debit Card' : order.paymentMethod === 'UPI' ? 'UPI Instant Pay' : 'Cash on Delivery'}</span>
+                <span>
+                  Payment: {order.paymentMethod === 'Card' ? 'Credit / Debit Card' : order.paymentMethod === 'UPI' ? 'UPI Dynamic QR' : 'Cash on Delivery'}
+                  {order.paymentStatus === 'Paid' ? ' (✓ Paid)' : ''}
+                </span>
               </p>
+              {order.transactionId && (
+                <p className="text-[10px] font-mono text-emerald-700 mt-0.5">
+                  Ref/UTR: {order.transactionId}
+                </p>
+              )}
             </div>
           </div>
 

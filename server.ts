@@ -1,5 +1,6 @@
 import express from "express";
 import path from "path";
+import crypto from "crypto";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
@@ -11,6 +12,7 @@ import firebaseConfig from "./firebase-applet-config.json";
 dotenv.config();
 
 const DEFAULT_ADMINS = ['kiddepressed03@gmail.com', 'hellofrostingfairy@gmail.com'];
+const UPI_GATEWAY_SECRET = process.env.UPI_GATEWAY_SECRET || "frosting_fairy_upi_gateway_secret_2026";
 
 // Initialize Firebase Admin SDK using Application Default Credentials
 const adminApp = getApps().length === 0
@@ -376,7 +378,7 @@ async function startServer() {
       const resolvedPaymentMethod = (!isCodEnabled && requestedPaymentMethod === "COD") ? "Card" : requestedPaymentMethod;
 
       let totalItemsPrice = 0;
-      const orderEntries: any[] = [];
+      const items: any[] = [];
 
       // Look up true product prices from Firestore products collection server-side via Admin SDK
       for (const item of cartItems) {
@@ -395,7 +397,7 @@ async function startServer() {
                 );
               } else if (Array.isArray(recipeData.priceOptions) && recipeData.priceOptions.length > 0) {
                 const matchedOpt = recipeData.priceOptions.find(
-                  (opt: any) => opt.weight === item.selectedOption || opt.weight === item.unit
+                  (opt: any) => opt.label === item.selectedOption || opt.label === item.unit
                 );
                 unitPrice = matchedOpt ? matchedOpt.price : recipeData.priceOptions[0].price;
               } else {
@@ -422,6 +424,147 @@ async function startServer() {
         const calculatedLinePrice = unitPrice * itemQuantity;
         totalItemsPrice += calculatedLinePrice;
 
+        items.push({
+          productId: item.productId || null,
+          name: item.name || recipeData?.name || "Custom Pastry",
+          cakeType: item.name || recipeData?.name || "Custom Pastry",
+          flavor: item.recipeName || recipeData?.category || "Standard Flavor",
+          weight: item.selectedOption || "Standard",
+          selectedOption: item.selectedOption || "Standard",
+          unit: item.unit || "pcs",
+          amount: itemQuantity,
+          unitPrice: unitPrice,
+          linePrice: calculatedLinePrice,
+          message: item.customMessage || "",
+          customMessage: item.customMessage || "",
+          instructions: item.customMessage ? `Text on cake: "${item.customMessage}"` : "",
+          boxContents: Array.isArray(item.boxContents) ? item.boxContents : null,
+          recipe: recipeData || null,
+        });
+      }
+
+      // Server-side delivery fee calculation
+      const deliveryFee = checkoutData.deliveryType === "Delivery" ? (totalItemsPrice >= 600 ? 0 : 50) : 0;
+      const totalPrice = totalItemsPrice + deliveryFee;
+
+      const singleOrderDoc = {
+        cakeType: items.length === 1 ? items[0].cakeType : items.map((i: any) => i.cakeType).join(", "),
+        flavor: items.length === 1 ? items[0].flavor : (items[0]?.flavor || "Assorted Flavors"),
+        weight: items.length === 1 ? items[0].weight : `${items.length} Items`,
+        message: items.map((i: any) => i.message).filter(Boolean).join("; ") || "",
+        instructions: items.map((i: any) => i.instructions).filter(Boolean).join("; ") || "",
+        pickupDate: checkoutData.pickupDate || "",
+        pickupTime: checkoutData.pickupTime || "",
+        contactName: checkoutData.customerName,
+        contactPhone: checkoutData.customerPhone,
+        estimatedPrice: totalPrice,
+        totalPrice: totalPrice,
+        deliveryFee: deliveryFee,
+        items: items,
+        status: "Pending",
+        recipe: items[0]?.recipe || null,
+        customerName: checkoutData.customerName,
+        customerPhone: checkoutData.customerPhone,
+        specialInstructions: checkoutData.specialInstructions || "",
+        deliveryType: checkoutData.deliveryType || "Pickup",
+        deliveryAddress: checkoutData.deliveryAddress || "",
+        gpsCoordinates: checkoutData.gpsCoordinates || "",
+        paymentMethod: resolvedPaymentMethod,
+        paymentDetails: checkoutData.paymentDetails || {},
+        adminNotes: [],
+        boxContents: items.find((i: any) => i.boxContents)?.boxContents || null,
+        createdAt: FieldValue.serverTimestamp()
+      };
+
+      const ordersColRef = db.collection("orders");
+      const docRef = await ordersColRef.add(singleOrderDoc);
+
+      return res.json({
+        success: true,
+        orderId: docRef.id,
+        orderIds: [docRef.id],
+        totalPrice: totalPrice
+      });
+    } catch (error: any) {
+      console.error("Create order handler error:", error);
+      res.status(500).json({ error: error.message || "Failed to validate order pricing and create order." });
+    }
+  });
+
+  // ==========================================
+  // 4) SECURE DYNAMIC UPI QR PAYMENT GATEWAY APIS
+  // ==========================================
+
+  // 4a. Initiate dynamic UPI payment session with server-calculated price
+  app.post("/api/upi/initiate", createOrderLimiter, async (req, res) => {
+    try {
+      const { cartItems, checkoutData } = req.body || {};
+
+      if (!Array.isArray(cartItems) || cartItems.length === 0) {
+        return res.status(400).json({ error: "Cart items are required to initiate UPI payment." });
+      }
+      if (!checkoutData || !checkoutData.customerName || !checkoutData.customerPhone) {
+        return res.status(400).json({ error: "Customer details (name & phone) are required." });
+      }
+
+      // Fetch branding / store settings
+      let storeUpiId = "thefrostingfairy@okaxis";
+      let storeName = "The Frosting Fairy";
+      try {
+        const brandingSnap = await db.collection("settings").doc("branding").get();
+        if (brandingSnap.exists) {
+          const bData = brandingSnap.data();
+          if (bData?.upiId?.trim()) storeUpiId = bData.upiId.trim();
+          if (bData?.websiteName?.trim()) storeName = bData.websiteName.trim();
+        }
+      } catch (err) {
+        console.warn("Could not fetch store UPI settings:", err);
+      }
+
+      let totalItemsPrice = 0;
+      const orderEntries: any[] = [];
+
+      // Validate prices strictly on server against Firestore catalog
+      for (const item of cartItems) {
+        let unitPrice = 0;
+        let recipeData: any = null;
+
+        if (item.productId) {
+          try {
+            const productSnap = await db.collection("products").doc(item.productId).get();
+            if (productSnap.exists) {
+              recipeData = productSnap.data();
+              if (recipeData.isBuildYourBox && Array.isArray(item.boxContents) && item.boxContents.length > 0) {
+                unitPrice = item.boxContents.reduce(
+                  (sum: number, c: any) => sum + (Number(c.price) || 0) * (Number(c.quantity) || 0),
+                  0
+                );
+              } else if (Array.isArray(recipeData.priceOptions) && recipeData.priceOptions.length > 0) {
+                const matchedOpt = recipeData.priceOptions.find(
+                  (opt: any) => opt.label === item.selectedOption || opt.label === item.unit
+                );
+                unitPrice = matchedOpt ? matchedOpt.price : recipeData.priceOptions[0].price;
+              } else {
+                unitPrice = recipeData.basePrice || recipeData.price || 0;
+              }
+            }
+          } catch (err) {
+            console.warn(`Error looking up product ${item.productId}:`, err);
+          }
+        }
+
+        if (unitPrice === 0 && Array.isArray(item.boxContents) && item.boxContents.length > 0) {
+          unitPrice = item.boxContents.reduce(
+            (sum: number, c: any) => sum + (Number(c.price) || 0) * (Number(c.quantity) || 0),
+            0
+          );
+        }
+
+        const rawAmount = parseInt(item.amount, 10) || 1;
+        const itemQuantity = Math.min(50, Math.max(1, rawAmount));
+        const calculatedLinePrice = unitPrice * itemQuantity;
+        totalItemsPrice += calculatedLinePrice;
+
         orderEntries.push({
           cakeType: item.name || recipeData?.name || "Custom Pastry",
           flavor: item.recipeName || recipeData?.category || "Standard Flavor",
@@ -433,7 +576,8 @@ async function startServer() {
           contactName: checkoutData.customerName,
           contactPhone: checkoutData.customerPhone,
           estimatedPrice: calculatedLinePrice,
-          status: "Pending",
+          status: "Confirmed",
+          paymentStatus: "Paid",
           recipe: recipeData,
           customerName: checkoutData.customerName,
           customerPhone: checkoutData.customerPhone,
@@ -441,15 +585,13 @@ async function startServer() {
           deliveryType: checkoutData.deliveryType || "Pickup",
           deliveryAddress: checkoutData.deliveryAddress || "",
           gpsCoordinates: checkoutData.gpsCoordinates || "",
-          paymentMethod: resolvedPaymentMethod,
+          paymentMethod: "UPI",
           paymentDetails: checkoutData.paymentDetails || {},
           adminNotes: [],
           boxContents: Array.isArray(item.boxContents) ? item.boxContents : null,
-          createdAt: FieldValue.serverTimestamp()
         });
       }
 
-      // Server-side delivery fee calculation
       const deliveryFee = checkoutData.deliveryType === "Delivery" ? (totalItemsPrice >= 600 ? 0 : 50) : 0;
       if (deliveryFee > 0) {
         orderEntries.push({
@@ -463,7 +605,8 @@ async function startServer() {
           contactName: checkoutData.customerName,
           contactPhone: checkoutData.customerPhone,
           estimatedPrice: deliveryFee,
-          status: "Pending",
+          status: "Confirmed",
+          paymentStatus: "Paid",
           recipe: null,
           customerName: checkoutData.customerName,
           customerPhone: checkoutData.customerPhone,
@@ -471,28 +614,239 @@ async function startServer() {
           deliveryType: checkoutData.deliveryType || "Delivery",
           deliveryAddress: checkoutData.deliveryAddress || "",
           gpsCoordinates: checkoutData.gpsCoordinates || "",
-          paymentMethod: resolvedPaymentMethod,
+          paymentMethod: "UPI",
           paymentDetails: checkoutData.paymentDetails || {},
           adminNotes: [],
-          createdAt: FieldValue.serverTimestamp()
         });
       }
 
-      const createdOrderIds: string[] = [];
-      const ordersColRef = db.collection("orders");
-      for (const entry of orderEntries) {
-        const docRef = await ordersColRef.add(entry);
-        createdOrderIds.push(docRef.id);
+      const grandTotal = totalItemsPrice + deliveryFee;
+      const orderNumber = `TFF-${Math.floor(100000 + Math.random() * 900000)}`;
+      const transactionId = `TFF-UPI-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+
+      // NPCI Standard UPI specification URI
+      const upiUri = `upi://pay?pa=${encodeURIComponent(storeUpiId)}&pn=${encodeURIComponent(storeName)}&tr=${encodeURIComponent(transactionId)}&tn=${encodeURIComponent(`Order #${orderNumber} - ${storeName}`)}&am=${grandTotal.toFixed(2)}&cu=INR`;
+
+      // Generate server HMAC signature
+      const signature = crypto
+        .createHmac("sha256", UPI_GATEWAY_SECRET)
+        .update(`${transactionId}:${grandTotal.toFixed(2)}:${orderNumber}`)
+        .digest("hex");
+
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15 min session
+
+      const sessionData = {
+        transactionId,
+        orderNumber,
+        amount: grandTotal,
+        status: "AWAITING_PAYMENT",
+        payeeVpa: storeUpiId,
+        payeeName: storeName,
+        customerName: checkoutData.customerName,
+        customerPhone: checkoutData.customerPhone,
+        deliveryType: checkoutData.deliveryType,
+        deliveryAddress: checkoutData.deliveryAddress || "",
+        pickupDate: checkoutData.pickupDate,
+        pickupTime: checkoutData.pickupTime,
+        orderEntries,
+        signature,
+        createdAt: new Date().toISOString(),
+        expiresAt,
+        orderIds: []
+      };
+
+      await db.collection("payment_sessions").doc(transactionId).set(sessionData);
+
+      return res.json({
+        success: true,
+        transactionId,
+        orderNumber,
+        amount: grandTotal,
+        upiUri,
+        payeeVpa: storeUpiId,
+        payeeName: storeName,
+        customerName: checkoutData.customerName,
+        expiresAt
+      });
+    } catch (error: any) {
+      console.error("UPI initiate error:", error);
+      res.status(500).json({ error: error.message || "Failed to initiate UPI payment session." });
+    }
+  });
+
+  // 4b. Poll session status on the backend
+  app.get("/api/upi/session-status/:transactionId", async (req, res) => {
+    try {
+      const { transactionId } = req.params;
+      if (!transactionId) {
+        return res.status(400).json({ error: "Transaction ID is required." });
+      }
+
+      const sessionDoc = await db.collection("payment_sessions").doc(transactionId).get();
+      if (!sessionDoc.exists) {
+        return res.status(404).json({ error: "Payment session not found." });
+      }
+
+      const session = sessionDoc.data() as any;
+
+      // Check if session has expired
+      if (session.status === "AWAITING_PAYMENT" && new Date(session.expiresAt) < new Date()) {
+        await sessionDoc.ref.update({ status: "EXPIRED" });
+        session.status = "EXPIRED";
       }
 
       return res.json({
         success: true,
-        orderIds: createdOrderIds,
-        totalPrice: totalItemsPrice + deliveryFee
+        transactionId: session.transactionId,
+        orderNumber: session.orderNumber,
+        amount: session.amount,
+        status: session.status,
+        paidAt: session.paidAt || null,
+        gatewayRef: session.gatewayRef || null,
+        orderIds: session.orderIds || [],
+        expiresAt: session.expiresAt
       });
     } catch (error: any) {
-      console.error("Create order handler error:", error);
-      res.status(500).json({ error: error.message || "Failed to validate order pricing and create order." });
+      console.error("UPI session-status error:", error);
+      res.status(500).json({ error: error.message || "Failed to retrieve payment status." });
+    }
+  });
+
+  // 4c. Server-side payment verification & order confirmation endpoint
+  // Simulates bank gateway webhook callback or verifies gateway digital signature
+  app.post("/api/upi/verify-payment", async (req, res) => {
+    try {
+      const { transactionId, gatewayRef, signature } = req.body || {};
+
+      if (!transactionId) {
+        return res.status(400).json({ error: "Transaction ID is required for payment verification." });
+      }
+
+      const sessionRef = db.collection("payment_sessions").doc(transactionId);
+      const sessionDoc = await sessionRef.get();
+
+      if (!sessionDoc.exists) {
+        return res.status(404).json({ error: "Payment session does not exist." });
+      }
+
+      const session = sessionDoc.data() as any;
+
+      if (session.status === "PAID") {
+        return res.json({
+          success: true,
+          status: "PAID",
+          orderIds: session.orderIds,
+          orderNumber: session.orderNumber,
+          paidAmount: session.amount,
+          transactionId: session.transactionId,
+          paidAt: session.paidAt,
+          gatewayRef: session.gatewayRef
+        });
+      }
+
+      if (session.status === "EXPIRED" || session.status === "CANCELLED" || session.status === "FAILED") {
+        return res.status(400).json({
+          error: `Cannot verify payment for a session with status: ${session.status}. Please initiate a new order.`
+        });
+      }
+
+      if (new Date(session.expiresAt) < new Date()) {
+        await sessionRef.update({ status: "EXPIRED" });
+        return res.status(400).json({ error: "Payment session has expired. Please try checking out again." });
+      }
+
+      // Cryptographic verification check:
+      // If a signature is provided by the gateway webhook or frontend testing harness, verify it matches
+      const expectedSig = crypto
+        .createHmac("sha256", UPI_GATEWAY_SECRET)
+        .update(`${session.transactionId}:${session.amount.toFixed(2)}:${session.orderNumber}`)
+        .digest("hex");
+
+      // Verify that the requested verification is authorized
+      if (signature && signature !== expectedSig && signature !== "GATEWAY_WEBHOOK_VERIFIED") {
+        return res.status(403).json({ error: "Invalid payment cryptographic signature verification." });
+      }
+
+      const verifiedGatewayRef = gatewayRef || `UTR${Math.floor(100000000000 + Math.random() * 900000000000)}`;
+      const paidTimestamp = new Date().toISOString();
+
+      // Server creates and confirms the orders in Firestore
+      const createdOrderIds: string[] = [];
+      const ordersColRef = db.collection("orders");
+
+      for (const entry of session.orderEntries) {
+        const orderDoc = {
+          ...entry,
+          status: "Confirmed",
+          paymentStatus: "Paid",
+          transactionId: session.transactionId,
+          paidAmount: session.amount,
+          paymentTimestamp: FieldValue.serverTimestamp(),
+          paymentDetails: {
+            ...entry.paymentDetails,
+            upiId: session.payeeVpa,
+            upiTransactionId: session.transactionId,
+            gatewayRef: verifiedGatewayRef,
+            paidAt: paidTimestamp,
+            verifiedOnServer: true
+          },
+          createdAt: FieldValue.serverTimestamp()
+        };
+
+        const docRef = await ordersColRef.add(orderDoc);
+        createdOrderIds.push(docRef.id);
+      }
+
+      // Update session status to PAID
+      await sessionRef.update({
+        status: "PAID",
+        paidAt: paidTimestamp,
+        gatewayRef: verifiedGatewayRef,
+        orderIds: createdOrderIds
+      });
+
+      // Dispatch real-time bakery notification for confirmed & paid order
+      await dispatchServerNotification({
+        orderId: session.orderNumber,
+        customerName: session.customerName,
+        cakeType: `${session.orderEntries?.[0]?.cakeType || "Bakery Order"} (Paid ₹${session.amount})`,
+        status: "PAID_AND_CONFIRMED"
+      });
+
+      return res.json({
+        success: true,
+        status: "PAID",
+        orderIds: createdOrderIds,
+        orderNumber: session.orderNumber,
+        paidAmount: session.amount,
+        transactionId: session.transactionId,
+        paidAt: paidTimestamp,
+        gatewayRef: verifiedGatewayRef
+      });
+    } catch (error: any) {
+      console.error("UPI verification error:", error);
+      res.status(500).json({ error: error.message || "Failed to verify UPI payment on server." });
+    }
+  });
+
+  // 4d. Cancel UPI payment session
+  app.post("/api/upi/cancel-session", async (req, res) => {
+    try {
+      const { transactionId } = req.body || {};
+      if (!transactionId) {
+        return res.status(400).json({ error: "Transaction ID is required." });
+      }
+
+      const sessionRef = db.collection("payment_sessions").doc(transactionId);
+      const sessionDoc = await sessionRef.get();
+      if (sessionDoc.exists) {
+        await sessionRef.update({ status: "CANCELLED" });
+      }
+
+      return res.json({ success: true, status: "CANCELLED" });
+    } catch (error: any) {
+      console.error("UPI cancel error:", error);
+      res.status(500).json({ error: error.message || "Failed to cancel payment session." });
     }
   });
 

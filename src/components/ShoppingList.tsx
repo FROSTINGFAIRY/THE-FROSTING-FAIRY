@@ -16,10 +16,13 @@ import {
   CreditCard, 
   Wallet, 
   DollarSign, 
-  Loader2 
+  Loader2,
+  QrCode,
+  Smartphone
 } from 'lucide-react';
 import { ShoppingItem } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
+import UpiQrPaymentModal, { UpiSessionDetails } from './UpiQrPaymentModal';
 
 interface ShoppingListProps {
   shoppingList: ShoppingItem[];
@@ -38,11 +41,26 @@ interface ShoppingListProps {
     deliveryAddress: string;
     gpsCoordinates: string;
     paymentMethod: 'Card' | 'UPI' | 'COD';
+    paymentStatus?: 'Unpaid' | 'Paid' | 'Pending';
     paymentDetails: {
       cardHolder?: string;
       cardNumber?: string;
       upiId?: string;
+      customerUpiId?: string;
+      upiTransactionId?: string;
+      gatewayRef?: string;
+      paidAt?: string;
+      verifiedOnServer?: boolean;
     };
+  }) => void;
+  onUpiPaymentSuccess?: (verifiedData: {
+    orderIds: string[];
+    orderNumber: string;
+    paidAmount: number;
+    transactionId: string;
+    paidAt: string;
+    gatewayRef: string;
+    checkoutData: any;
   }) => void;
   upiId?: string;
   upiQrCode?: string;
@@ -54,6 +72,7 @@ export default function ShoppingList({
   onRemoveItem,
   onClearAll,
   onCheckout,
+  onUpiPaymentSuccess,
   upiId: propUpiId = 'thefrostingfairy@okaxis',
   upiQrCode = '',
   cashOnDeliveryEnabled = true,
@@ -81,16 +100,16 @@ export default function ShoppingList({
   const [isLocating, setIsLocating] = useState(false);
   const [locationFeedback, setLocationFeedback] = useState('');
 
-  const [paymentMethod, setPaymentMethod] = useState<'Card' | 'UPI' | 'COD'>('Card');
+  const [paymentMethod, setPaymentMethod] = useState<'Card' | 'UPI' | 'COD'>('UPI');
   const [cardHolder, setCardHolder] = useState('');
   const [cardNumber, setCardNumber] = useState('');
   const [cardExpiry, setCardExpiry] = useState('');
   const [cardCvv, setCardCvv] = useState('');
-  const [upiId, setUpiId] = useState(propUpiId);
+  const [customerUpiId, setCustomerUpiId] = useState('');
 
-  useEffect(() => {
-    setUpiId(propUpiId);
-  }, [propUpiId]);
+  // Dynamic UPI Session State
+  const [upiSession, setUpiSession] = useState<UpiSessionDetails | null>(null);
+  const [isUpiModalOpen, setIsUpiModalOpen] = useState(false);
 
   useEffect(() => {
     if (!cashOnDeliveryEnabled && paymentMethod === 'COD') {
@@ -200,7 +219,13 @@ export default function ShoppingList({
     }
   };
 
-  const handlePlaceOrder = (e: React.FormEvent) => {
+  // Pay via UPI deep link on mobile
+  const handlePayViaUpiApp = () => {
+    const upiLink = `upi://pay?pa=${encodeURIComponent(propUpiId)}&pn=${encodeURIComponent('The Frosting Fairy')}&am=${grandTotal}&cu=INR&tn=${encodeURIComponent('Order payment - ' + (customerName || 'Customer'))}`;
+    window.location.href = upiLink;
+  };
+
+  const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
 
@@ -245,16 +270,63 @@ export default function ShoppingList({
         setErrorMessage('Please enter the 3-digit CVV number.');
         return;
       }
-    } else if (paymentMethod === 'UPI') {
-      if (!upiId.trim() || !upiId.includes('@')) {
-        setErrorMessage('Please enter a valid UPI ID (e.g. name@paytm or phone@okaxis).');
-        return;
-      }
     } else if (paymentMethod === 'COD') {
       if (!cashOnDeliveryEnabled) {
         setErrorMessage('Cash on Delivery is currently disabled by store management. Please select Card or UPI.');
         return;
       }
+    }
+
+    // Dynamic UPI QR Payment Flow (Secure Backend Session)
+    if (paymentMethod === 'UPI') {
+      setIsSubmitting(true);
+      try {
+        const response = await fetch('/api/upi/initiate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            cartItems: shoppingList.map((item) => ({
+              productId: item.productId,
+              name: item.name,
+              recipeName: item.recipeName,
+              selectedOption: item.selectedOption,
+              amount: item.amount,
+              unit: item.unit,
+              customMessage: item.customMessage,
+              boxContents: item.boxContents,
+            })),
+            checkoutData: {
+              customerName: customerName.trim(),
+              customerPhone: customerPhone.trim(),
+              pickupDate,
+              pickupTime,
+              specialInstructions: specialInstructions.trim(),
+              deliveryType,
+              deliveryAddress: deliveryType === 'Delivery' ? deliveryAddress.trim() : 'Store Pick-up',
+              gpsCoordinates,
+              paymentMethod: 'UPI',
+              paymentDetails: {
+                upiId: propUpiId,
+                customerUpiId: customerUpiId.trim() || undefined,
+              },
+            },
+          }),
+        });
+
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || 'Failed to initiate secure UPI payment session.');
+        }
+
+        setUpiSession(data);
+        setIsUpiModalOpen(true);
+      } catch (err: any) {
+        console.error('UPI initiation error:', err);
+        setErrorMessage(err.message || 'Unable to connect to UPI payment gateway. Please check your network.');
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
     }
 
     const cleanCard = cardNumber.replace(/\s/g, '');
@@ -276,7 +348,7 @@ export default function ShoppingList({
         paymentDetails: {
           cardHolder: paymentMethod === 'Card' ? cardHolder : undefined,
           cardNumber: paymentMethod === 'Card' ? maskedCard : undefined,
-          upiId: paymentMethod === 'UPI' ? upiId : undefined,
+          upiId: undefined,
         },
       });
     } finally {
@@ -608,64 +680,135 @@ export default function ShoppingList({
               </div>
 
               {/* Payment Methods Section */}
+              {/* PAYMENT SECTION */}
               <div className="space-y-2 border-t border-brand-cocoa-border/40 pt-4">
-                <label className="text-[10px] font-bold font-mono uppercase tracking-widest text-brand-cocoa-light">
-                  Select Payment Option
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-bold font-mono uppercase tracking-widest text-brand-cocoa-light">
+                    Select Payment Method
+                  </label>
+                  <span className="text-[10px] text-brand-pink font-bold font-mono">
+                    {paymentMethod === 'UPI' ? '✨ Instant QR Pay' : ''}
+                  </span>
+                </div>
+
                 <div className={`grid ${cashOnDeliveryEnabled ? 'grid-cols-3' : 'grid-cols-2'} gap-2`}>
                   <button
                     type="button"
-                    onClick={() => setPaymentMethod('Card')}
-                    className={`py-3 border rounded-xl flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                      paymentMethod === 'Card'
-                        ? 'border-brand-pink bg-brand-pink-light/20 text-brand-pink'
+                    onClick={() => setPaymentMethod('UPI')}
+                    className={`py-3 px-2 border rounded-xl flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                      paymentMethod === 'UPI'
+                        ? 'border-brand-pink bg-brand-pink-light/30 text-brand-pink shadow-xs'
                         : 'border-brand-cocoa-border bg-white text-brand-cocoa hover:border-brand-pink-accent/50'
                     }`}
                   >
-                    <CreditCard className="w-4 h-4" />
-                    <span className="text-[10px] font-bold font-mono uppercase">Card</span>
+                    <Smartphone className="w-4 h-4" />
+                    <span className="text-[10px] font-bold font-mono uppercase tracking-tight">UPI QR Code</span>
                   </button>
 
                   <button
                     type="button"
-                    onClick={() => setPaymentMethod('UPI')}
-                    className={`py-3 border rounded-xl flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                      paymentMethod === 'UPI'
-                        ? 'border-brand-pink bg-brand-pink-light/20 text-brand-pink'
+                    onClick={() => setPaymentMethod('Card')}
+                    className={`py-3 px-2 border rounded-xl flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                      paymentMethod === 'Card'
+                        ? 'border-brand-pink bg-brand-pink-light/30 text-brand-pink shadow-xs'
                         : 'border-brand-cocoa-border bg-white text-brand-cocoa hover:border-brand-pink-accent/50'
                     }`}
                   >
-                    <Wallet className="w-4 h-4" />
-                    <span className="text-[10px] font-bold font-mono uppercase">UPI / QR</span>
+                    <CreditCard className="w-4 h-4" />
+                    <span className="text-[10px] font-bold font-mono uppercase tracking-tight">Card</span>
                   </button>
 
                   {cashOnDeliveryEnabled && (
                     <button
                       type="button"
                       onClick={() => setPaymentMethod('COD')}
-                      className={`py-3 border rounded-xl flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                      className={`py-3 px-2 border rounded-xl flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer ${
                         paymentMethod === 'COD'
-                          ? 'border-brand-pink bg-brand-pink-light/20 text-brand-pink'
+                          ? 'border-brand-pink bg-brand-pink-light/30 text-brand-pink shadow-xs'
                           : 'border-brand-cocoa-border bg-white text-brand-cocoa hover:border-brand-pink-accent/50'
                       }`}
                     >
                       <DollarSign className="w-4 h-4" />
-                      <span className="text-[10px] font-bold font-mono uppercase">COD</span>
+                      <span className="text-[10px] font-bold font-mono uppercase tracking-tight">COD</span>
                     </button>
                   )}
                 </div>
 
-                {/* Visible warning note for demo payment */}
-                <div className="text-[10px] text-brand-pink-dark bg-brand-pink-light/30 border border-brand-pink-accent/20 px-3.5 py-2.5 rounded-xl flex items-start gap-2 leading-relaxed">
-                  <span className="font-bold text-xs">⚠️</span>
-                  <span>
-                    <strong>Demo Checkout Note:</strong> This is a simulation playground. No real payment processing occurs and no financial details are transmitted or securely stored. Do not use your real production card numbers.
-                  </span>
-                </div>
+                {/* Sub-fields for UPI */}
+                {paymentMethod === 'UPI' && (
+                  <div className="space-y-3 p-3.5 bg-brand-cream-light/40 border border-brand-cocoa-border rounded-2xl mt-2.5 animate-fadeIn">
+                    <div className="flex items-start gap-2.5">
+                      <div className="w-7 h-7 rounded-lg bg-brand-pink-light flex items-center justify-center text-brand-pink shrink-0 mt-0.5">
+                        <QrCode className="w-4 h-4" />
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-xs font-bold text-brand-cocoa">
+                          Dynamic UPI QR Payment
+                        </p>
+                        <p className="text-[11px] text-brand-cocoa-light leading-relaxed">
+                          A secure QR code for exactly <strong className="text-brand-pink font-bold">₹{grandTotal}</strong> will be generated for your order. Scan with any UPI app to pay.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Supported Apps Badges */}
+                    <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                      <span className="text-[10px] text-brand-cocoa-light font-medium">Supported:</span>
+                      <span className="px-2 py-0.5 bg-white rounded-md border border-brand-cocoa-border/60 text-[10px] font-bold text-brand-cocoa font-mono">GPay</span>
+                      <span className="px-2 py-0.5 bg-white rounded-md border border-brand-cocoa-border/60 text-[10px] font-bold text-brand-cocoa font-mono">PhonePe</span>
+                      <span className="px-2 py-0.5 bg-white rounded-md border border-brand-cocoa-border/60 text-[10px] font-bold text-brand-cocoa font-mono">Paytm</span>
+                      <span className="px-2 py-0.5 bg-white rounded-md border border-brand-cocoa-border/60 text-[10px] font-bold text-brand-cocoa font-mono">BHIM</span>
+                      <span className="px-2 py-0.5 bg-white rounded-md border border-brand-cocoa-border/60 text-[10px] font-bold text-brand-cocoa font-mono">CRED</span>
+                    </div>
+
+                    {/* Optional Customer UPI ID */}
+                    <div className="pt-2 border-t border-brand-cocoa-border/40 space-y-1">
+                      <label className="text-[10px] font-bold font-mono text-brand-cocoa-light uppercase">
+                        Customer UPI ID (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. yourname@oksbi or 9876543210@paytm"
+                        value={customerUpiId}
+                        onChange={(e) => setCustomerUpiId(e.target.value)}
+                        className="w-full bg-white border border-brand-cocoa-border rounded-lg px-3 py-2 text-xs text-brand-cocoa focus:outline-none font-mono"
+                      />
+                    </div>
+
+                    {/* Pay via UPI App Action */}
+                    <div className="pt-2 border-t border-brand-cocoa-border/40 space-y-1.5">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={handlePayViaUpiApp}
+                          className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-sans font-bold py-2.5 px-3 rounded-xl transition-all shadow-xs flex items-center justify-center gap-1.5 text-xs cursor-pointer"
+                        >
+                          <Smartphone className="w-4 h-4 shrink-0" />
+                          <span>Pay Now via UPI App</span>
+                        </button>
+                        <button
+                          type="submit"
+                          className="w-full bg-brand-pink hover:bg-brand-pink-dark text-white font-sans font-bold py-2.5 px-3 rounded-xl transition-all shadow-xs flex items-center justify-center gap-1.5 text-xs cursor-pointer"
+                        >
+                          <QrCode className="w-4 h-4 shrink-0" />
+                          <span>Show Instant Scan QR Code</span>
+                        </button>
+                      </div>
+                      <p className="text-[10px] text-brand-cocoa-light text-center leading-tight">
+                        Works on mobile devices with a UPI app installed. On desktop, scan the QR code instead.
+                      </p>
+                    </div>
+                  </div>
+                )}
 
                 {/* Sub-fields for Card */}
                 {paymentMethod === 'Card' && (
                   <div className="space-y-2.5 p-3.5 bg-brand-cream-light/35 border border-brand-cocoa-border rounded-xl mt-2.5 animate-fadeIn">
+                    <div className="text-[10px] text-brand-pink-dark bg-brand-pink-light/30 border border-brand-pink-accent/20 px-3 py-2 rounded-lg flex items-start gap-1.5 leading-relaxed">
+                      <span>🔒</span>
+                      <span>Card payments are securely tokenized and verified.</span>
+                    </div>
+
                     <div className="space-y-1">
                       <input
                         type="text"
@@ -703,70 +846,11 @@ export default function ShoppingList({
                   </div>
                 )}
 
-                {/* Sub-fields for UPI */}
-                {paymentMethod === 'UPI' && (
-                  <div className="space-y-3 p-3.5 bg-brand-cream-light/35 border border-brand-cocoa-border rounded-xl mt-2.5 animate-fadeIn">
-                    <div className="space-y-1">
-                      <input
-                        type="text"
-                        placeholder="Enter UPI ID (e.g. name@paytm, phone@okaxis)"
-                        value={upiId}
-                        onChange={(e) => setUpiId(e.target.value)}
-                        className="w-full bg-white border border-brand-cocoa-border rounded-lg px-3 py-2 text-xs text-brand-cocoa focus:outline-none font-mono"
-                      />
-                    </div>
-                    <div className="text-center">
-                      <button
-                        type="button"
-                        onClick={() => setShowQR(!showQR)}
-                        className="text-[10px] font-bold font-mono text-brand-pink-dark hover:underline"
-                      >
-                        {showQR ? 'Hide UPI QR Code ↩' : 'Show Instant Scan QR Code 📸'}
-                      </button>
-
-                      {showQR && (
-                        <div className="mt-3 flex flex-col items-center justify-center bg-white p-3 border border-brand-cocoa-border rounded-xl">
-                          <div className="w-32 h-32 bg-gray-100 border border-brand-cocoa-border flex flex-col items-center justify-center rounded-lg relative overflow-hidden p-1">
-                            {upiQrCode ? (
-                              <img
-                                src={upiQrCode}
-                                alt="Payment QR Code"
-                                loading="lazy"
-                                decoding="async"
-                                className="w-full h-full object-contain"
-                              />
-                            ) : (
-                              /* Stylised QR Code mockup if no custom QR is uploaded */
-                              <div className="w-full h-full border border-dashed border-brand-pink/50 flex flex-col justify-center items-center text-center p-1 bg-brand-cream-light/40">
-                                <span className="font-mono text-[8px] text-brand-cocoa-light font-bold">THE FROSTING FAIRY</span>
-                                <div className="w-16 h-16 bg-brand-cocoa mt-1 rounded relative flex items-center justify-center">
-                                  <span className="text-[7px] text-white font-black font-mono">UPI QR</span>
-                                </div>
-                                <span className="font-mono text-[6px] text-brand-pink-dark mt-1 truncate max-w-full">
-                                  {upiId}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                          <div className="text-center mt-2 space-y-0.5">
-                            <span className="text-[9px] font-mono uppercase tracking-wider text-brand-cocoa-light block">
-                              Scan to pay <span className="text-brand-pink font-bold">₹{grandTotal}</span> instantly
-                            </span>
-                            <span className="text-[8px] font-mono text-brand-cocoa-light/80 block select-all">
-                              UPI ID: <span className="font-bold underline">{upiId}</span>
-                            </span>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
                 {/* Info on COD */}
                 {paymentMethod === 'COD' && (
-                  <div className="p-3 bg-brand-cream-light/35 border border-brand-cocoa-border rounded-xl mt-2.5 animate-fadeIn">
+                  <div className="p-3.5 bg-brand-cream-light/40 border border-brand-cocoa-border rounded-xl mt-2.5 animate-fadeIn">
                     <p className="text-[11px] font-medium text-brand-cocoa-light">
-                      👍 <span className="font-bold text-brand-cocoa">Cash on Collection/Delivery:</span> Pay with Cash or any UPI wallet once your treats are safely in your hands.
+                      👍 <span className="font-bold text-brand-cocoa">Cash on Collection/Delivery:</span> Pay with Cash or UPI once your treats are safely in your hands.
                     </p>
                   </div>
                 )}
@@ -825,11 +909,23 @@ export default function ShoppingList({
                 {isSubmitting ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    <span>Baking Your Order Request...</span>
+                    <span>Preparing Payment Gateway...</span>
+                  </>
+                ) : paymentMethod === 'UPI' ? (
+                  <>
+                    <Smartphone className="w-4 h-4 text-white" />
+                    <span>Pay ₹{grandTotal} via UPI QR 📱</span>
+                    <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                  </>
+                ) : paymentMethod === 'Card' ? (
+                  <>
+                    <CreditCard className="w-4 h-4 text-white" />
+                    <span>Pay ₹{grandTotal} via Card 💳</span>
+                    <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                   </>
                 ) : (
                   <>
-                    <span>Confirm & Place Custom Order 🎂</span>
+                    <span>Place Cash on Delivery Order 💵</span>
                     <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                   </>
                 )}
@@ -854,6 +950,65 @@ export default function ShoppingList({
           </p>
         </div>
       )}
+
+      {/* DYNAMIC SECURE UPI QR PAYMENT MODAL */}
+      <UpiQrPaymentModal
+        session={upiSession}
+        isOpen={isUpiModalOpen}
+        onClose={() => setIsUpiModalOpen(false)}
+        onPaymentSuccess={(verifiedData) => {
+          setIsUpiModalOpen(false);
+          if (onUpiPaymentSuccess) {
+            onUpiPaymentSuccess({
+              ...verifiedData,
+              checkoutData: {
+                customerName: customerName.trim(),
+                customerPhone: customerPhone.trim(),
+                pickupDate,
+                pickupTime,
+                specialInstructions: specialInstructions.trim(),
+                deliveryType,
+                deliveryAddress: deliveryType === 'Delivery' ? deliveryAddress.trim() : 'Store Pick-up',
+                gpsCoordinates,
+                paymentMethod: 'UPI',
+                paymentStatus: 'Paid',
+                paymentDetails: {
+                  upiId: upiSession?.payeeVpa || propUpiId,
+                  customerUpiId: customerUpiId.trim() || undefined,
+                  upiTransactionId: verifiedData.transactionId,
+                  gatewayRef: verifiedData.gatewayRef,
+                  paidAt: verifiedData.paidAt,
+                  verifiedOnServer: true,
+                },
+              },
+            });
+          } else {
+            onCheckout({
+              customerName: customerName.trim(),
+              customerPhone: customerPhone.trim(),
+              pickupDate,
+              pickupTime,
+              specialInstructions: specialInstructions.trim(),
+              deliveryType,
+              deliveryAddress: deliveryType === 'Delivery' ? deliveryAddress.trim() : 'Store Pick-up',
+              gpsCoordinates,
+              paymentMethod: 'UPI',
+              paymentStatus: 'Paid',
+              paymentDetails: {
+                upiId: upiSession?.payeeVpa || propUpiId,
+                customerUpiId: customerUpiId.trim() || undefined,
+                upiTransactionId: verifiedData.transactionId,
+                gatewayRef: verifiedData.gatewayRef,
+                paidAt: verifiedData.paidAt,
+                verifiedOnServer: true,
+              },
+            });
+          }
+        }}
+        onPaymentFailed={(errMsg) => {
+          setErrorMessage(`Payment Gateway: ${errMsg}`);
+        }}
+      />
     </div>
   );
 }

@@ -536,6 +536,43 @@ export default function App() {
     }
   };
 
+  // Handle verified UPI payment success from dynamic QR code modal
+  const handleUpiPaymentSuccess = (verifiedData: {
+    orderIds: string[];
+    orderNumber: string;
+    paidAmount: number;
+    transactionId: string;
+    paidAt: string;
+    gatewayRef: string;
+    checkoutData: any;
+  }) => {
+    const { checkoutData, orderNumber, paidAmount, gatewayRef } = verifiedData;
+    const totalCount = shoppingList.reduce((sum, item) => sum + item.amount, 0);
+
+    // Trigger celebratory confetti
+    triggerOrderSuccessConfetti();
+
+    // Open celebratory order confirmed modal
+    setOrderSuccessModalData({
+      orderId: orderNumber,
+      customerName: checkoutData.customerName,
+      deliveryType: checkoutData.deliveryType,
+      deliveryAddress: checkoutData.deliveryAddress,
+      pickupDate: checkoutData.pickupDate,
+      pickupTime: checkoutData.pickupTime,
+      totalAmount: paidAmount,
+      itemsCount: totalCount,
+    });
+
+    addToast(
+      '🎉 Payment Verified & Confirmed!',
+      `Thank you ${checkoutData.customerName}! Your UPI payment of ₹${paidAmount} was verified (Ref: ${gatewayRef}). Order #${orderNumber} is confirmed!`,
+      'success'
+    );
+
+    setShoppingList([]); // Clear the cart
+  };
+
   // Toggle bought/checked state
   const handleToggleBought = (id: string) => {
     setShoppingList((prev) =>
@@ -663,6 +700,7 @@ export default function App() {
             onClearCompleted={handleClearCompleted}
             onClearAll={handleClearAllShopping}
             onCheckout={handleCheckout}
+            onUpiPaymentSuccess={handleUpiPaymentSuccess}
             upiId={upiId}
             upiQrCode={upiQrCode}
             cashOnDeliveryEnabled={cashOnDeliveryEnabled}

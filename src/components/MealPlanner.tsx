@@ -512,12 +512,21 @@ export default function MealPlanner({
                             {order.paymentMethod === 'Card'
                               ? '💳 Card'
                               : order.paymentMethod === 'UPI'
-                              ? '📱 UPI Scan'
+                              ? '📱 UPI QR'
                               : '💵 Cash'}
                           </span>
-                          <span className="text-[10px] font-mono text-emerald-700 font-bold mt-0.5 block">
-                            {isDelivered ? 'Paid & Settled' : 'Verified'}
+                          <span className="text-[10px] font-mono text-emerald-700 font-bold mt-0.5 block truncate">
+                            {order.paymentStatus === 'Paid'
+                              ? `✓ Paid ₹${order.paidAmount || order.estimatedPrice}`
+                              : isDelivered
+                              ? 'Paid & Settled'
+                              : 'Verified Order'}
                           </span>
+                          {order.transactionId && (
+                            <span className="text-[8px] font-mono text-brand-cocoa-light block truncate mt-0.5" title={`Ref: ${order.transactionId}`}>
+                              Ref: {order.transactionId.slice(-8)}
+                            </span>
+                          )}
                         </div>
                       </div>
 

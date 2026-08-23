@@ -3540,6 +3540,16 @@ export default function AdminDashboard({
                           }`}>
                             {currentStatus}
                           </span>
+                          {order.paymentStatus === 'Paid' ? (
+                            <span className="font-mono font-bold text-[9px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full flex items-center gap-1">
+                              <span>✓ PAID</span>
+                              {order.paidAmount && <span>(₹{order.paidAmount})</span>}
+                            </span>
+                          ) : (
+                            <span className="font-mono text-[9px] bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full">
+                              {order.paymentMethod || 'Card'}
+                            </span>
+                          )}
                         </div>
 
                         <button
@@ -3663,7 +3673,7 @@ export default function AdminDashboard({
                                   <span className="leading-snug text-brand-cocoa font-medium text-[11px]">{noteItem}</span>
                                 </div>
                                 <button
-                                  onClick={() => handleDeleteNote(order.id, idx)}
+                                  onClick={() => handleDeleteNote(order.id, noteIdx)}
                                   className="opacity-60 hover:opacity-100 text-brand-cocoa-light hover:text-red-600 transition-opacity p-0.5 rounded cursor-pointer shrink-0"
                                   title="Delete this note"
                                 >
