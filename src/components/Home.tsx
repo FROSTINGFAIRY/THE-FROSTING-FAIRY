@@ -260,6 +260,8 @@ export default function Home({
           <img 
             src={heroImage} 
             alt="Artisanal Cake Showcase" 
+            width="1600"
+            height="650"
             fetchPriority="high"
             className="w-full h-full object-cover opacity-25 scale-105 transition-all duration-10000"
           />
@@ -275,7 +277,7 @@ export default function Home({
             className="flex items-center justify-center gap-3"
           >
             <div className="w-16 h-16 rounded-full border-2 border-brand-pink/60 p-0.5 bg-white/10 backdrop-blur-xs">
-              <img src={logo} alt="Logo" className="w-full h-full object-cover rounded-full" />
+              <img src={logo} alt="Logo" width="64" height="64" className="w-full h-full object-cover rounded-full" />
             </div>
             <span className="font-mono text-xs font-bold uppercase tracking-[0.25em] text-brand-pink-light block">
               {websiteSlogan}
@@ -357,6 +359,8 @@ export default function Home({
                       <img
                         src={displayImg}
                         alt={cat.name}
+                        width="400"
+                        height="224"
                         loading="lazy"
                         decoding="async"
                         onError={(e) => {
@@ -437,6 +441,8 @@ export default function Home({
               <img 
                 src="https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=800&q=80" 
                 alt="Pastry Menu background" 
+                width="800"
+                height="340"
                 loading="lazy"
                 decoding="async"
                 className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
@@ -474,6 +480,8 @@ export default function Home({
               <img 
                 src="https://images.unsplash.com/photo-1535254973040-607b474cb50d?auto=format&fit=crop&w=800&q=80" 
                 alt="Custom Cake background" 
+                width="800"
+                height="340"
                 loading="lazy"
                 decoding="async"
                 className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
@@ -515,6 +523,8 @@ export default function Home({
               <img 
                 src="https://images.unsplash.com/photo-1535254973040-607b474cb50d?auto=format&fit=crop&w=400&q=80" 
                 alt="Finely decorated cake" 
+                width="400"
+                height="256"
                 loading="lazy"
                 decoding="async"
                 className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
@@ -524,6 +534,8 @@ export default function Home({
               <img 
                 src="https://images.unsplash.com/photo-1576618148400-f54bed99fcfd?auto=format&fit=crop&w=400&q=80" 
                 alt="Fluffy cupcakes" 
+                width="400"
+                height="176"
                 loading="lazy"
                 decoding="async"
                 className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
@@ -535,6 +547,8 @@ export default function Home({
               <img 
                 src="https://images.unsplash.com/photo-1551024601-bec78aea704b?auto=format&fit=crop&w=400&q=80" 
                 alt="Gourmet bakes" 
+                width="400"
+                height="176"
                 loading="lazy"
                 decoding="async"
                 className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
@@ -544,6 +558,8 @@ export default function Home({
               <img 
                 src="https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=400&q=80" 
                 alt="Chocolate brownies" 
+                width="400"
+                height="256"
                 loading="lazy"
                 decoding="async"
                 className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"

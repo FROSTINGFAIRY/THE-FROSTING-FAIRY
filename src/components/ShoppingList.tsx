@@ -219,11 +219,17 @@ export default function ShoppingList({
     }
   };
 
-  // Pay via UPI deep link on mobile
-  const handlePayViaUpiApp = () => {
-    const upiLink = `upi://pay?pa=${encodeURIComponent(propUpiId)}&pn=${encodeURIComponent('The Frosting Fairy')}&am=${grandTotal}&cu=INR&tn=${encodeURIComponent('Order payment - ' + (customerName || 'Customer'))}`;
-    window.location.href = upiLink;
-  };
+  // UPI params & deep links for mobile apps
+  const upiParams = `pa=${encodeURIComponent(propUpiId)}&pn=${encodeURIComponent('The Frosting Fairy')}&am=${grandTotal}&cu=INR&tn=${encodeURIComponent('Order payment - ' + (customerName || 'Customer'))}`;
+
+  const upiApps = [
+    { name: 'Google Pay', link: `tez://upi/pay?${upiParams}` },
+    { name: 'PhonePe', link: `phonepe://pay?${upiParams}` },
+    { name: 'Paytm', link: `paytmmp://pay?${upiParams}` },
+    { name: 'BHIM', link: `bhim://pay?${upiParams}` },
+    { name: 'CRED', link: `credpay://upi/pay?${upiParams}` },
+    { name: 'Other', link: `upi://pay?${upiParams}` },
+  ];
 
   const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -775,27 +781,31 @@ export default function ShoppingList({
                       />
                     </div>
 
-                    {/* Pay via UPI App Action */}
-                    <div className="pt-2 border-t border-brand-cocoa-border/40 space-y-1.5">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        <button
-                          type="button"
-                          onClick={handlePayViaUpiApp}
-                          className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-sans font-bold py-2.5 px-3 rounded-xl transition-all shadow-xs flex items-center justify-center gap-1.5 text-xs cursor-pointer"
-                        >
-                          <Smartphone className="w-4 h-4 shrink-0" />
-                          <span>Pay Now via UPI App</span>
-                        </button>
-                        <button
-                          type="submit"
-                          className="w-full bg-brand-pink hover:bg-brand-pink-dark text-white font-sans font-bold py-2.5 px-3 rounded-xl transition-all shadow-xs flex items-center justify-center gap-1.5 text-xs cursor-pointer"
-                        >
-                          <QrCode className="w-4 h-4 shrink-0" />
-                          <span>Show Instant Scan QR Code</span>
-                        </button>
+                    {/* Direct UPI App Deep Links */}
+                    <div className="pt-2 border-t border-brand-cocoa-border/40 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[10px] font-bold font-mono text-brand-cocoa-light uppercase">
+                          Pay Directly with UPI App
+                        </label>
+                        <span className="text-[9px] text-emerald-700 font-mono font-bold bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">Mobile Instant</span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {upiApps.map((app) => (
+                          <button
+                            key={app.name}
+                            type="button"
+                            onClick={() => {
+                              window.location.href = app.link;
+                            }}
+                            className="bg-white hover:bg-brand-pink-light/25 hover:border-brand-pink border border-brand-cocoa-border text-brand-cocoa font-sans font-semibold py-2 px-1 rounded-xl transition-all shadow-xs flex items-center justify-center gap-1 text-[11px] cursor-pointer active:scale-95 text-center"
+                          >
+                            <Smartphone className="w-3 h-3 text-brand-pink shrink-0" />
+                            <span className="truncate">{app.name}</span>
+                          </button>
+                        ))}
                       </div>
                       <p className="text-[10px] text-brand-cocoa-light text-center leading-tight">
-                        Works on mobile devices with a UPI app installed. On desktop, scan the QR code instead.
+                        Opens your chosen UPI app with the amount and store UPI ID pre-filled. Works on mobile only — use the QR code on desktop.
                       </p>
                     </div>
                   </div>

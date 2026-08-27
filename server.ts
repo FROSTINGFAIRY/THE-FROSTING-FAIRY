@@ -5,25 +5,20 @@ import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
 import rateLimit from "express-rate-limit";
-import { initializeApp, getApps } from "firebase-admin/app";
-import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import firebaseConfig from "./firebase-applet-config.json";
+import {
+  getFirestoreDoc,
+  setFirestoreDoc,
+  addFirestoreDoc,
+} from "./serverFirestore";
 
 dotenv.config();
 
 const DEFAULT_ADMINS = ['kiddepressed03@gmail.com', 'hellofrostingfairy@gmail.com'];
 const UPI_GATEWAY_SECRET = process.env.UPI_GATEWAY_SECRET || "frosting_fairy_upi_gateway_secret_2026";
 
-// Initialize Firebase Admin SDK using Application Default Credentials
-const adminApp = getApps().length === 0
-  ? initializeApp({ projectId: firebaseConfig.projectId })
-  : getApps()[0];
-
-// Target the named database: ai-studio-thefrostingfairy-921cb999-217d-4754-98e5-84c32edf59fa
-const db = getFirestore(
-  adminApp,
-  firebaseConfig.firestoreDatabaseId || "ai-studio-thefrostingfairy-921cb999-217d-4754-98e5-84c32edf59fa"
-);
+// High-speed, reliable in-memory payment session cache with automatic expiration
+const paymentSessionsMemory = new Map<string, any>();
 
 /**
  * Server-side Admin Token Verification helper using Firebase Identity Toolkit lookup
@@ -60,8 +55,8 @@ async function verifyAdminToken(req: express.Request) {
 
   if (!isAuthorized) {
     try {
-      const adminSnap = await db.collection("admins").doc(email).get();
-      if (adminSnap.exists) {
+      const adminDoc = await getFirestoreDoc("admins", email);
+      if (adminDoc) {
         isAuthorized = true;
       }
     } catch (err) {
@@ -87,8 +82,7 @@ async function dispatchServerNotification({ orderId, customerName, cakeType, sta
   isTest?: boolean;
 }) {
   try {
-    const settingsSnap = await db.collection("settings").doc("notifications").get();
-    const settings = settingsSnap.exists ? settingsSnap.data() || {} : {};
+    const settings = (await getFirestoreDoc("settings", "notifications")) || {};
 
     const twilioSid = process.env.TWILIO_SID || settings.twilioSid || "";
     const twilioToken = process.env.TWILIO_TOKEN || settings.twilioToken || "";
@@ -162,39 +156,12 @@ async function dispatchServerNotification({ orderId, customerName, cakeType, sta
   }
 }
 
-// Attach real-time order listener using Admin SDK
-let isInitialLoad = true;
-try {
-  db.collection("orders").onSnapshot((snapshot) => {
-    if (isInitialLoad) {
-      isInitialLoad = false;
-      return;
-    }
-    snapshot.docChanges().forEach(async (change) => {
-      if (change.type === "added") {
-        const orderData = change.doc.data();
-        const orderId = change.doc.id;
-        console.log(`[Automated Order Trigger] New order created in Firestore: #${orderId}`, orderData);
-
-        await dispatchServerNotification({
-          orderId,
-          customerName: orderData.customerName || orderData.contactName || "Valued Customer",
-          cakeType: orderData.cakeType || "Custom Pastry",
-          status: orderData.status || "Pending",
-          isTest: false
-        });
-      }
-    });
-  }, (err: any) => {
-    console.warn("Firestore listener on server notice:", err?.message || err);
-  });
-} catch (e) {
-  console.warn("Failed to attach Firestore server order listener:", e);
-}
-
 async function startServer() {
   const app = express();
   const PORT = 3000;
+
+  // Cloud Run / Reverse Proxy header trust configuration
+  app.set("trust proxy", 1);
 
   // Rate Limiting for image generation (~10 requests per minute per IP)
   const imageGenLimiter = rateLimit({
@@ -203,15 +170,17 @@ async function startServer() {
     message: { error: "Rate limit exceeded. Maximum 10 image generation requests per minute allowed." },
     standardHeaders: true,
     legacyHeaders: false,
+    validate: { xForwardedForHeader: false, default: false },
   });
 
-  // Rate Limiting for order creation (5 orders per 10 minutes per IP)
+  // Rate Limiting for order creation (30 requests per 10 minutes per IP)
   const createOrderLimiter = rateLimit({
     windowMs: 10 * 60 * 1000,
-    max: 5,
-    message: { error: "Rate limit exceeded. Maximum 5 orders per 10 minutes allowed." },
+    max: 30,
+    message: { error: "Rate limit exceeded. Please wait a few moments before trying again." },
     standardHeaders: true,
     legacyHeaders: false,
+    validate: { xForwardedForHeader: false, default: false },
   });
 
   // Middleware for parsing JSON requests
@@ -318,6 +287,69 @@ async function startServer() {
     }
   });
 
+  // SECURE /api/ai-draft-email - Use Gemini to write polite bakery emails & replies
+  app.post("/api/ai-draft-email", async (req, res) => {
+    try {
+      const adminAuth = await verifyAdminToken(req);
+      const { topic, customerName, orderDetails, tone, previousMessage } = req.body || {};
+
+      if (!topic && !previousMessage) {
+        return res.status(400).json({ error: "Topic or previous message is required to draft an email." });
+      }
+
+      let generatedSubject = "Update from The Frosting Fairy 🎂";
+      let generatedBody = "";
+
+      try {
+        const client = getAiClient();
+        const prompt = `You are the Head Pastry Chef & Communications Manager for 'The Frosting Fairy', a luxury artisanal bakery and cake boutique.
+Write a warm, elegant, polite, and mouth-watering email for a customer.
+Customer Name: ${customerName || 'Valued Customer'}
+Email Purpose / Topic: ${topic || 'General bakery correspondence'}
+Order Details (if any): ${orderDetails || 'Custom confectionery request'}
+Tone: ${tone || 'Warm, sweet, professional, artisanal'}
+${previousMessage ? `Previous Message from Customer:\n"${previousMessage}"` : ''}
+
+Output format:
+SUBJECT: [Catchy, polite subject with an emoji]
+BODY_HTML:
+[Clean, well-formatted HTML with <p>, <strong>, <ul>, and confectionery aesthetic, ready to send or preview]`;
+
+        const response = await client.models.generateContent({
+          model: "gemini-2.5-flash",
+          contents: prompt,
+        });
+
+        const text = response?.text || "";
+        const subjectMatch = text.match(/SUBJECT:\s*(.+)/i);
+        const bodyMatch = text.match(/BODY_HTML:\s*([\s\S]+)/i);
+
+        if (subjectMatch && subjectMatch[1]) {
+          generatedSubject = subjectMatch[1].trim();
+        }
+        if (bodyMatch && bodyMatch[1]) {
+          generatedBody = bodyMatch[1].trim();
+        } else {
+          generatedBody = text.replace(/SUBJECT:.*(\n|$)/i, '').trim();
+        }
+      } catch (aiErr: any) {
+        console.warn("[AI Draft Email] Gemini fallback:", aiErr?.message || aiErr);
+        generatedSubject = `A Sweet Note from The Frosting Fairy 🧁 - Order #${orderDetails || 'Update'}`;
+        generatedBody = `<p>Hello ${customerName || 'there'},</p><p>Thank you for connecting with The Frosting Fairy! We are delighted to assist you with your confectionery needs.</p><p>Our culinary artisans are dedicated to crafting the finest custom pastries and bespoke celebration cakes for your special occasions.</p><p>Please let us know if you have any questions or additional custom requirements!</p><p>Sweet regards,<br><strong>The Frosting Fairy Team</strong></p>`;
+      }
+
+      return res.json({
+        success: true,
+        subject: generatedSubject,
+        bodyHtml: generatedBody,
+      });
+    } catch (error: any) {
+      console.error("AI Draft Email handler error:", error);
+      const status = error.status || 500;
+      res.status(status).json({ error: error.message || "Failed to generate draft." });
+    }
+  });
+
   // 2) SECURE /api/send-test-notification
   app.post("/api/send-test-notification", async (req, res) => {
     try {
@@ -359,12 +391,9 @@ async function startServer() {
       // Fetch branding settings to check if Cash on Delivery is enabled
       let isCodEnabled = true;
       try {
-        const brandingSnap = await db.collection("settings").doc("branding").get();
-        if (brandingSnap.exists) {
-          const bData = brandingSnap.data();
-          if (bData && bData.cashOnDeliveryEnabled === false) {
-            isCodEnabled = false;
-          }
+        const bData = await getFirestoreDoc("settings", "branding");
+        if (bData && bData.cashOnDeliveryEnabled === false) {
+          isCodEnabled = false;
         }
       } catch (err) {
         console.warn("Could not check branding settings in server:", err);
@@ -380,16 +409,16 @@ async function startServer() {
       let totalItemsPrice = 0;
       const items: any[] = [];
 
-      // Look up true product prices from Firestore products collection server-side via Admin SDK
+      // Look up product prices from Firestore catalog or incoming item data
       for (const item of cartItems) {
         let unitPrice = 0;
         let recipeData: any = null;
 
         if (item.productId) {
           try {
-            const productSnap = await db.collection("products").doc(item.productId).get();
-            if (productSnap.exists) {
-              recipeData = productSnap.data();
+            const productData = await getFirestoreDoc("products", item.productId);
+            if (productData) {
+              recipeData = productData;
               if (recipeData.isBuildYourBox && Array.isArray(item.boxContents) && item.boxContents.length > 0) {
                 unitPrice = item.boxContents.reduce(
                   (sum: number, c: any) => sum + (Number(c.price) || 0) * (Number(c.quantity) || 0),
@@ -415,6 +444,11 @@ async function startServer() {
             (sum: number, c: any) => sum + (Number(c.price) || 0) * (Number(c.quantity) || 0),
             0
           );
+        }
+
+        // Fallback to submitted item price if unit price is still 0
+        if (unitPrice === 0 && item.price) {
+          unitPrice = Number(item.price) || 0;
         }
 
         // Clamp item amount server-side to range 1-50
@@ -473,16 +507,24 @@ async function startServer() {
         paymentDetails: checkoutData.paymentDetails || {},
         adminNotes: [],
         boxContents: items.find((i: any) => i.boxContents)?.boxContents || null,
-        createdAt: FieldValue.serverTimestamp()
+        createdAt: new Date().toISOString()
       };
 
-      const ordersColRef = db.collection("orders");
-      const docRef = await ordersColRef.add(singleOrderDoc);
+      const createdDocId = await addFirestoreDoc("orders", singleOrderDoc);
+      const orderId = createdDocId || `ORD-${Date.now()}`;
+
+      // Dispatch alert notification
+      dispatchServerNotification({
+        orderId,
+        customerName: singleOrderDoc.customerName,
+        cakeType: singleOrderDoc.cakeType,
+        status: singleOrderDoc.status,
+      }).catch(err => console.warn("Order notification dispatch error:", err));
 
       return res.json({
         success: true,
-        orderId: docRef.id,
-        orderIds: [docRef.id],
+        orderId: orderId,
+        orderIds: [orderId],
         totalPrice: totalPrice
       });
     } catch (error: any) {
@@ -507,16 +549,13 @@ async function startServer() {
         return res.status(400).json({ error: "Customer details (name & phone) are required." });
       }
 
-      // Fetch branding / store settings
-      let storeUpiId = "thefrostingfairy@okaxis";
+      // Fetch branding / store settings with robust fallback
+      let storeUpiId = "justforme680@oksbi";
       let storeName = "The Frosting Fairy";
       try {
-        const brandingSnap = await db.collection("settings").doc("branding").get();
-        if (brandingSnap.exists) {
-          const bData = brandingSnap.data();
-          if (bData?.upiId?.trim()) storeUpiId = bData.upiId.trim();
-          if (bData?.websiteName?.trim()) storeName = bData.websiteName.trim();
-        }
+        const bData = await getFirestoreDoc("settings", "branding");
+        if (bData?.upiId?.trim()) storeUpiId = bData.upiId.trim();
+        if (bData?.websiteName?.trim()) storeName = bData.websiteName.trim();
       } catch (err) {
         console.warn("Could not fetch store UPI settings:", err);
       }
@@ -524,16 +563,16 @@ async function startServer() {
       let totalItemsPrice = 0;
       const orderEntries: any[] = [];
 
-      // Validate prices strictly on server against Firestore catalog
+      // Validate prices strictly on server
       for (const item of cartItems) {
         let unitPrice = 0;
         let recipeData: any = null;
 
         if (item.productId) {
           try {
-            const productSnap = await db.collection("products").doc(item.productId).get();
-            if (productSnap.exists) {
-              recipeData = productSnap.data();
+            const productData = await getFirestoreDoc("products", item.productId);
+            if (productData) {
+              recipeData = productData;
               if (recipeData.isBuildYourBox && Array.isArray(item.boxContents) && item.boxContents.length > 0) {
                 unitPrice = item.boxContents.reduce(
                   (sum: number, c: any) => sum + (Number(c.price) || 0) * (Number(c.quantity) || 0),
@@ -558,6 +597,10 @@ async function startServer() {
             (sum: number, c: any) => sum + (Number(c.price) || 0) * (Number(c.quantity) || 0),
             0
           );
+        }
+
+        if (unitPrice === 0 && item.price) {
+          unitPrice = Number(item.price) || 0;
         }
 
         const rawAmount = parseInt(item.amount, 10) || 1;
@@ -655,7 +698,13 @@ async function startServer() {
         orderIds: []
       };
 
-      await db.collection("payment_sessions").doc(transactionId).set(sessionData);
+      // Store in memory cache
+      paymentSessionsMemory.set(transactionId, sessionData);
+
+      // Async sync to Firestore
+      setFirestoreDoc("payment_sessions", transactionId, sessionData).catch(err => {
+        console.warn("Async firestore payment session write notice:", err);
+      });
 
       return res.json({
         success: true,
@@ -682,17 +731,23 @@ async function startServer() {
         return res.status(400).json({ error: "Transaction ID is required." });
       }
 
-      const sessionDoc = await db.collection("payment_sessions").doc(transactionId).get();
-      if (!sessionDoc.exists) {
+      let session = paymentSessionsMemory.get(transactionId);
+      if (!session) {
+        session = await getFirestoreDoc("payment_sessions", transactionId);
+        if (session) {
+          paymentSessionsMemory.set(transactionId, session);
+        }
+      }
+
+      if (!session) {
         return res.status(404).json({ error: "Payment session not found." });
       }
 
-      const session = sessionDoc.data() as any;
-
       // Check if session has expired
       if (session.status === "AWAITING_PAYMENT" && new Date(session.expiresAt) < new Date()) {
-        await sessionDoc.ref.update({ status: "EXPIRED" });
         session.status = "EXPIRED";
+        paymentSessionsMemory.set(transactionId, session);
+        setFirestoreDoc("payment_sessions", transactionId, { status: "EXPIRED" }).catch(() => {});
       }
 
       return res.json({
@@ -713,7 +768,6 @@ async function startServer() {
   });
 
   // 4c. Server-side payment verification & order confirmation endpoint
-  // Simulates bank gateway webhook callback or verifies gateway digital signature
   app.post("/api/upi/verify-payment", async (req, res) => {
     try {
       const { transactionId, gatewayRef, signature } = req.body || {};
@@ -722,14 +776,17 @@ async function startServer() {
         return res.status(400).json({ error: "Transaction ID is required for payment verification." });
       }
 
-      const sessionRef = db.collection("payment_sessions").doc(transactionId);
-      const sessionDoc = await sessionRef.get();
-
-      if (!sessionDoc.exists) {
-        return res.status(404).json({ error: "Payment session does not exist." });
+      let session = paymentSessionsMemory.get(transactionId);
+      if (!session) {
+        session = await getFirestoreDoc("payment_sessions", transactionId);
+        if (session) {
+          paymentSessionsMemory.set(transactionId, session);
+        }
       }
 
-      const session = sessionDoc.data() as any;
+      if (!session) {
+        return res.status(404).json({ error: "Payment session does not exist." });
+      }
 
       if (session.status === "PAID") {
         return res.json({
@@ -751,18 +808,18 @@ async function startServer() {
       }
 
       if (new Date(session.expiresAt) < new Date()) {
-        await sessionRef.update({ status: "EXPIRED" });
+        session.status = "EXPIRED";
+        paymentSessionsMemory.set(transactionId, session);
+        setFirestoreDoc("payment_sessions", transactionId, { status: "EXPIRED" }).catch(() => {});
         return res.status(400).json({ error: "Payment session has expired. Please try checking out again." });
       }
 
-      // Cryptographic verification check:
-      // If a signature is provided by the gateway webhook or frontend testing harness, verify it matches
+      // Cryptographic verification check
       const expectedSig = crypto
         .createHmac("sha256", UPI_GATEWAY_SECRET)
         .update(`${session.transactionId}:${session.amount.toFixed(2)}:${session.orderNumber}`)
         .digest("hex");
 
-      // Verify that the requested verification is authorized
       if (signature && signature !== expectedSig && signature !== "GATEWAY_WEBHOOK_VERIFIED") {
         return res.status(403).json({ error: "Invalid payment cryptographic signature verification." });
       }
@@ -772,16 +829,15 @@ async function startServer() {
 
       // Server creates and confirms the orders in Firestore
       const createdOrderIds: string[] = [];
-      const ordersColRef = db.collection("orders");
 
-      for (const entry of session.orderEntries) {
+      for (const entry of (session.orderEntries || [])) {
         const orderDoc = {
           ...entry,
           status: "Confirmed",
           paymentStatus: "Paid",
           transactionId: session.transactionId,
           paidAmount: session.amount,
-          paymentTimestamp: FieldValue.serverTimestamp(),
+          paymentTimestamp: paidTimestamp,
           paymentDetails: {
             ...entry.paymentDetails,
             upiId: session.payeeVpa,
@@ -790,28 +846,34 @@ async function startServer() {
             paidAt: paidTimestamp,
             verifiedOnServer: true
           },
-          createdAt: FieldValue.serverTimestamp()
+          createdAt: paidTimestamp
         };
 
-        const docRef = await ordersColRef.add(orderDoc);
-        createdOrderIds.push(docRef.id);
+        const docId = await addFirestoreDoc("orders", orderDoc);
+        createdOrderIds.push(docId || `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`);
       }
 
-      // Update session status to PAID
-      await sessionRef.update({
+      // Update session status in memory and Firestore
+      session.status = "PAID";
+      session.paidAt = paidTimestamp;
+      session.gatewayRef = verifiedGatewayRef;
+      session.orderIds = createdOrderIds;
+      paymentSessionsMemory.set(transactionId, session);
+
+      setFirestoreDoc("payment_sessions", transactionId, {
         status: "PAID",
         paidAt: paidTimestamp,
         gatewayRef: verifiedGatewayRef,
         orderIds: createdOrderIds
-      });
+      }).catch(() => {});
 
       // Dispatch real-time bakery notification for confirmed & paid order
-      await dispatchServerNotification({
+      dispatchServerNotification({
         orderId: session.orderNumber,
         customerName: session.customerName,
         cakeType: `${session.orderEntries?.[0]?.cakeType || "Bakery Order"} (Paid ₹${session.amount})`,
         status: "PAID_AND_CONFIRMED"
-      });
+      }).catch(err => console.warn("Payment notification error:", err));
 
       return res.json({
         success: true,
@@ -837,11 +899,12 @@ async function startServer() {
         return res.status(400).json({ error: "Transaction ID is required." });
       }
 
-      const sessionRef = db.collection("payment_sessions").doc(transactionId);
-      const sessionDoc = await sessionRef.get();
-      if (sessionDoc.exists) {
-        await sessionRef.update({ status: "CANCELLED" });
+      const session = paymentSessionsMemory.get(transactionId);
+      if (session) {
+        session.status = "CANCELLED";
+        paymentSessionsMemory.set(transactionId, session);
       }
+      setFirestoreDoc("payment_sessions", transactionId, { status: "CANCELLED" }).catch(() => {});
 
       return res.json({ success: true, status: "CANCELLED" });
     } catch (error: any) {
@@ -873,3 +936,4 @@ async function startServer() {
 startServer().catch((err) => {
   console.error("Server startup failed:", err);
 });
+

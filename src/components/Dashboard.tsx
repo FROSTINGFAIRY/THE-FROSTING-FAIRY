@@ -221,7 +221,7 @@ export default function Dashboard({
       <header id="dashboard-header" className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div id="header-greetings" className="flex items-center gap-4 text-left">
           <div className="w-16 h-16 rounded-full border border-brand-cocoa-border overflow-hidden bg-white shadow-xs shrink-0 p-0.5">
-            <img src={logo} alt="The Frosting Fairy Logo" className="w-full h-full object-cover rounded-full" />
+            <img src={logo} alt="The Frosting Fairy Logo" width="64" height="64" className="w-full h-full object-cover rounded-full" />
           </div>
           <div>
             <h2 id="welcome-title" className="font-display font-black text-3xl text-brand-cocoa tracking-tight uppercase">
@@ -271,6 +271,9 @@ export default function Dashboard({
               id="hero-recipe-image"
               src={heroRecipe.image}
               alt={heroRecipe.name}
+              width="700"
+              height="400"
+              fetchPriority="high"
               className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
             />
             {/* Badges on Hero Image */}
@@ -420,6 +423,8 @@ export default function Dashboard({
                         <img
                           src={displayImg}
                           alt={cat.name}
+                          width="400"
+                          height="224"
                           loading="lazy"
                           decoding="async"
                           onError={(e) => {
@@ -547,6 +552,8 @@ export default function Dashboard({
                     <img
                       src={currentCatInfo.image}
                       alt={currentCatInfo.name}
+                      width="400"
+                      height="300"
                       loading="lazy"
                       decoding="async"
                       className="w-full h-full object-cover"
@@ -592,6 +599,8 @@ export default function Dashboard({
                         id={`recipe-card-image-${recipe.id}`}
                         src={activeImage}
                         alt={recipe.name}
+                        width="400"
+                        height="224"
                         loading="lazy"
                         decoding="async"
                         className="w-full h-full object-cover transition-all duration-500 cursor-pointer"
@@ -702,7 +711,7 @@ export default function Dashboard({
                                   currentImgIdx === thumbIdx ? 'border-brand-pink ring-1 ring-brand-pink' : 'border-brand-cocoa-border/50 hover:border-brand-pink/50'
                                 }`}
                               >
-                                <img src={thumbUrl} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                                <img src={thumbUrl} alt="" width="36" height="28" loading="lazy" decoding="async" className="w-full h-full object-cover" />
                               </button>
                             ))}
                           </div>

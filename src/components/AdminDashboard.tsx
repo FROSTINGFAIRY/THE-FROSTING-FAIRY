@@ -44,6 +44,7 @@ import { motion } from 'motion/react';
 import { INITIAL_RECIPES, INITIAL_CATEGORY_INFOS } from '../data';
 import defaultLogoImg from '../assets/images/frosting_fairy_logo_1784129178255.jpg';
 import { PerformanceDashboard } from './PerformanceDashboard';
+import { GmailHub } from './GmailHub';
 import { db, auth, signInWithGoogle, logOutAdmin, checkIsAdminInFirestore, cleanFirestoreData } from '../lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { collection, onSnapshot, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, addDoc, serverTimestamp, query, orderBy, limit } from 'firebase/firestore';
@@ -132,7 +133,8 @@ export default function AdminDashboard({
   cashOnDeliveryEnabled,
   setCashOnDeliveryEnabled,
 }: AdminDashboardProps) {
-  const [adminTab, setAdminTab] = useState<'overview' | 'products' | 'categories' | 'branding' | 'authority' | 'orders'>('overview');
+  const [adminTab, setAdminTab] = useState<'overview' | 'products' | 'categories' | 'branding' | 'authority' | 'orders' | 'gmail'>('overview');
+  const [gmailPreselectedOrder, setGmailPreselectedOrder] = useState<MealPlanEntry | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
   const categoryInfos = passedCategoryInfos && passedCategoryInfos.length > 0
@@ -1028,7 +1030,7 @@ export default function AdminDashboard({
       if (data.hits && data.hits.length > 0) {
         const results = data.hits.slice(0, 4).map((p: any) => ({
           id: p.id,
-          url: p.largeImageURL || p.webformatURL,
+          url: p.webformatURL || p.largeImageURL,
           thumbnail: p.previewURL || p.webformatURL,
           user: p.user,
         }));
@@ -1108,7 +1110,7 @@ export default function AdminDashboard({
             if (response.ok) {
               const data = await response.json();
               if (data.hits && data.hits.length > 0) {
-                foundUrl = data.hits[0].largeImageURL || data.hits[0].webformatURL;
+                foundUrl = data.hits[0].webformatURL || data.hits[0].largeImageURL;
                 break;
               }
             }
@@ -1653,6 +1655,23 @@ export default function AdminDashboard({
             <span>Customer Orders Queue</span>
           </button>
           <button
+            onClick={() => {
+              setAdminTab('gmail');
+              setGmailPreselectedOrder(null);
+            }}
+            className={`px-5 py-3 font-semibold text-sm transition-all border-b-2 flex items-center gap-2 cursor-pointer ${
+              adminTab === 'gmail'
+                ? 'border-brand-pink text-brand-pink font-bold border-brand-pink'
+                : 'border-transparent text-brand-cocoa-light hover:text-brand-cocoa'
+            }`}
+          >
+            <Mail className="w-4 h-4 text-brand-pink" />
+            <span>Gmail Communications</span>
+            <span className="font-mono text-[9px] uppercase px-1.5 py-0.5 rounded-full bg-brand-pink/15 text-brand-pink font-bold border border-brand-pink/30">
+              Live
+            </span>
+          </button>
+          <button
             onClick={() => setAdminTab('authority')}
             className={`px-5 py-3 font-semibold text-sm transition-all border-b-2 flex items-center gap-2 cursor-pointer ${
               adminTab === 'authority'
@@ -1774,6 +1793,16 @@ export default function AdminDashboard({
                   >
                     <span className="text-lg block group-hover:scale-110 transition-transform">📦</span>
                     <span className="text-[11px] font-bold text-brand-cocoa block mt-1">Orders Desk</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setAdminTab('gmail');
+                      setGmailPreselectedOrder(null);
+                    }}
+                    className="p-3 bg-brand-cream-light/30 hover:bg-brand-pink-light/40 border border-brand-cocoa-border/40 rounded-xl text-center group cursor-pointer transition-all animate-none h-auto w-auto"
+                  >
+                    <span className="text-lg block group-hover:scale-110 transition-transform">📧</span>
+                    <span className="text-[11px] font-bold text-brand-cocoa block mt-1">Gmail Hub</span>
                   </button>
                   <button
                     onClick={() => setAdminTab('authority')}
@@ -3789,12 +3818,24 @@ export default function AdminDashboard({
                         </button>
 
                         <button
-                          onClick={() => setSelectedEmailPreviewOrder(order)}
-                          className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-brand-pink hover:bg-brand-pink-dark text-white font-sans font-bold text-xs rounded-xl transition-all cursor-pointer shadow-xs hover:shadow-sm"
-                          title="Open interactive email notification simulator for this customer"
+                          onClick={() => {
+                            setGmailPreselectedOrder(order);
+                            setAdminTab('gmail');
+                          }}
+                          className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-brand-pink to-brand-pink-dark hover:from-brand-pink-dark hover:to-brand-pink text-white font-sans font-bold text-xs rounded-xl transition-all cursor-pointer shadow-xs hover:shadow-sm"
+                          title="Dispatch luxury order receipt directly through connected Gmail account"
                         >
                           <Mail className="w-3.5 h-3.5" />
-                          <span>Send Order Confirmation</span>
+                          <span>Dispatch via Bakery Gmail</span>
+                        </button>
+
+                        <button
+                          onClick={() => setSelectedEmailPreviewOrder(order)}
+                          className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white hover:bg-brand-cream-light text-brand-cocoa border border-brand-cocoa-border font-sans font-bold text-xs rounded-xl transition-all cursor-pointer shadow-3xs"
+                          title="Open interactive email notification simulator for this customer"
+                        >
+                          <FileText className="w-3.5 h-3.5 text-brand-pink" />
+                          <span>Email Simulator Preview</span>
                         </button>
 
                         <button
@@ -4173,7 +4214,7 @@ export default function AdminDashboard({
                           value={upiIdInput}
                           onChange={(e) => setUpiIdInput(e.target.value)}
                           className="w-full px-3.5 py-2 text-xs font-mono font-bold text-brand-cocoa border border-brand-cocoa-border rounded-xl focus:outline-none focus:ring-1 focus:ring-brand-pink bg-brand-cream-light/10"
-                          placeholder="E.g. thefrostingfairy@okaxis"
+                          placeholder="E.g. justforme680@oksbi"
                         />
                       </div>
 
@@ -4398,6 +4439,20 @@ export default function AdminDashboard({
           </div>
 
         </div>
+      )}
+
+      {/* GMAIL COMMUNICATIONS TAB */}
+      {adminTab === 'gmail' && (
+        <GmailHub
+          websiteName={websiteName}
+          websiteSlogan={websiteSlogan}
+          mealPlan={mealPlan}
+          currentRole={currentRole}
+          addToast={addToast}
+          addAuditLog={addAuditLog}
+          preselectedOrder={gmailPreselectedOrder}
+          onClearPreselectedOrder={() => setGmailPreselectedOrder(null)}
+        />
       )}
 
       {/* EMAIL PREVIEW SIMULATION MODAL OVERLAY */}

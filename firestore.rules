@@ -56,6 +56,11 @@ service cloud.firestore {
       allow delete: if isRoleAdmin();
     }
 
+    // Payment sessions collection: allow read & write for UPI checkout session verification
+    match /payment_sessions/{sessionId} {
+      allow read, write: if true;
+    }
+
     // Admins collection: read allowed for signed-in admins only, write for role admin
     match /admins/{email} {
       allow read: if isAdmin();

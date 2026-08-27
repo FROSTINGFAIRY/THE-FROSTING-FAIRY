@@ -99,6 +99,8 @@ export interface MealPlanEntry {
   recipe?: Recipe; // compatibility
   customerName?: string;
   customerPhone?: string;
+  customerEmail?: string;
+  contactEmail?: string;
   specialInstructions?: string;
   deliveryType?: 'Pickup' | 'Delivery';
   deliveryAddress?: string;

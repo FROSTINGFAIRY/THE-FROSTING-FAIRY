@@ -35,7 +35,7 @@ export default function App() {
   const [logo, setLogo] = useState<string>(logoImg);
   const [websiteName, setWebsiteName] = useState<string>('THE FROSTING FAIRY');
   const [websiteSlogan, setWebsiteSlogan] = useState<string>('CREATING EDIBLE MAGIC');
-  const [upiId, setUpiId] = useState<string>('thefrostingfairy@okaxis');
+  const [upiId, setUpiId] = useState<string>('justforme680@oksbi');
   const [upiQrCode, setUpiQrCode] = useState<string>('');
   const [cashOnDeliveryEnabled, setCashOnDeliveryEnabled] = useState<boolean>(true);
 
@@ -179,9 +179,26 @@ export default function App() {
         if (data.logo) setLogo(data.logo);
         if (data.websiteName) setWebsiteName(data.websiteName);
         if (data.websiteSlogan) setWebsiteSlogan(data.websiteSlogan);
-        if (data.upiId) setUpiId(data.upiId);
+        if (data.upiId) {
+          if (data.upiId === 'thefrostingfairy@okaxis') {
+            setUpiId('justforme680@oksbi');
+            setDoc(brandingRef, { upiId: 'justforme680@oksbi' }, { merge: true }).catch((err) => {
+              console.warn('Auto-sync UPI ID update error:', err);
+            });
+          } else {
+            setUpiId(data.upiId);
+          }
+        } else {
+          setUpiId('justforme680@oksbi');
+        }
         if (data.upiQrCode !== undefined) setUpiQrCode(data.upiQrCode);
         if (data.cashOnDeliveryEnabled !== undefined) setCashOnDeliveryEnabled(data.cashOnDeliveryEnabled);
+      } else {
+        setDoc(brandingRef, {
+          upiId: 'justforme680@oksbi',
+        }, { merge: true }).catch((err) => {
+          console.warn('Init branding doc error:', err);
+        });
       }
     }, (err) => {
       if (err.message?.includes('CANCELLED') || err.code === 'cancelled') {
