@@ -81,6 +81,30 @@ export interface CategoryInfo {
 
 export type MealType = 'Breakfast' | 'Lunch' | 'Dinner';
 
+export interface CheckoutData {
+  customerName: string;
+  customerPhone: string;
+  pickupDate: string;
+  pickupTime: string;
+  specialInstructions: string;
+  deliveryType: 'Pickup' | 'Delivery';
+  deliveryAddress: string;
+  gpsCoordinates: string;
+  paymentMethod: 'Razorpay' | 'COD';
+  paymentStatus?: 'Unpaid' | 'Paid' | 'Pending' | 'Failed';
+  paymentDetails: {
+    gateway?: string;
+    razorpayOrderId?: string;
+    razorpayPaymentId?: string;
+    gatewayRef?: string;
+    paidAt?: string;
+    verifiedOnServer?: boolean;
+    cardHolder?: string;
+    cardNumber?: string;
+    upiId?: string;
+  };
+}
+
 export interface MealPlanEntry {
   id: string;
   cakeType: string; // "Bento Cake", "Half Kg Cake", "1 Kg Custom Cake", etc.
@@ -105,12 +129,15 @@ export interface MealPlanEntry {
   deliveryType?: 'Pickup' | 'Delivery';
   deliveryAddress?: string;
   gpsCoordinates?: string;
-  paymentMethod?: 'Card' | 'UPI' | 'COD';
+  paymentMethod?: 'Razorpay' | 'COD' | 'Card' | 'UPI';
   paymentStatus?: 'Unpaid' | 'Paid' | 'Pending' | 'Failed' | 'Refunded';
   transactionId?: string;
   paymentTimestamp?: string;
   paidAmount?: number;
   paymentDetails?: {
+    gateway?: string;
+    razorpayOrderId?: string;
+    razorpayPaymentId?: string;
     cardHolder?: string;
     cardNumber?: string;
     upiId?: string;

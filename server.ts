@@ -4,6 +4,7 @@ import crypto from "crypto";
 import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
 import rateLimit from "express-rate-limit";
+import Razorpay from "razorpay";
 import firebaseConfig from "./firebase-applet-config.json";
 import {
   getFirestoreDoc,
@@ -14,10 +15,26 @@ import {
 dotenv.config();
 
 const DEFAULT_ADMINS = ['kiddepressed03@gmail.com', 'hellofrostingfairy@gmail.com'];
-const UPI_GATEWAY_SECRET = process.env.UPI_GATEWAY_SECRET || "frosting_fairy_upi_gateway_secret_2026";
 
-// High-speed, reliable in-memory payment session cache with automatic expiration
-const paymentSessionsMemory = new Map<string, any>();
+// In-memory pending order cache for Razorpay checkout sessions
+const pendingRazorpayOrdersMemory = new Map<string, any>();
+
+// Lazily initialize Razorpay client to avoid startup crashes if keys are not set yet
+let razorpayClient: Razorpay | null = null;
+function getRazorpayInstance(): Razorpay {
+  const key_id = process.env.RAZORPAY_KEY_ID || process.env.VITE_RAZORPAY_KEY_ID;
+  const key_secret = process.env.RAZORPAY_KEY_SECRET;
+  if (!key_id || !key_secret) {
+    throw new Error("Razorpay API credentials (RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET) are required on the server.");
+  }
+  if (!razorpayClient) {
+    razorpayClient = new Razorpay({
+      key_id,
+      key_secret,
+    });
+  }
+  return razorpayClient;
+}
 
 /**
  * Server-side Admin Token Verification helper using Firebase Identity Toolkit lookup
@@ -182,8 +199,15 @@ async function startServer() {
     validate: { xForwardedForHeader: false, default: false },
   });
 
-  // Middleware for parsing JSON requests
-  app.use(express.json({ limit: "10mb" }));
+  // Middleware for parsing JSON requests with rawBody preserved for webhook signatures
+  app.use(
+    express.json({
+      limit: "10mb",
+      verify: (req: any, _res, buf) => {
+        req.rawBody = buf;
+      },
+    })
+  );
 
   // Initialize GoogleGenAI client lazily via dynamic import
   let ai: any = null;
@@ -376,7 +400,208 @@ BODY_HTML:
     }
   });
 
-  // 3) VALIDATE ORDER PRICING SERVER-SIDE /api/create-order
+  /**
+   * Server-side helper to strictly re-derive order item prices and delivery fee from Firestore
+   */
+  async function deriveOrderItemsAndTotals(cartItems: any[], checkoutData: any) {
+    let totalItemsPrice = 0;
+    const items: any[] = [];
+
+    for (const item of cartItems) {
+      let unitPrice = 0;
+      let recipeData: any = null;
+
+      if (item.productId) {
+        try {
+          const productData = await getFirestoreDoc("products", item.productId);
+          if (productData) {
+            recipeData = productData;
+            if (recipeData.isBuildYourBox && Array.isArray(item.boxContents) && item.boxContents.length > 0) {
+              unitPrice = item.boxContents.reduce(
+                (sum: number, c: any) => sum + (Number(c.price) || 0) * (Number(c.quantity) || 0),
+                0
+              );
+            } else if (Array.isArray(recipeData.priceOptions) && recipeData.priceOptions.length > 0) {
+              const matchedOpt = recipeData.priceOptions.find(
+                (opt: any) => opt.label === item.selectedOption || opt.label === item.unit
+              );
+              unitPrice = matchedOpt ? matchedOpt.price : recipeData.priceOptions[0].price;
+            } else {
+              unitPrice = recipeData.basePrice || recipeData.price || 0;
+            }
+          }
+        } catch (err) {
+          console.warn(`Error looking up product ${item.productId}:`, err);
+        }
+      }
+
+      // Fallback calculation for box contents if product wasn't found in Firestore
+      if (unitPrice === 0 && Array.isArray(item.boxContents) && item.boxContents.length > 0) {
+        unitPrice = item.boxContents.reduce(
+          (sum: number, c: any) => sum + (Number(c.price) || 0) * (Number(c.quantity) || 0),
+          0
+        );
+      }
+
+      // Fallback to submitted item price if unit price is still 0
+      if (unitPrice === 0 && item.price) {
+        unitPrice = Number(item.price) || 0;
+      }
+
+      // Clamp item amount server-side to range 1-50
+      const rawAmount = parseInt(item.amount, 10) || 1;
+      const itemQuantity = Math.min(50, Math.max(1, rawAmount));
+
+      const calculatedLinePrice = unitPrice * itemQuantity;
+      totalItemsPrice += calculatedLinePrice;
+
+      items.push({
+        productId: item.productId || null,
+        name: item.name || recipeData?.name || "Custom Pastry",
+        cakeType: item.name || recipeData?.name || "Custom Pastry",
+        flavor: item.recipeName || recipeData?.category || "Standard Flavor",
+        weight: item.selectedOption || "Standard",
+        selectedOption: item.selectedOption || "Standard",
+        unit: item.unit || "pcs",
+        amount: itemQuantity,
+        unitPrice: unitPrice,
+        linePrice: calculatedLinePrice,
+        message: item.customMessage || "",
+        customMessage: item.customMessage || "",
+        instructions: item.customMessage ? `Text on cake: "${item.customMessage}"` : "",
+        boxContents: Array.isArray(item.boxContents) ? item.boxContents : null,
+        recipe: recipeData || null,
+      });
+    }
+
+    // Server-side delivery fee calculation
+    const deliveryFee = checkoutData.deliveryType === "Delivery" ? (totalItemsPrice >= 600 ? 0 : 50) : 0;
+    const totalPrice = totalItemsPrice + deliveryFee;
+
+    return { totalItemsPrice, deliveryFee, totalPrice, items };
+  }
+
+  /**
+   * Shared helper for fulfilling a verified Razorpay payment into real Firestore orders
+   * Fully idempotent: will not double-create orders if called by both client verify & webhook
+   */
+  async function fulfillRazorpayOrder({
+    razorpayOrderId,
+    razorpayPaymentId,
+    gatewayRef,
+  }: {
+    razorpayOrderId: string;
+    razorpayPaymentId: string;
+    gatewayRef?: string;
+  }) {
+    let pendingData = pendingRazorpayOrdersMemory.get(razorpayOrderId);
+    if (!pendingData) {
+      pendingData = await getFirestoreDoc("pending_razorpay_orders", razorpayOrderId);
+      if (pendingData) {
+        pendingRazorpayOrdersMemory.set(razorpayOrderId, pendingData);
+      }
+    }
+
+    if (!pendingData) {
+      throw new Error(`Pending order snapshot for Razorpay Order ${razorpayOrderId} not found.`);
+    }
+
+    // Idempotency: if already paid, return existing created order metadata
+    if (pendingData.status === "PAID" && Array.isArray(pendingData.orderIds) && pendingData.orderIds.length > 0) {
+      return {
+        success: true,
+        status: "PAID",
+        orderIds: pendingData.orderIds,
+        orderNumber: pendingData.orderNumber || pendingData.orderIds[0],
+        paidAmount: pendingData.totalPrice,
+        transactionId: razorpayPaymentId,
+        paidAt: pendingData.paidAt,
+        gatewayRef: pendingData.gatewayRef || razorpayPaymentId,
+      };
+    }
+
+    const { items, checkoutData, totalPrice, deliveryFee } = pendingData;
+    const paidTimestamp = new Date().toISOString();
+    const orderNumber = `TFF-${Math.floor(100000 + Math.random() * 900000)}`;
+
+    const singleOrderDoc = {
+      cakeType: items.length === 1 ? items[0].cakeType : items.map((i: any) => i.cakeType).join(", "),
+      flavor: items.length === 1 ? items[0].flavor : (items[0]?.flavor || "Assorted Flavors"),
+      weight: items.length === 1 ? items[0].weight : `${items.length} Items`,
+      message: items.map((i: any) => i.message).filter(Boolean).join("; ") || "",
+      instructions: items.map((i: any) => i.instructions).filter(Boolean).join("; ") || "",
+      pickupDate: checkoutData.pickupDate || "",
+      pickupTime: checkoutData.pickupTime || "",
+      contactName: checkoutData.customerName,
+      contactPhone: checkoutData.customerPhone,
+      estimatedPrice: totalPrice,
+      totalPrice: totalPrice,
+      deliveryFee: deliveryFee,
+      items: items,
+      status: "Confirmed",
+      paymentStatus: "Paid",
+      recipe: items[0]?.recipe || null,
+      customerName: checkoutData.customerName,
+      customerPhone: checkoutData.customerPhone,
+      specialInstructions: checkoutData.specialInstructions || "",
+      deliveryType: checkoutData.deliveryType || "Pickup",
+      deliveryAddress: checkoutData.deliveryAddress || "",
+      gpsCoordinates: checkoutData.gpsCoordinates || "",
+      paymentMethod: "Razorpay",
+      paymentDetails: {
+        gateway: "Razorpay",
+        razorpayOrderId: razorpayOrderId,
+        razorpayPaymentId: razorpayPaymentId,
+        gatewayRef: gatewayRef || razorpayPaymentId,
+        verifiedOnServer: true,
+        paidAt: paidTimestamp,
+      },
+      adminNotes: [],
+      boxContents: items.find((i: any) => i.boxContents)?.boxContents || null,
+      createdAt: paidTimestamp,
+    };
+
+    const createdDocId = await addFirestoreDoc("orders", singleOrderDoc);
+    const orderId = createdDocId || `ORD-${Date.now()}`;
+    const createdOrderIds = [orderId];
+
+    // Update pending order snapshot state to PAID
+    pendingData.status = "PAID";
+    pendingData.paidAt = paidTimestamp;
+    pendingData.gatewayRef = gatewayRef || razorpayPaymentId;
+    pendingData.orderNumber = orderNumber;
+    pendingData.orderIds = createdOrderIds;
+    pendingRazorpayOrdersMemory.set(razorpayOrderId, pendingData);
+
+    setFirestoreDoc("pending_razorpay_orders", razorpayOrderId, {
+      status: "PAID",
+      paidAt: paidTimestamp,
+      gatewayRef: gatewayRef || razorpayPaymentId,
+      orderNumber,
+      orderIds: createdOrderIds,
+    }).catch((err) => console.warn("Async firestore pending order write notice:", err));
+
+    // Dispatch real-time bakery notification for confirmed & paid order
+    dispatchServerNotification({
+      orderId: orderNumber,
+      customerName: singleOrderDoc.customerName,
+      cakeType: `${singleOrderDoc.cakeType} (Paid ₹${totalPrice} via Razorpay)`,
+      status: "PAID_AND_CONFIRMED",
+    }).catch((err) => console.warn("Payment notification error:", err));
+
+    return {
+      success: true,
+      status: "PAID",
+      orderIds: createdOrderIds,
+      orderNumber: orderNumber,
+      paidAmount: totalPrice,
+      transactionId: razorpayPaymentId,
+      paidAt: paidTimestamp,
+      gatewayRef: gatewayRef || razorpayPaymentId,
+    };
+  }
+
+  // 3) VALIDATE ORDER PRICING SERVER-SIDE /api/create-order (Cash on Delivery)
   app.post("/api/create-order", createOrderLimiter, async (req, res) => {
     try {
       const { cartItems, checkoutData } = req.body || {};
@@ -399,87 +624,14 @@ BODY_HTML:
         console.warn("Could not check branding settings in server:", err);
       }
 
-      const requestedPaymentMethod = checkoutData.paymentMethod || "Card";
+      const requestedPaymentMethod = checkoutData.paymentMethod || "COD";
       if (!isCodEnabled && requestedPaymentMethod === "COD") {
-        return res.status(400).json({ error: "Cash on Delivery is currently disabled by store management. Please select Card or UPI payment method." });
+        return res.status(400).json({ error: "Cash on Delivery is currently disabled by store management. Please select Pay Online." });
       }
 
-      const resolvedPaymentMethod = (!isCodEnabled && requestedPaymentMethod === "COD") ? "Card" : requestedPaymentMethod;
+      const resolvedPaymentMethod = (!isCodEnabled && requestedPaymentMethod === "COD") ? "Razorpay" : requestedPaymentMethod;
 
-      let totalItemsPrice = 0;
-      const items: any[] = [];
-
-      // Look up product prices from Firestore catalog or incoming item data
-      for (const item of cartItems) {
-        let unitPrice = 0;
-        let recipeData: any = null;
-
-        if (item.productId) {
-          try {
-            const productData = await getFirestoreDoc("products", item.productId);
-            if (productData) {
-              recipeData = productData;
-              if (recipeData.isBuildYourBox && Array.isArray(item.boxContents) && item.boxContents.length > 0) {
-                unitPrice = item.boxContents.reduce(
-                  (sum: number, c: any) => sum + (Number(c.price) || 0) * (Number(c.quantity) || 0),
-                  0
-                );
-              } else if (Array.isArray(recipeData.priceOptions) && recipeData.priceOptions.length > 0) {
-                const matchedOpt = recipeData.priceOptions.find(
-                  (opt: any) => opt.label === item.selectedOption || opt.label === item.unit
-                );
-                unitPrice = matchedOpt ? matchedOpt.price : recipeData.priceOptions[0].price;
-              } else {
-                unitPrice = recipeData.basePrice || recipeData.price || 0;
-              }
-            }
-          } catch (err) {
-            console.warn(`Error looking up product ${item.productId}:`, err);
-          }
-        }
-
-        // Fallback calculation for box contents if product wasn't found in Firestore
-        if (unitPrice === 0 && Array.isArray(item.boxContents) && item.boxContents.length > 0) {
-          unitPrice = item.boxContents.reduce(
-            (sum: number, c: any) => sum + (Number(c.price) || 0) * (Number(c.quantity) || 0),
-            0
-          );
-        }
-
-        // Fallback to submitted item price if unit price is still 0
-        if (unitPrice === 0 && item.price) {
-          unitPrice = Number(item.price) || 0;
-        }
-
-        // Clamp item amount server-side to range 1-50
-        const rawAmount = parseInt(item.amount, 10) || 1;
-        const itemQuantity = Math.min(50, Math.max(1, rawAmount));
-
-        const calculatedLinePrice = unitPrice * itemQuantity;
-        totalItemsPrice += calculatedLinePrice;
-
-        items.push({
-          productId: item.productId || null,
-          name: item.name || recipeData?.name || "Custom Pastry",
-          cakeType: item.name || recipeData?.name || "Custom Pastry",
-          flavor: item.recipeName || recipeData?.category || "Standard Flavor",
-          weight: item.selectedOption || "Standard",
-          selectedOption: item.selectedOption || "Standard",
-          unit: item.unit || "pcs",
-          amount: itemQuantity,
-          unitPrice: unitPrice,
-          linePrice: calculatedLinePrice,
-          message: item.customMessage || "",
-          customMessage: item.customMessage || "",
-          instructions: item.customMessage ? `Text on cake: "${item.customMessage}"` : "",
-          boxContents: Array.isArray(item.boxContents) ? item.boxContents : null,
-          recipe: recipeData || null,
-        });
-      }
-
-      // Server-side delivery fee calculation
-      const deliveryFee = checkoutData.deliveryType === "Delivery" ? (totalItemsPrice >= 600 ? 0 : 50) : 0;
-      const totalPrice = totalItemsPrice + deliveryFee;
+      const { totalItemsPrice, deliveryFee, totalPrice, items } = await deriveOrderItemsAndTotals(cartItems, checkoutData);
 
       const singleOrderDoc = {
         cakeType: items.length === 1 ? items[0].cakeType : items.map((i: any) => i.cakeType).join(", "),
@@ -534,382 +686,154 @@ BODY_HTML:
   });
 
   // ==========================================
-  // 4) SECURE DYNAMIC UPI QR PAYMENT GATEWAY APIS
+  // 4) REAL RAZORPAY PAYMENT GATEWAY ENDPOINTS
   // ==========================================
 
-  // 4a. Initiate dynamic UPI payment session with server-calculated price
-  app.post("/api/upi/initiate", createOrderLimiter, async (req, res) => {
+  // 4a. Create Razorpay order with strictly server-derived amount
+  app.post("/api/razorpay/create-order", createOrderLimiter, async (req, res) => {
     try {
       const { cartItems, checkoutData } = req.body || {};
 
       if (!Array.isArray(cartItems) || cartItems.length === 0) {
-        return res.status(400).json({ error: "Cart items are required to initiate UPI payment." });
+        return res.status(400).json({ error: "Cart items are required to initiate payment." });
       }
       if (!checkoutData || !checkoutData.customerName || !checkoutData.customerPhone) {
         return res.status(400).json({ error: "Customer details (name & phone) are required." });
       }
 
-      // Fetch branding / store settings with robust fallback
-      let storeUpiId = "justforme680@oksbi";
-      let storeName = "The Frosting Fairy";
-      try {
-        const bData = await getFirestoreDoc("settings", "branding");
-        if (bData?.upiId?.trim()) storeUpiId = bData.upiId.trim();
-        if (bData?.websiteName?.trim()) storeName = bData.websiteName.trim();
-      } catch (err) {
-        console.warn("Could not fetch store UPI settings:", err);
+      // Re-derive price server-side from product catalog
+      const { totalItemsPrice, deliveryFee, totalPrice, items } = await deriveOrderItemsAndTotals(cartItems, checkoutData);
+
+      if (totalPrice <= 0) {
+        return res.status(400).json({ error: "Total order amount must be greater than 0." });
       }
 
-      let totalItemsPrice = 0;
-      const orderEntries: any[] = [];
+      const amountInPaise = Math.round(totalPrice * 100);
+      const rzp = getRazorpayInstance();
+      const receipt = `rcpt_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
 
-      // Validate prices strictly on server
-      for (const item of cartItems) {
-        let unitPrice = 0;
-        let recipeData: any = null;
-
-        if (item.productId) {
-          try {
-            const productData = await getFirestoreDoc("products", item.productId);
-            if (productData) {
-              recipeData = productData;
-              if (recipeData.isBuildYourBox && Array.isArray(item.boxContents) && item.boxContents.length > 0) {
-                unitPrice = item.boxContents.reduce(
-                  (sum: number, c: any) => sum + (Number(c.price) || 0) * (Number(c.quantity) || 0),
-                  0
-                );
-              } else if (Array.isArray(recipeData.priceOptions) && recipeData.priceOptions.length > 0) {
-                const matchedOpt = recipeData.priceOptions.find(
-                  (opt: any) => opt.label === item.selectedOption || opt.label === item.unit
-                );
-                unitPrice = matchedOpt ? matchedOpt.price : recipeData.priceOptions[0].price;
-              } else {
-                unitPrice = recipeData.basePrice || recipeData.price || 0;
-              }
-            }
-          } catch (err) {
-            console.warn(`Error looking up product ${item.productId}:`, err);
-          }
-        }
-
-        if (unitPrice === 0 && Array.isArray(item.boxContents) && item.boxContents.length > 0) {
-          unitPrice = item.boxContents.reduce(
-            (sum: number, c: any) => sum + (Number(c.price) || 0) * (Number(c.quantity) || 0),
-            0
-          );
-        }
-
-        if (unitPrice === 0 && item.price) {
-          unitPrice = Number(item.price) || 0;
-        }
-
-        const rawAmount = parseInt(item.amount, 10) || 1;
-        const itemQuantity = Math.min(50, Math.max(1, rawAmount));
-        const calculatedLinePrice = unitPrice * itemQuantity;
-        totalItemsPrice += calculatedLinePrice;
-
-        orderEntries.push({
-          cakeType: item.name || recipeData?.name || "Custom Pastry",
-          flavor: item.recipeName || recipeData?.category || "Standard Flavor",
-          weight: item.selectedOption || "Standard",
-          message: item.customMessage || "",
-          instructions: item.customMessage ? `Text on cake: "${item.customMessage}"` : "",
-          pickupDate: checkoutData.pickupDate || "",
-          pickupTime: checkoutData.pickupTime || "",
-          contactName: checkoutData.customerName,
-          contactPhone: checkoutData.customerPhone,
-          estimatedPrice: calculatedLinePrice,
-          status: "Confirmed",
-          paymentStatus: "Paid",
-          recipe: recipeData,
-          customerName: checkoutData.customerName,
-          customerPhone: checkoutData.customerPhone,
-          specialInstructions: checkoutData.specialInstructions || "",
+      const razorpayOrder = await rzp.orders.create({
+        amount: amountInPaise,
+        currency: "INR",
+        receipt,
+        notes: {
+          customerName: checkoutData.customerName.trim(),
+          customerPhone: checkoutData.customerPhone.trim(),
           deliveryType: checkoutData.deliveryType || "Pickup",
-          deliveryAddress: checkoutData.deliveryAddress || "",
-          gpsCoordinates: checkoutData.gpsCoordinates || "",
-          paymentMethod: "UPI",
-          paymentDetails: checkoutData.paymentDetails || {},
-          adminNotes: [],
-          boxContents: Array.isArray(item.boxContents) ? item.boxContents : null,
-        });
-      }
+        },
+      });
 
-      const deliveryFee = checkoutData.deliveryType === "Delivery" ? (totalItemsPrice >= 600 ? 0 : 50) : 0;
-      if (deliveryFee > 0) {
-        orderEntries.push({
-          cakeType: "Delivery Fee",
-          flavor: "N/A",
-          weight: "Standard",
-          message: "",
-          instructions: "Delivery fee for hand-crafted cake delivery",
-          pickupDate: checkoutData.pickupDate || "",
-          pickupTime: checkoutData.pickupTime || "",
-          contactName: checkoutData.customerName,
-          contactPhone: checkoutData.customerPhone,
-          estimatedPrice: deliveryFee,
-          status: "Confirmed",
-          paymentStatus: "Paid",
-          recipe: null,
-          customerName: checkoutData.customerName,
-          customerPhone: checkoutData.customerPhone,
-          specialInstructions: checkoutData.specialInstructions || "",
-          deliveryType: checkoutData.deliveryType || "Delivery",
-          deliveryAddress: checkoutData.deliveryAddress || "",
-          gpsCoordinates: checkoutData.gpsCoordinates || "",
-          paymentMethod: "UPI",
-          paymentDetails: checkoutData.paymentDetails || {},
-          adminNotes: [],
-        });
-      }
-
-      const grandTotal = totalItemsPrice + deliveryFee;
-      const orderNumber = `TFF-${Math.floor(100000 + Math.random() * 900000)}`;
-      const transactionId = `TFF-UPI-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
-
-      // NPCI Standard UPI specification URI
-      const upiUri = `upi://pay?pa=${encodeURIComponent(storeUpiId)}&pn=${encodeURIComponent(storeName)}&tr=${encodeURIComponent(transactionId)}&tn=${encodeURIComponent(`Order #${orderNumber} - ${storeName}`)}&am=${grandTotal.toFixed(2)}&cu=INR`;
-
-      // Generate server HMAC signature
-      const signature = crypto
-        .createHmac("sha256", UPI_GATEWAY_SECRET)
-        .update(`${transactionId}:${grandTotal.toFixed(2)}:${orderNumber}`)
-        .digest("hex");
-
-      const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15 min session
-
-      const sessionData = {
-        transactionId,
-        orderNumber,
-        amount: grandTotal,
-        status: "AWAITING_PAYMENT",
-        payeeVpa: storeUpiId,
-        payeeName: storeName,
-        customerName: checkoutData.customerName,
-        customerPhone: checkoutData.customerPhone,
-        deliveryType: checkoutData.deliveryType,
-        deliveryAddress: checkoutData.deliveryAddress || "",
-        pickupDate: checkoutData.pickupDate,
-        pickupTime: checkoutData.pickupTime,
-        orderEntries,
-        signature,
+      const pendingSnapshot = {
+        razorpayOrderId: razorpayOrder.id,
+        amountInPaise,
+        totalPrice,
+        deliveryFee,
+        totalItemsPrice,
+        items,
+        cartItems,
+        checkoutData,
+        status: "PENDING",
         createdAt: new Date().toISOString(),
-        expiresAt,
-        orderIds: []
       };
 
-      // Store in memory cache
-      paymentSessionsMemory.set(transactionId, sessionData);
-
-      // Async sync to Firestore
-      setFirestoreDoc("payment_sessions", transactionId, sessionData).catch(err => {
-        console.warn("Async firestore payment session write notice:", err);
+      // Store in memory cache and non-public Firestore pending collection
+      pendingRazorpayOrdersMemory.set(razorpayOrder.id, pendingSnapshot);
+      setFirestoreDoc("pending_razorpay_orders", razorpayOrder.id, pendingSnapshot).catch((err) => {
+        console.warn("Async firestore pending order write notice:", err);
       });
+
+      const keyId = process.env.RAZORPAY_KEY_ID || process.env.VITE_RAZORPAY_KEY_ID || "";
 
       return res.json({
         success: true,
-        transactionId,
-        orderNumber,
-        amount: grandTotal,
-        upiUri,
-        payeeVpa: storeUpiId,
-        payeeName: storeName,
-        customerName: checkoutData.customerName,
-        expiresAt
+        razorpayOrderId: razorpayOrder.id,
+        amount: razorpayOrder.amount,
+        currency: razorpayOrder.currency,
+        keyId,
       });
     } catch (error: any) {
-      console.error("UPI initiate error:", error);
-      res.status(500).json({ error: error.message || "Failed to initiate UPI payment session." });
+      console.error("Razorpay create-order error:", error);
+      res.status(500).json({ error: error.message || "Failed to create Razorpay order." });
     }
   });
 
-  // 4b. Poll session status on the backend
-  app.get("/api/upi/session-status/:transactionId", async (req, res) => {
+  // 4b. Verify Razorpay payment signature and confirm order
+  app.post("/api/razorpay/verify-payment", async (req, res) => {
     try {
-      const { transactionId } = req.params;
-      if (!transactionId) {
-        return res.status(400).json({ error: "Transaction ID is required." });
-      }
+      const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body || {};
 
-      let session = paymentSessionsMemory.get(transactionId);
-      if (!session) {
-        session = await getFirestoreDoc("payment_sessions", transactionId);
-        if (session) {
-          paymentSessionsMemory.set(transactionId, session);
-        }
-      }
-
-      if (!session) {
-        return res.status(404).json({ error: "Payment session not found." });
-      }
-
-      // Check if session has expired
-      if (session.status === "AWAITING_PAYMENT" && new Date(session.expiresAt) < new Date()) {
-        session.status = "EXPIRED";
-        paymentSessionsMemory.set(transactionId, session);
-        setFirestoreDoc("payment_sessions", transactionId, { status: "EXPIRED" }).catch(() => {});
-      }
-
-      return res.json({
-        success: true,
-        transactionId: session.transactionId,
-        orderNumber: session.orderNumber,
-        amount: session.amount,
-        status: session.status,
-        paidAt: session.paidAt || null,
-        gatewayRef: session.gatewayRef || null,
-        orderIds: session.orderIds || [],
-        expiresAt: session.expiresAt
-      });
-    } catch (error: any) {
-      console.error("UPI session-status error:", error);
-      res.status(500).json({ error: error.message || "Failed to retrieve payment status." });
-    }
-  });
-
-  // 4c. Server-side payment verification & order confirmation endpoint
-  app.post("/api/upi/verify-payment", async (req, res) => {
-    try {
-      const { transactionId, gatewayRef, signature } = req.body || {};
-
-      if (!transactionId) {
-        return res.status(400).json({ error: "Transaction ID is required for payment verification." });
-      }
-
-      let session = paymentSessionsMemory.get(transactionId);
-      if (!session) {
-        session = await getFirestoreDoc("payment_sessions", transactionId);
-        if (session) {
-          paymentSessionsMemory.set(transactionId, session);
-        }
-      }
-
-      if (!session) {
-        return res.status(404).json({ error: "Payment session does not exist." });
-      }
-
-      if (session.status === "PAID") {
-        return res.json({
-          success: true,
-          status: "PAID",
-          orderIds: session.orderIds,
-          orderNumber: session.orderNumber,
-          paidAmount: session.amount,
-          transactionId: session.transactionId,
-          paidAt: session.paidAt,
-          gatewayRef: session.gatewayRef
-        });
-      }
-
-      if (session.status === "EXPIRED" || session.status === "CANCELLED" || session.status === "FAILED") {
+      if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
         return res.status(400).json({
-          error: `Cannot verify payment for a session with status: ${session.status}. Please initiate a new order.`
+          error: "Missing required payment verification parameters (razorpay_order_id, razorpay_payment_id, and razorpay_signature are required).",
         });
       }
 
-      if (new Date(session.expiresAt) < new Date()) {
-        session.status = "EXPIRED";
-        paymentSessionsMemory.set(transactionId, session);
-        setFirestoreDoc("payment_sessions", transactionId, { status: "EXPIRED" }).catch(() => {});
-        return res.status(400).json({ error: "Payment session has expired. Please try checking out again." });
+      const key_secret = process.env.RAZORPAY_KEY_SECRET;
+      if (!key_secret) {
+        return res.status(500).json({ error: "RAZORPAY_KEY_SECRET is not configured on the server." });
       }
 
-      // Cryptographic verification check
-      const expectedSig = crypto
-        .createHmac("sha256", UPI_GATEWAY_SECRET)
-        .update(`${session.transactionId}:${session.amount.toFixed(2)}:${session.orderNumber}`)
+      // Compute HMAC SHA256 signature
+      const expectedSignature = crypto
+        .createHmac("sha256", key_secret)
+        .update(`${razorpay_order_id}|${razorpay_payment_id}`)
         .digest("hex");
 
-      if (signature && signature !== expectedSig && signature !== "GATEWAY_WEBHOOK_VERIFIED") {
-        return res.status(403).json({ error: "Invalid payment cryptographic signature verification." });
+      if (expectedSignature !== razorpay_signature) {
+        return res.status(400).json({ error: "Invalid Razorpay payment signature. Verification failed." });
       }
 
-      const verifiedGatewayRef = gatewayRef || `UTR${Math.floor(100000000000 + Math.random() * 900000000000)}`;
-      const paidTimestamp = new Date().toISOString();
-
-      // Server creates and confirms the orders in Firestore
-      const createdOrderIds: string[] = [];
-
-      for (const entry of (session.orderEntries || [])) {
-        const orderDoc = {
-          ...entry,
-          status: "Confirmed",
-          paymentStatus: "Paid",
-          transactionId: session.transactionId,
-          paidAmount: session.amount,
-          paymentTimestamp: paidTimestamp,
-          paymentDetails: {
-            ...entry.paymentDetails,
-            upiId: session.payeeVpa,
-            upiTransactionId: session.transactionId,
-            gatewayRef: verifiedGatewayRef,
-            paidAt: paidTimestamp,
-            verifiedOnServer: true
-          },
-          createdAt: paidTimestamp
-        };
-
-        const docId = await addFirestoreDoc("orders", orderDoc);
-        createdOrderIds.push(docId || `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`);
-      }
-
-      // Update session status in memory and Firestore
-      session.status = "PAID";
-      session.paidAt = paidTimestamp;
-      session.gatewayRef = verifiedGatewayRef;
-      session.orderIds = createdOrderIds;
-      paymentSessionsMemory.set(transactionId, session);
-
-      setFirestoreDoc("payment_sessions", transactionId, {
-        status: "PAID",
-        paidAt: paidTimestamp,
-        gatewayRef: verifiedGatewayRef,
-        orderIds: createdOrderIds
-      }).catch(() => {});
-
-      // Dispatch real-time bakery notification for confirmed & paid order
-      dispatchServerNotification({
-        orderId: session.orderNumber,
-        customerName: session.customerName,
-        cakeType: `${session.orderEntries?.[0]?.cakeType || "Bakery Order"} (Paid ₹${session.amount})`,
-        status: "PAID_AND_CONFIRMED"
-      }).catch(err => console.warn("Payment notification error:", err));
-
-      return res.json({
-        success: true,
-        status: "PAID",
-        orderIds: createdOrderIds,
-        orderNumber: session.orderNumber,
-        paidAmount: session.amount,
-        transactionId: session.transactionId,
-        paidAt: paidTimestamp,
-        gatewayRef: verifiedGatewayRef
+      // Fulfill and record the order
+      const fulfillment = await fulfillRazorpayOrder({
+        razorpayOrderId: razorpay_order_id,
+        razorpayPaymentId: razorpay_payment_id,
+        gatewayRef: razorpay_payment_id,
       });
+
+      return res.json(fulfillment);
     } catch (error: any) {
-      console.error("UPI verification error:", error);
-      res.status(500).json({ error: error.message || "Failed to verify UPI payment on server." });
+      console.error("Razorpay verify-payment error:", error);
+      res.status(500).json({ error: error.message || "Failed to verify Razorpay payment." });
     }
   });
 
-  // 4d. Cancel UPI payment session
-  app.post("/api/upi/cancel-session", async (req, res) => {
+  // 4c. Razorpay Webhook for server-to-server payment notifications
+  app.post("/api/razorpay/webhook", async (req, res) => {
     try {
-      const { transactionId } = req.body || {};
-      if (!transactionId) {
-        return res.status(400).json({ error: "Transaction ID is required." });
+      const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
+      const webhookSignature = (req.headers["x-razorpay-signature"] as string) || "";
+
+      if (webhookSecret) {
+        if (!webhookSignature) {
+          return res.status(400).json({ error: "Missing X-Razorpay-Signature header." });
+        }
+        const rawBody = (req as any).rawBody || JSON.stringify(req.body);
+        const expectedSig = crypto.createHmac("sha256", webhookSecret).update(rawBody).digest("hex");
+        if (expectedSig !== webhookSignature) {
+          return res.status(400).json({ error: "Invalid Razorpay webhook signature." });
+        }
       }
 
-      const session = paymentSessionsMemory.get(transactionId);
-      if (session) {
-        session.status = "CANCELLED";
-        paymentSessionsMemory.set(transactionId, session);
-      }
-      setFirestoreDoc("payment_sessions", transactionId, { status: "CANCELLED" }).catch(() => {});
+      const event = req.body?.event;
+      if (event === "payment.captured" || event === "order.paid") {
+        const paymentEntity = req.body?.payload?.payment?.entity;
+        const orderEntity = req.body?.payload?.order?.entity;
+        const razorpay_order_id = paymentEntity?.order_id || orderEntity?.id;
+        const razorpay_payment_id = paymentEntity?.id || `WEBHOOK_${Date.now()}`;
 
-      return res.json({ success: true, status: "CANCELLED" });
+        if (razorpay_order_id) {
+          await fulfillRazorpayOrder({
+            razorpayOrderId: razorpay_order_id,
+            razorpayPaymentId: razorpay_payment_id,
+            gatewayRef: razorpay_payment_id,
+          });
+        }
+      }
+
+      return res.json({ status: "ok", received: true });
     } catch (error: any) {
-      console.error("UPI cancel error:", error);
-      res.status(500).json({ error: error.message || "Failed to cancel payment session." });
+      console.error("Razorpay webhook error:", error);
+      res.status(500).json({ error: error.message || "Webhook processing failed." });
     }
   });
 

@@ -12,20 +12,25 @@ import OrderSuccessModal, { OrderSuccessDetails } from './components/OrderSucces
 import { BakeryStoreMapModal } from './components/BakeryMapModal';
 import { triggerOrderSuccessConfetti } from './lib/confetti';
 import { INITIAL_RECIPES, INITIAL_CATEGORY_INFOS } from './data';
-import { Recipe, ShoppingItem, MealPlanEntry, MealType, CategoryInfo } from './types';
+import { Recipe, ShoppingItem, MealPlanEntry, MealType, CategoryInfo, CheckoutData } from './types';
 import { AnimatePresence, motion } from 'motion/react';
 import { X, Instagram, ArrowLeft, Loader2 } from 'lucide-react';
 import { db } from './lib/firebase';
 import { collection, onSnapshot, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 
+import { runStartupStorageMigrations } from './utils/storageMigration';
+
+// Run storage key migrations once on app startup before any state reads
+runStartupStorageMigrations();
+
 // Lazy loaded route/tab components for code splitting & optimal load performance
-const MealPlanner = lazy(() => import('./components/MealPlanner'));
-const ShoppingList = lazy(() => import('./components/ShoppingList'));
-const RecipeDetail = lazy(() => import('./components/RecipeDetail'));
+const MyOrders = lazy(() => import('./components/MyOrders'));
+const CartCheckout = lazy(() => import('./components/CartCheckout'));
+const ProductDetail = lazy(() => import('./components/ProductDetail'));
 const AdminDashboard = lazy(() => import('./components/AdminDashboard'));
 
-// Local storage key names for fallback preferences
-const SHOPPING_STORAGE_KEY = 'gusto_shopping_list';
+// Local storage key names
+const SHOPPING_STORAGE_KEY = 'tff_shopping_list';
 
 export default function App() {
   // --- CORE STATE DRIVEN BY FIRESTORE ---
@@ -225,7 +230,7 @@ export default function App() {
 
   // Theme support
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    return (localStorage.getItem('gusto_theme') as 'light' | 'dark') || 'light';
+    return (localStorage.getItem('tff_theme') as 'light' | 'dark') || 'light';
   });
 
   // Order Success Celebratory Modal State
@@ -238,7 +243,7 @@ export default function App() {
     } else {
       document.documentElement.classList.remove('dark');
     }
-    localStorage.setItem('gusto_theme', theme);
+    localStorage.setItem('tff_theme', theme);
   }, [theme]);
 
   // Shopping Cart State
@@ -265,7 +270,7 @@ export default function App() {
   const [toasts, setToasts] = useState<{ id: string; title: string; message: string; type: 'success' | 'info' | 'warning' }[]>([]);
   const [prevStatuses, setPrevStatuses] = useState<Record<string, string>>(() => {
     const initial: Record<string, string> = {};
-    const saved = localStorage.getItem('gusto_meal_plan');
+    const saved = localStorage.getItem('tff_my_orders');
     if (saved) {
       try {
         const parsed = JSON.parse(saved) as MealPlanEntry[];
@@ -478,22 +483,7 @@ export default function App() {
   };
 
   // Checkout and place custom orders securely server-side
-  const handleCheckout = async (checkoutData: {
-    customerName: string;
-    customerPhone: string;
-    pickupDate: string;
-    pickupTime: string;
-    specialInstructions: string;
-    deliveryType: 'Pickup' | 'Delivery';
-    deliveryAddress: string;
-    gpsCoordinates: string;
-    paymentMethod: 'Card' | 'UPI' | 'COD';
-    paymentDetails: {
-      cardHolder?: string;
-      cardNumber?: string;
-      upiId?: string;
-    };
-  }) => {
+  const handleCheckout = async (checkoutData: CheckoutData) => {
     if (!cashOnDeliveryEnabled && checkoutData.paymentMethod === 'COD') {
       alert("Cash on Delivery is currently disabled. Please select a different payment method.");
       return;
@@ -641,7 +631,7 @@ export default function App() {
     // If a recipe is currently selected, show the immersive detail view
     if (selectedRecipe) {
       return (
-        <RecipeDetail
+        <ProductDetail
           recipe={selectedRecipe}
           allRecipes={recipes}
           onBack={handleBackToDiscover}
@@ -696,7 +686,7 @@ export default function App() {
         );
       case 'planner':
         return (
-          <MealPlanner
+          <MyOrders
             recipes={recipes}
             mealPlan={mealPlan}
             onAddMeal={handleAddMeal}
@@ -715,7 +705,7 @@ export default function App() {
         );
       case 'shopping':
         return (
-          <ShoppingList
+          <CartCheckout
             shoppingList={shoppingList}
             onToggleBought={handleToggleBought}
             onAddItem={() => {}} // legacy, not needed
@@ -772,7 +762,7 @@ export default function App() {
           setActiveTab(tab);
         }}
         shoppingItemsCount={shoppingList.reduce((acc, item) => acc + item.amount, 0)}
-        mealPlanCount={mealPlan.length}
+        ordersCount={mealPlan.length}
         logo={logo}
         websiteName={websiteName}
         websiteSlogan={websiteSlogan}

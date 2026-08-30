@@ -27,7 +27,7 @@ import { Recipe, MealPlanEntry } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { OrderReceiptModal } from './OrderReceiptModal';
 
-interface MealPlannerProps {
+interface MyOrdersProps {
   recipes: Recipe[];
   mealPlan: MealPlanEntry[];
   onAddMeal: (entry: MealPlanEntry) => void;
@@ -46,7 +46,7 @@ interface MealPlannerProps {
 
 type TabType = 'active' | 'history' | 'all';
 
-export default function MealPlanner({
+export default function MyOrders({
   recipes,
   mealPlan,
   onRemoveMeal,
@@ -57,7 +57,7 @@ export default function MealPlanner({
   cashOnDeliveryEnabled = true,
   logo,
   websiteName = 'The Frosting Fairy',
-}: MealPlannerProps) {
+}: MyOrdersProps) {
   const [activeTab, setActiveTab] = useState<TabType>('active');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedReceiptOrder, setSelectedReceiptOrder] = useState<MealPlanEntry | null>(null);

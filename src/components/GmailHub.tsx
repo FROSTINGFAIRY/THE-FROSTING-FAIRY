@@ -287,7 +287,7 @@ export function GmailHub({
       setComposeSubject(`We are baking your artisanal order #${targetOrder?.id || 'Update'}! 🥣✨`);
       setComposeBody(generateBakeryStatusUpdateHtml({
         websiteName,
-        orderId: targetOrder?.id || 'GUSTO-01',
+        orderId: targetOrder?.id || 'TFF-01',
         customerName,
         cakeType: targetOrder?.cakeType || 'Custom Celebration Cake',
         status: 'Baking',
@@ -297,7 +297,7 @@ export function GmailHub({
       setComposeSubject(`Your sweet creation is ready for pickup! 🏪🎂`);
       setComposeBody(generateBakeryStatusUpdateHtml({
         websiteName,
-        orderId: targetOrder?.id || 'GUSTO-01',
+        orderId: targetOrder?.id || 'TFF-01',
         customerName,
         cakeType: targetOrder?.cakeType || 'Custom Cake',
         status: 'Ready for Pickup',

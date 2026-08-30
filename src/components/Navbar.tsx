@@ -5,7 +5,7 @@ interface NavbarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   shoppingItemsCount: number;
-  mealPlanCount: number;
+  ordersCount: number;
   logo: string;
   websiteName: string;
   websiteSlogan: string;
@@ -18,7 +18,7 @@ export default function Navbar({
   activeTab,
   setActiveTab,
   shoppingItemsCount,
-  mealPlanCount,
+  ordersCount,
   logo,
   websiteName,
   websiteSlogan,
@@ -99,9 +99,9 @@ export default function Navbar({
             >
               <Calendar className="w-4 h-4" />
               <span>My Orders</span>
-              {mealPlanCount > 0 && (
+              {ordersCount > 0 && (
                 <span className="bg-brand-cocoa text-white text-[10px] font-bold font-mono px-1.5 py-0.5 rounded-full animate-bounce">
-                  {mealPlanCount}
+                  {ordersCount}
                 </span>
               )}
             </button>
@@ -289,9 +289,9 @@ export default function Navbar({
               <Calendar className="w-4 h-4" />
               <span>My Orders</span>
             </div>
-            {mealPlanCount > 0 && (
+            {ordersCount > 0 && (
               <span className="bg-brand-cocoa text-white text-[10px] font-bold font-mono px-2 py-0.5 rounded-full">
-                {mealPlanCount}
+                {ordersCount}
               </span>
             )}
           </button>

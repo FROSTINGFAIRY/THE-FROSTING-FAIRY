@@ -8,7 +8,7 @@ import { auth } from '../lib/firebase';
 
 const BOX_ROUND_TIERS = [6, 12, 18, 24];
 
-interface RecipeDetailProps {
+interface ProductDetailProps {
   recipe: Recipe;
   allRecipes?: Recipe[];
   onBack: () => void;
@@ -29,14 +29,14 @@ interface RecipeDetailProps {
   onGoToCart: () => void;
 }
 
-export default function RecipeDetail({
+export default function ProductDetail({
   recipe,
   allRecipes = [],
   onBack,
   onToggleFavorite,
   onAddToCart,
   onGoToCart,
-}: RecipeDetailProps) {
+}: ProductDetailProps) {
   // E-commerce state
   const [selectedOptionIndex, setSelectedOptionIndex] = useState(0);
   const [frostingFlavor, setFrostingFlavor] = useState(() => {

@@ -49,16 +49,21 @@ service cloud.firestore {
       allow write: if isRoleAdmin();
     }
 
-    // Orders collection: allow create with required fields validation, chef/admin read/update, admin delete
+    // Orders collection: server-side only create, chef/admin read/update, admin delete
     match /orders/{orderId} {
-      allow create: if request.resource.data.keys().hasAll(['cakeType', 'contactName', 'customerName', 'status', 'createdAt']);
+      allow create: if false;
       allow read, update: if isRoleChefOrAdmin();
       allow delete: if isRoleAdmin();
     }
 
-    // Payment sessions collection: allow read & write for UPI checkout session verification
+    // Payment sessions: admin-only reads, server-only writes
     match /payment_sessions/{sessionId} {
-      allow read, write: if true;
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /pending_razorpay_orders/{orderId} {
+      allow read, write: if false;
     }
 
     // Admins collection: read allowed for signed-in admins only, write for role admin

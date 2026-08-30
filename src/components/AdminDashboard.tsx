@@ -270,7 +270,7 @@ export default function AdminDashboard({
   };
 
   // --- ORDER NOTIFICATIONS CONFIGURATION ---
-  const [whatsappEnabled, setWhatsappEnabled] = useState(() => localStorage.getItem('gusto_whatsapp_enabled') !== 'false');
+  const [whatsappEnabled, setWhatsappEnabled] = useState(() => localStorage.getItem('tff_whatsapp_enabled') !== 'false');
   const [isOrderNotificationsExpanded, setIsOrderNotificationsExpanded] = useState(true);
 
   // Orders filters state
@@ -284,7 +284,7 @@ export default function AdminDashboard({
   const [emailHeader, setEmailHeader] = useState('An artisanal creation is being lovingly prepared for you!');
   const [sentEmails, setSentEmails] = useState<Array<{ id: string; recipientName: string; recipientEmail: string; subject: string; time: string; status: 'SENT' | 'DELIVERED'; orderId: string; cakeType: string }>>(() => {
     try {
-      const saved = localStorage.getItem('gusto_simulated_emails');
+      const saved = localStorage.getItem('tff_simulated_emails');
       return saved ? JSON.parse(saved) : [];
     } catch {
       return [];
@@ -292,7 +292,7 @@ export default function AdminDashboard({
   });
 
   React.useEffect(() => {
-    localStorage.setItem('gusto_simulated_emails', JSON.stringify(sentEmails));
+    localStorage.setItem('tff_simulated_emails', JSON.stringify(sentEmails));
   }, [sentEmails]);
 
   const [isEmailCenterExpanded, setIsEmailCenterExpanded] = useState(true);
@@ -856,13 +856,13 @@ export default function AdminDashboard({
 
   // Logo Upload presets state
   const [uploadedLogoPresets, setUploadedLogoPresets] = useState<{ name: string; url: string; desc: string }[]>(() => {
-    const saved = localStorage.getItem('gusto_uploaded_logo_presets');
+    const saved = localStorage.getItem('tff_uploaded_logo_presets');
     return saved ? JSON.parse(saved) : [];
   });
   const [isDraggingLogo, setIsDraggingLogo] = useState(false);
 
   React.useEffect(() => {
-    localStorage.setItem('gusto_uploaded_logo_presets', JSON.stringify(uploadedLogoPresets));
+    localStorage.setItem('tff_uploaded_logo_presets', JSON.stringify(uploadedLogoPresets));
   }, [uploadedLogoPresets]);
 
   // New option row local inputs
@@ -1151,7 +1151,7 @@ export default function AdminDashboard({
       }
 
       setRecipes(updatedRecipes);
-      localStorage.setItem('gusto_recipes', JSON.stringify(updatedRecipes));
+      localStorage.setItem('tff_recipes', JSON.stringify(updatedRecipes));
 
       addAuditLog(`Successfully updated ${successCount} menu product images using Pixabay`, 'success');
       triggerToast(`✨ Successfully updated ${successCount} product images in local storage!`);
@@ -1424,10 +1424,10 @@ export default function AdminDashboard({
       // Reset selected product
       setSelectedProductId(INITIAL_RECIPES[0].id);
       
-      localStorage.removeItem('gusto_recipes');
-      localStorage.removeItem('gusto_logo');
-      localStorage.removeItem('gusto_website_name');
-      localStorage.removeItem('gusto_website_slogan');
+      localStorage.removeItem('tff_recipes');
+      localStorage.removeItem('tff_logo');
+      localStorage.removeItem('tff_website_name');
+      localStorage.removeItem('tff_website_slogan');
 
       addAuditLog(`System restored to factory boutique defaults`, 'info');
       triggerToast('♻️ Website restored to initial default boutique data.');

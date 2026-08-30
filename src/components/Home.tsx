@@ -189,7 +189,7 @@ export default function Home({
     : INITIAL_CATEGORY_INFOS;
   // --- TESTIMONIAL SYSTEM STATE ---
   const [testimonials, setTestimonials] = useState<Testimonial[]>(() => {
-    const saved = localStorage.getItem('gusto_testimonials');
+    const saved = localStorage.getItem('tff_testimonials');
     if (saved) {
       try {
         return JSON.parse(saved);
@@ -209,7 +209,7 @@ export default function Home({
   const [successMsg, setSuccessMsg] = useState('');
 
   useEffect(() => {
-    localStorage.setItem('gusto_testimonials', JSON.stringify(testimonials));
+    localStorage.setItem('tff_testimonials', JSON.stringify(testimonials));
   }, [testimonials]);
 
   // Handle Review Submission
