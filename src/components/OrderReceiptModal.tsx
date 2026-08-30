@@ -66,7 +66,7 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-6 border-b border-brand-cocoa-border/60">
             <div className="flex items-center gap-3">
               {logo ? (
-                <img src={logo} alt={websiteName} className="w-12 h-12 rounded-xl object-cover border border-brand-cocoa-border shadow-xs" />
+                <img src={logo} alt={websiteName} width="48" height="48" loading="lazy" decoding="async" className="w-12 h-12 rounded-xl object-cover border border-brand-cocoa-border shadow-xs" />
               ) : (
                 <div className="w-12 h-12 rounded-xl bg-brand-pink flex items-center justify-center text-white font-serif font-bold text-xl shadow-xs">
                   TF
@@ -149,6 +149,10 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
                   <img
                     src={order.recipe?.image || 'https://images.unsplash.com/photo-1565958011703-44f9829ba187?auto=format&fit=crop&q=80&w=300'}
                     alt={order.cakeType}
+                    width="64"
+                    height="64"
+                    loading="lazy"
+                    decoding="async"
                     className="w-full h-full object-cover"
                   />
                 </div>

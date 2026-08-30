@@ -510,10 +510,18 @@ export default function AdminDashboard({
     return () => unsubscribe();
   }, []);
 
+  const [isSigningInGoogle, setIsSigningInGoogle] = useState(false);
+
   const handleGoogleSignIn = async () => {
+    if (isSigningInGoogle) return;
+    setIsSigningInGoogle(true);
     setSignInError('');
     try {
       const user = await signInWithGoogle();
+      if (!user) {
+        // User closed the popup or cancelled sign-in
+        return;
+      }
       const email = user.email || '';
       const isAuthorized = await checkIsAdminInFirestore(email);
       if (isAuthorized) {
@@ -525,8 +533,19 @@ export default function AdminDashboard({
         triggerToast('❌ Unauthorized: Account not registered in Firestore.');
       }
     } catch (err: any) {
-      console.error('Sign-in error:', err);
-      setSignInError('Google sign in error: ' + (err?.message || 'Popup closed or failed'));
+      const errorMsg = err?.message || '';
+      if (
+        err?.code === 'auth/popup-closed-by-user' ||
+        err?.code === 'auth/cancelled-popup-request' ||
+        errorMsg.includes('popup-closed-by-user') ||
+        errorMsg.includes('cancelled-popup-request')
+      ) {
+        return;
+      }
+      console.warn('Sign-in notice:', err);
+      setSignInError('Google sign in: ' + (err?.message || 'Authentication could not be completed.'));
+    } finally {
+      setIsSigningInGoogle(false);
     }
   };
 
@@ -1910,7 +1929,7 @@ export default function AdminDashboard({
                       }`}
                     >
                       <div className="w-10 h-10 rounded-lg overflow-hidden bg-brand-cream border border-brand-cocoa-border/40 shrink-0">
-                        <img src={item.image} alt={item.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                        <img src={item.image} alt={item.name} width="40" height="40" loading="lazy" decoding="async" className="w-full h-full object-cover" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <span className="font-sans font-bold text-brand-cocoa text-xs block truncate">
@@ -1994,10 +2013,11 @@ export default function AdminDashboard({
                         <option value="Cupcakes">Cupcakes</option>
                         <option value="Brownies">Brownies</option>
                         <option value="Cookies">Cookies</option>
+                        <option value="Overloaded Tubs">Overloaded Tubs</option>
                         <option value="Donuts">Donuts</option>
                         <option value="Bombolonis">Bombolonis</option>
+                        <option value="Cinnamon Rolls">Cinnamon Rolls</option>
                         <option value="Assorted Boxes">Assorted Boxes</option>
-                        <option value="New Additions">New Additions</option>
                       </select>
                     </div>
 
@@ -2068,7 +2088,7 @@ export default function AdminDashboard({
                       {deviceImagePreview && !isUploadingProductImage && (
                         <div className="flex items-center gap-2.5 p-2 bg-white rounded-xl border border-brand-cocoa-border/40 shadow-3xs">
                           <div className="relative w-12 h-12 rounded-lg overflow-hidden border border-brand-cocoa-border shrink-0 bg-brand-cream">
-                            <img src={deviceImagePreview} alt="Device Preview" loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                            <img src={deviceImagePreview} alt="Device Preview" width="48" height="48" loading="lazy" decoding="async" className="w-full h-full object-cover" />
                           </div>
                           <div className="flex-1 min-w-0">
                             <span className="text-[11px] font-bold text-brand-cocoa block truncate">Device Image Selected</span>
@@ -2259,7 +2279,7 @@ export default function AdminDashboard({
                     <div className="bg-white rounded-2xl overflow-hidden border border-brand-cocoa-border shadow-xs max-w-[240px] mx-auto">
                       <div className="h-40 bg-brand-cream relative overflow-hidden flex items-center justify-center">
                         {editImage ? (
-                          <img src={editImage} alt="Preview" loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                          <img src={editImage} alt="Preview" width="240" height="160" loading="lazy" decoding="async" className="w-full h-full object-cover" />
                         ) : (
                           <span className="font-mono text-[10px] text-brand-cocoa-light">No Image Selected</span>
                         )}
@@ -2302,7 +2322,7 @@ export default function AdminDashboard({
                           }`}
                           title={p.name}
                         >
-                          <img src={p.url} alt={p.name} loading="lazy" decoding="async" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                          <img src={p.url} alt={p.name} width="80" height="80" loading="lazy" decoding="async" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
                             <span className="text-[8px] font-bold text-white text-center p-1 leading-none">{p.name.split(' ').slice(0, 2).join(' ')}</span>
                           </div>
@@ -2384,10 +2404,11 @@ export default function AdminDashboard({
                         <option value="Cupcakes">Cupcakes</option>
                         <option value="Brownies">Brownies</option>
                         <option value="Cookies">Cookies</option>
+                        <option value="Overloaded Tubs">Overloaded Tubs</option>
                         <option value="Donuts">Donuts</option>
                         <option value="Bombolonis">Bombolonis</option>
+                        <option value="Cinnamon Rolls">Cinnamon Rolls</option>
                         <option value="Assorted Boxes">Assorted Boxes</option>
-                        <option value="New Additions">New Additions</option>
                       </select>
                     </div>
 
@@ -2468,7 +2489,7 @@ export default function AdminDashboard({
                       {deviceImagePreview && !isUploadingProductImage && (
                         <div className="flex items-center gap-2.5 p-2 bg-white rounded-xl border border-brand-cocoa-border/40 shadow-3xs">
                           <div className="relative w-12 h-12 rounded-lg overflow-hidden border border-brand-cocoa-border shrink-0 bg-brand-cream">
-                            <img src={deviceImagePreview} alt="Device Preview" loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                            <img src={deviceImagePreview} alt="Device Preview" width="48" height="48" loading="lazy" decoding="async" className="w-full h-full object-cover" />
                           </div>
                           <div className="flex-1 min-w-0">
                             <span className="text-[11px] font-bold text-brand-cocoa block truncate">Device Image Selected</span>
@@ -2561,6 +2582,8 @@ export default function AdminDashboard({
                                     <img
                                       src={result.thumbnail}
                                       alt={`Pixabay match`}
+                                      width="64"
+                                      height="64"
                                       loading="lazy"
                                       decoding="async"
                                       className="w-full h-full object-cover"
@@ -2755,7 +2778,7 @@ export default function AdminDashboard({
                     <div className="bg-brand-cream-light/35 rounded-2xl border border-brand-cocoa-border overflow-hidden">
                       <div className="relative h-36 bg-brand-cream/40 flex items-center justify-center overflow-hidden">
                         {editImage ? (
-                          <img src={editImage} alt="Card Preview" loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                          <img src={editImage} alt="Card Preview" width="300" height="144" loading="lazy" decoding="async" className="w-full h-full object-cover" />
                         ) : (
                           <div className="flex flex-col items-center justify-center p-4 text-center">
                             <ImageIcon className="w-8 h-8 text-brand-cocoa-light/60 mb-1" />
@@ -2908,6 +2931,8 @@ export default function AdminDashboard({
                           <img
                             src={displayImg}
                             alt={cat.name}
+                            width="320"
+                            height="176"
                             loading="lazy"
                             decoding="async"
                             className="w-full h-full object-cover transition-transform group-hover:scale-105"
@@ -3148,7 +3173,7 @@ export default function AdminDashboard({
               {/* Current preview */}
               <div className="flex items-center gap-4 bg-brand-cream-light/40 p-4 rounded-2xl border border-brand-cocoa-border/40">
                 <div className="w-16 h-16 rounded-full border border-brand-cocoa-border bg-white overflow-hidden shadow-sm flex items-center justify-center shrink-0">
-                  <img src={brandLogoInput} alt="Current brand logo" loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                  <img src={brandLogoInput} alt="Current brand logo" width="64" height="64" loading="lazy" decoding="async" className="w-full h-full object-cover" />
                 </div>
                 <div className="text-left">
                   <span className="font-display font-black text-sm text-brand-cocoa block uppercase">
@@ -3218,7 +3243,7 @@ export default function AdminDashboard({
                       }`}
                     >
                       <div className="w-10 h-10 rounded-full border border-brand-cocoa-border/30 overflow-hidden bg-white shrink-0">
-                        <img src={l.url} alt={l.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                        <img src={l.url} alt={l.name} width="40" height="40" loading="lazy" decoding="async" className="w-full h-full object-cover" />
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1">
@@ -3899,7 +3924,7 @@ export default function AdminDashboard({
                 <div className="p-4 bg-brand-pink-light/30 border border-brand-pink-accent/20 rounded-2xl flex items-center gap-3.5">
                   <div className="w-11 h-11 rounded-full overflow-hidden border border-brand-pink-accent/40 shrink-0 bg-brand-cocoa text-brand-cream flex items-center justify-center font-bold font-display text-sm">
                     {firebaseUser.photoURL ? (
-                      <img src={firebaseUser.photoURL} alt="Admin profile" loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                      <img src={firebaseUser.photoURL} alt="Admin profile" width="44" height="44" loading="lazy" decoding="async" className="w-full h-full object-cover" />
                     ) : (
                       <span>{(firebaseUser.displayName || firebaseUser.email || 'A')[0].toUpperCase()}</span>
                     )}
@@ -4248,7 +4273,7 @@ export default function AdminDashboard({
                         <div className="bg-white p-3.5 border border-brand-cocoa-border rounded-xl flex flex-col items-center shadow-2xs max-w-[190px] w-full">
                           <div className="w-28 h-28 bg-gray-100 border border-brand-cocoa-border/60 flex flex-col items-center justify-center rounded-lg relative overflow-hidden p-1">
                             {upiQrInput ? (
-                              <img src={upiQrInput} alt="Payment QR Preview" loading="lazy" decoding="async" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                              <img src={upiQrInput} alt="Payment QR Preview" width="112" height="112" loading="lazy" decoding="async" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
                             ) : (
                               <div className="w-full h-full border border-dashed border-brand-pink/50 flex flex-col justify-center items-center text-center p-1 bg-brand-cream-light/40">
                                 <span className="font-mono text-[7px] text-brand-cocoa-light font-bold">THE FROSTING FAIRY</span>

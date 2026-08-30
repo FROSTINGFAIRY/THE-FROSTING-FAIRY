@@ -39,7 +39,7 @@ export interface Recipe {
   ingredients: RecipeIngredient[];
   instructions: RecipeInstruction[];
   tags: string[];
-  category: string; // 'Signature Cakes' | 'Cupcakes' | 'Brownies' | 'Cookies' | 'New Additions'
+  category: string; // 'Signature Cakes' | 'Cupcakes' | 'Brownies' | 'Cookies' | 'Donuts' | 'Bombolonis' | 'Overloaded Tubs' | 'Cinnamon Rolls' | 'Assorted Boxes'
   isFavorite?: boolean;
   
   // Custom Bakery fields

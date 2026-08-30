@@ -53,27 +53,52 @@ export const getGmailProvider = (): GoogleAuthProvider => {
   return provider;
 };
 
+let activeGmailAuthPromise: Promise<{ user: User; accessToken: string } | null> | null = null;
+
 /**
  * Connect with Google and acquire Gmail OAuth Access Token
  */
-export const connectGmailAccount = async (): Promise<{ user: User; accessToken: string }> => {
-  try {
-    const provider = getGmailProvider();
-    const result = await signInWithPopup(auth, provider);
-    const credential = GoogleAuthProvider.credentialFromResult(result);
-    const token = credential?.accessToken;
-
-    if (!token) {
-      throw new Error('Could not retrieve Gmail access token from Google sign-in.');
-    }
-
-    cachedGmailAccessToken = token;
-    cachedGmailUser = result.user;
-    return { user: result.user, accessToken: token };
-  } catch (error: any) {
-    console.error('[Gmail Auth] Error connecting Gmail:', error);
-    throw error;
+export const connectGmailAccount = async (): Promise<{ user: User; accessToken: string } | null> => {
+  if (activeGmailAuthPromise) {
+    return activeGmailAuthPromise;
   }
+
+  activeGmailAuthPromise = (async () => {
+    try {
+      const provider = getGmailProvider();
+      const result = await signInWithPopup(auth, provider);
+      const credential = GoogleAuthProvider.credentialFromResult(result);
+      const token = credential?.accessToken;
+
+      if (!token) {
+        throw new Error('Could not retrieve Gmail access token from Google sign-in.');
+      }
+
+      cachedGmailAccessToken = token;
+      cachedGmailUser = result.user;
+      return { user: result.user, accessToken: token };
+    } catch (error: any) {
+      const errorCode = error?.code || '';
+      const errorMsg = error?.message || '';
+      if (
+        errorCode === 'auth/popup-closed-by-user' ||
+        errorCode === 'auth/cancelled-popup-request' ||
+        errorCode === 'auth/user-cancelled' ||
+        errorMsg.includes('popup-closed-by-user') ||
+        errorMsg.includes('cancelled-popup-request') ||
+        errorMsg.includes('Pending promise was never set')
+      ) {
+        // User closed or dismissed the popup window normally
+        return null;
+      }
+      console.warn('[Gmail Auth] Connection notice:', errorMsg || error);
+      throw error;
+    } finally {
+      activeGmailAuthPromise = null;
+    }
+  })();
+
+  return activeGmailAuthPromise;
 };
 
 /**

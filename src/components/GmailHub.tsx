@@ -155,16 +155,30 @@ export function GmailHub({
   }, [token]);
 
   const handleConnectGmail = async () => {
+    if (isAuthenticating) return;
     setIsAuthenticating(true);
     try {
       const res = await connectGmailAccount();
+      if (!res) {
+        // User closed or dismissed the popup
+        return;
+      }
       setToken(res.accessToken);
       setGmailToken(res.accessToken);
       addAuditLog(`Connected Gmail integration for ${res.user.email}`, 'success');
       addToast('Gmail Connected', `Successfully connected as ${res.user.email}`, 'success');
     } catch (err: any) {
-      console.error('Gmail Auth error:', err);
-      addToast('Connection Error', err?.message || 'Failed to authenticate with Google Gmail.', 'warning');
+      const errorMsg = err?.message || '';
+      if (
+        err?.code === 'auth/popup-closed-by-user' ||
+        err?.code === 'auth/cancelled-popup-request' ||
+        errorMsg.includes('popup-closed-by-user') ||
+        errorMsg.includes('cancelled-popup-request')
+      ) {
+        return;
+      }
+      console.warn('Gmail Auth notice:', err);
+      addToast('Connection Notice', err?.message || 'Failed to authenticate with Google Gmail.', 'warning');
     } finally {
       setIsAuthenticating(false);
     }

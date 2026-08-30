@@ -177,12 +177,12 @@ export const INITIAL_CATEGORY_INFOS: CategoryInfo[] = [
     startingPrice: 220,
   },
   {
-    name: 'New Additions',
-    emoji: '✨',
+    name: 'Cinnamon Rolls',
+    emoji: '🌀',
     description: 'Warm, soft, pillowy rolls swirled with sweet cassia cinnamon butter and covered with gourmet glazes.',
     image: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=600&q=80',
     imageUrl: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=600&q=80',
-    itemCountText: 'Warm Cinnamon Rolls & Specials',
+    itemCountText: 'Box of 6 Cinnamon Rolls',
     startingPrice: 400,
   },
   {
@@ -1186,7 +1186,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     isFavorite: false
   },
 
-  // --- NEW ADDITIONS (BOX OF 6) ---
+  // --- BOMBOLONIS (BOX OF 6) ---
   {
     id: 'add-bomboloni-vanilla',
     name: 'Classic Vanilla Custard Bombolonies',
@@ -1530,6 +1530,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     ],
     isFavorite: false
   },
+  // --- CINNAMON ROLLS (BOX OF 6) ---
   {
     id: 'add-roll-sugar',
     name: 'Classic Sugar Glaze Cinnamon Rolls',
@@ -1543,7 +1544,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     votes: 123,
     nutrients: { calories: 290, protein: '4g', carbs: '41g', fat: '12g' },
     tags: ['Cinnamon Roll', 'Sugar Glaze', 'Warm', 'Comfort'],
-    category: 'New Additions',
+    category: 'Cinnamon Rolls',
     priceOptions: [
       { label: 'Box of 6', price: 400 }
     ],
@@ -1577,7 +1578,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     votes: 145,
     nutrients: { calories: 310, protein: '4.8g', carbs: '44g', fat: '13g' },
     tags: ['Cinnamon Roll', 'Condensed Milk', 'Gooey', 'Moist'],
-    category: 'New Additions',
+    category: 'Cinnamon Rolls',
     priceOptions: [
       { label: 'Box of 6', price: 440 }
     ],
@@ -1610,7 +1611,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     votes: 215,
     nutrients: { calories: 340, protein: '5g', carbs: '42g', fat: '16g' },
     tags: ['Cinnamon Roll', 'Cream Cheese', 'Rich', 'Bestseller'],
-    category: 'New Additions',
+    category: 'Cinnamon Rolls',
     priceOptions: [
       { label: 'Box of 6', price: 480 }
     ],

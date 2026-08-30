@@ -130,11 +130,11 @@ const CATEGORY_INFOS = [
     startingPrice: 220,
   },
   {
-    name: 'New Additions',
-    emoji: '✨',
+    name: 'Cinnamon Rolls',
+    emoji: '🌀',
     description: 'Warm, soft, pillowy rolls swirled with sweet cassia cinnamon butter and covered with gourmet glazes.',
     image: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=600&q=80',
-    itemCountText: 'Warm Cinnamon Rolls & Specials',
+    itemCountText: 'Box of 6 Cinnamon Rolls',
     startingPrice: 400,
   },
   {
@@ -166,6 +166,7 @@ const getCategoryIcon = (name: string) => {
       return <ChefHat className={iconClass} />;
     case 'Overloaded Tubs':
       return <Sparkles className={iconClass} />;
+    case 'Cinnamon Rolls':
     case 'New Additions':
       return <Sparkles className={iconClass} />;
     case 'Assorted Boxes':
@@ -263,6 +264,7 @@ export default function Home({
             width="1600"
             height="650"
             fetchPriority="high"
+            decoding="async"
             className="w-full h-full object-cover opacity-25 scale-105 transition-all duration-10000"
           />
           <div className="absolute inset-0 bg-brand-cocoa/70" />
@@ -277,7 +279,7 @@ export default function Home({
             className="flex items-center justify-center gap-3"
           >
             <div className="w-16 h-16 rounded-full border-2 border-brand-pink/60 p-0.5 bg-white/10 backdrop-blur-xs">
-              <img src={logo} alt="Logo" width="64" height="64" className="w-full h-full object-cover rounded-full" />
+              <img src={logo} alt="Logo" width="64" height="64" decoding="async" className="w-full h-full object-cover rounded-full" />
             </div>
             <span className="font-mono text-xs font-bold uppercase tracking-[0.25em] text-brand-pink-light block">
               {websiteSlogan}

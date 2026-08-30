@@ -1,9 +1,9 @@
-import confetti from 'canvas-confetti';
-
 /**
  * Subtle celebratory confetti animation styled for The Frosting Fairy bakery
  */
-export function triggerOrderSuccessConfetti() {
+export async function triggerOrderSuccessConfetti() {
+  const confetti = (await import('canvas-confetti')).default;
+
   const brandColors = [
     '#e07a93', // signature blush pink
     '#f4a7bb', // soft rose

@@ -313,6 +313,10 @@ export default function UpiQrPaymentModal({
               <img
                 src={qrDataUrl}
                 alt="UPI Payment QR Code"
+                width="224"
+                height="224"
+                loading="lazy"
+                decoding="async"
                 className="w-full h-full object-contain"
               />
             ) : (

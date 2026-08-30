@@ -2,7 +2,6 @@ import express from "express";
 import path from "path";
 import crypto from "crypto";
 import { createServer as createViteServer } from "vite";
-import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
 import rateLimit from "express-rate-limit";
 import firebaseConfig from "./firebase-applet-config.json";
@@ -186,14 +185,15 @@ async function startServer() {
   // Middleware for parsing JSON requests
   app.use(express.json({ limit: "10mb" }));
 
-  // Initialize GoogleGenAI client lazily
+  // Initialize GoogleGenAI client lazily via dynamic import
   let ai: any = null;
-  const getAiClient = () => {
+  const getAiClient = async () => {
     if (!ai) {
       const apiKey = process.env.GEMINI_API_KEY;
       if (!apiKey) {
         throw new Error("GEMINI_API_KEY is not set. Please add it in Settings > Secrets.");
       }
+      const { GoogleGenAI } = await import("@google/genai");
       ai = new GoogleGenAI({
         apiKey,
         httpOptions: {
@@ -226,7 +226,7 @@ async function startServer() {
       console.log(`Generating cake image for prompt: "${prompt}"`);
 
       try {
-        const client = getAiClient();
+        const client = await getAiClient();
         const response = await client.models.generateContent({
           model: "gemini-3.1-flash-lite-image",
           contents: {
@@ -301,7 +301,7 @@ async function startServer() {
       let generatedBody = "";
 
       try {
-        const client = getAiClient();
+        const client = await getAiClient();
         const prompt = `You are the Head Pastry Chef & Communications Manager for 'The Frosting Fairy', a luxury artisanal bakery and cake boutique.
 Write a warm, elegant, polite, and mouth-watering email for a customer.
 Customer Name: ${customerName || 'Valued Customer'}

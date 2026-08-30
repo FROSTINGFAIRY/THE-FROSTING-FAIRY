@@ -81,6 +81,7 @@ const getCategoryIcon = (name: string, isActive: boolean) => {
       return <Sparkles className={iconClass} />;
     case 'Favorites':
       return <Heart className={iconClass} />;
+    case 'Cinnamon Rolls':
     case 'New Additions':
       return <Sparkles className={iconClass} />;
     case 'Assorted Boxes':
@@ -196,7 +197,7 @@ export default function Dashboard({
     { name: 'Overloaded Tubs', emoji: '🥣' },
     { name: 'Donuts', emoji: '🍩' },
     { name: 'Bombolonis', emoji: '🥯' },
-    { name: 'New Additions', emoji: '✨' },
+    { name: 'Cinnamon Rolls', emoji: '🌀' },
     { name: 'Assorted Boxes', emoji: '🎁' },
   ];
 

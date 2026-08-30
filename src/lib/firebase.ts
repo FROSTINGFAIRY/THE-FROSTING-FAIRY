@@ -45,10 +45,40 @@ export const db = firestoreDbId
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 
-// Google Sign-In helper using Firebase Authentication
-export const signInWithGoogle = async (): Promise<User> => {
-  const result = await signInWithPopup(auth, googleProvider);
-  return result.user;
+let activeGoogleSignInPromise: Promise<User | null> | null = null;
+
+// Google Sign-In helper using Firebase Authentication with concurrent request safety
+export const signInWithGoogle = async (): Promise<User | null> => {
+  if (activeGoogleSignInPromise) {
+    return activeGoogleSignInPromise;
+  }
+
+  activeGoogleSignInPromise = (async () => {
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      return result.user;
+    } catch (error: any) {
+      const errorCode = error?.code || '';
+      const errorMsg = error?.message || '';
+      if (
+        errorCode === 'auth/popup-closed-by-user' ||
+        errorCode === 'auth/cancelled-popup-request' ||
+        errorCode === 'auth/user-cancelled' ||
+        errorMsg.includes('popup-closed-by-user') ||
+        errorMsg.includes('cancelled-popup-request') ||
+        errorMsg.includes('Pending promise was never set')
+      ) {
+        // User closed or dismissed the popup window normally
+        return null;
+      }
+      console.warn('[Firebase Auth] Sign-in notice:', errorMsg || error);
+      throw error;
+    } finally {
+      activeGoogleSignInPromise = null;
+    }
+  })();
+
+  return activeGoogleSignInPromise;
 };
 
 // Sign out helper

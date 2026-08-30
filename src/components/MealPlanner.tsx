@@ -376,6 +376,8 @@ export default function MealPlanner({
                             'https://images.unsplash.com/photo-1565958011703-44f9829ba187?auto=format&fit=crop&q=80&w=300'
                           }
                           alt={order.cakeType}
+                          width="72"
+                          height="72"
                           loading="lazy"
                           decoding="async"
                           className="w-full h-full object-cover"

@@ -6,6 +6,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { getRecipeImages } from './Dashboard';
 import { auth } from '../lib/firebase';
 
+const BOX_ROUND_TIERS = [6, 12, 18, 24];
+
 interface RecipeDetailProps {
   recipe: Recipe;
   allRecipes?: Recipe[];
@@ -133,6 +135,8 @@ export default function RecipeDetail({
   const totalBoxItemsSelected = React.useMemo(() => {
     return (Object.values(boxSelections) as number[]).reduce((sum: number, qty: number) => sum + qty, 0);
   }, [boxSelections]);
+
+  const nextTier = BOX_ROUND_TIERS.find((tier) => tier > totalBoxItemsSelected);
 
   const liveBoxTotal = React.useMemo(() => {
     if (!isBox) return 0;
@@ -307,6 +311,10 @@ export default function RecipeDetail({
             <img
               src={activeImageUrl}
               alt={recipe.name}
+              width="600"
+              height="420"
+              loading="lazy"
+              decoding="async"
               className="w-full h-full object-cover transition-transform duration-500 hover:scale-102"
             />
             
@@ -368,7 +376,7 @@ export default function RecipeDetail({
                       : 'border-brand-cocoa-border hover:border-brand-pink-accent/50 hover:scale-101'
                   }`}
                 >
-                  <img src={imgUrl} alt={`${recipe.name} view ${idx + 1}`} loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                  <img src={imgUrl} alt={`${recipe.name} view ${idx + 1}`} width="80" height="64" loading="lazy" decoding="async" className="w-full h-full object-cover" />
                 </button>
               ))}
             </div>
@@ -508,6 +516,15 @@ export default function RecipeDetail({
                     </div>
                   </div>
 
+                  {/* Complete the Box Nudge Banner */}
+                  {totalBoxItemsSelected >= boxMinItems && nextTier !== undefined && (nextTier - totalBoxItemsSelected === 1 || nextTier - totalBoxItemsSelected === 2) && (
+                    <div className="bg-brand-pink-light/60 border border-brand-pink/40 rounded-xl px-3.5 py-2 flex items-center justify-between text-xs font-mono text-brand-cocoa shadow-3xs">
+                      <span className="font-bold text-brand-pink-dark flex items-center gap-1.5">
+                        <span>Add {nextTier - totalBoxItemsSelected} more to make it a full {nextTier}! 🎁</span>
+                      </span>
+                    </div>
+                  )}
+
                   {/* Selected Treats Tray Toggle */}
                   {totalBoxItemsSelected > 0 && (
                     <div className="border-t border-brand-pink/20 pt-2.5">
@@ -550,6 +567,10 @@ export default function RecipeDetail({
                                     <img
                                       src={itemProduct.image}
                                       alt={itemName}
+                                      width="32"
+                                      height="32"
+                                      loading="lazy"
+                                      decoding="async"
                                       className="w-8 h-8 rounded-lg object-cover border border-brand-cocoa-border shrink-0"
                                     />
                                   )}
@@ -750,6 +771,8 @@ export default function RecipeDetail({
                                 <img
                                   src={item.image}
                                   alt={item.name}
+                                  width="48"
+                                  height="48"
                                   loading="lazy"
                                   decoding="async"
                                   className="w-full h-full object-cover"
@@ -968,7 +991,7 @@ export default function RecipeDetail({
                   {customImageUrl && (
                     <div className="mt-3.5 p-3 bg-white border border-brand-pink/30 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
                       <div className="w-14 h-14 rounded-lg overflow-hidden border border-brand-cocoa-border shrink-0">
-                        <img src={customImageUrl} alt="Generated design preview" loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                        <img src={customImageUrl} alt="Generated design preview" width="56" height="56" loading="lazy" decoding="async" className="w-full h-full object-cover" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <span className="text-[9px] font-mono font-bold text-brand-pink uppercase tracking-wider block">Mock-up Applied!</span>

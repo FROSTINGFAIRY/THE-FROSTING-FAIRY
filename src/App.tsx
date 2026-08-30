@@ -3,24 +3,26 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import Navbar from './components/Navbar';
 import logoImg from './assets/images/frosting_fairy_logo_1784129178255.jpg';
 import Home from './components/Home';
 import Dashboard from './components/Dashboard';
-import MealPlanner from './components/MealPlanner';
-import ShoppingList from './components/ShoppingList';
-import RecipeDetail from './components/RecipeDetail';
-import AdminDashboard from './components/AdminDashboard';
 import OrderSuccessModal, { OrderSuccessDetails } from './components/OrderSuccessModal';
 import { BakeryStoreMapModal } from './components/BakeryMapModal';
 import { triggerOrderSuccessConfetti } from './lib/confetti';
 import { INITIAL_RECIPES, INITIAL_CATEGORY_INFOS } from './data';
 import { Recipe, ShoppingItem, MealPlanEntry, MealType, CategoryInfo } from './types';
 import { AnimatePresence, motion } from 'motion/react';
-import { X, Instagram, ArrowLeft } from 'lucide-react';
+import { X, Instagram, ArrowLeft, Loader2 } from 'lucide-react';
 import { db } from './lib/firebase';
 import { collection, onSnapshot, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+
+// Lazy loaded route/tab components for code splitting & optimal load performance
+const MealPlanner = lazy(() => import('./components/MealPlanner'));
+const ShoppingList = lazy(() => import('./components/ShoppingList'));
+const RecipeDetail = lazy(() => import('./components/RecipeDetail'));
+const AdminDashboard = lazy(() => import('./components/AdminDashboard'));
 
 // Local storage key names for fallback preferences
 const SHOPPING_STORAGE_KEY = 'gusto_shopping_list';
@@ -67,20 +69,24 @@ export default function App() {
               (docSnap.id === 'cookie-mm' && docData.priceOptions?.[0]?.price !== 330)
             );
 
+            const normalizedCategory = (docData.category === 'New Additions' ? 'Cinnamon Rolls' : (docData.category || initial.category));
             if (isStaleCookie) {
               loadedRecipes.push({
                 ...initial,
+                category: normalizedCategory,
                 isFavorite: docData.isFavorite ?? initial.isFavorite,
               });
             } else {
               loadedRecipes.push({
                 ...initial,
                 ...docData,
+                category: normalizedCategory,
                 id: docSnap.id,
               } as Recipe);
             }
           } else {
-            loadedRecipes.push({ id: docSnap.id, ...docData } as Recipe);
+            const normalizedCategory = docData.category === 'New Additions' ? 'Cinnamon Rolls' : (docData.category || 'Cinnamon Rolls');
+            loadedRecipes.push({ id: docSnap.id, ...docData, category: normalizedCategory } as Recipe);
           }
         });
 
@@ -786,7 +792,16 @@ export default function App() {
             transition={{ duration: 0.25, ease: 'easeOut' }}
             className="flex-1 flex flex-col w-full"
           >
-            {renderContent()}
+            <Suspense
+              fallback={
+                <div className="flex flex-col items-center justify-center p-16 min-h-[360px] space-y-3">
+                  <Loader2 className="w-8 h-8 text-brand-pink animate-spin" />
+                  <span className="text-xs font-mono text-brand-cocoa-light">Loading fresh treats...</span>
+                </div>
+              }
+            >
+              {renderContent()}
+            </Suspense>
           </motion.div>
         </AnimatePresence>
 
@@ -872,7 +887,7 @@ export default function App() {
           <div className="space-y-3">
             <div className="flex items-center gap-3">
               <div className="w-14 h-14 rounded-full border border-brand-cream/25 overflow-hidden bg-white/10 p-0.5 shrink-0">
-                <img src={logo} alt={`${websiteName} Logo`} loading="lazy" decoding="async" className="w-full h-full object-cover rounded-full" />
+                <img src={logo} alt={`${websiteName} Logo`} width="56" height="56" loading="lazy" decoding="async" className="w-full h-full object-cover rounded-full" />
               </div>
               <h4 className="font-display font-black text-lg text-white uppercase tracking-wider">{websiteName}</h4>
             </div>

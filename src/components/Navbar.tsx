@@ -43,7 +43,7 @@ export default function Navbar({
               className="flex items-center gap-3 group focus:outline-none cursor-pointer"
             >
               <div className="w-12 h-12 rounded-full border border-brand-cocoa-border overflow-hidden shadow-xs group-hover:scale-105 transition-transform flex items-center justify-center bg-white shrink-0">
-                <img src={logo} alt="The Frosting Fairy Logo" className="w-full h-full object-cover" />
+                <img src={logo} alt="The Frosting Fairy Logo" width="48" height="48" decoding="async" className="w-full h-full object-cover" />
               </div>
               <div className="text-left">
                 <span className="font-display font-black text-lg md:text-xl text-brand-cocoa tracking-tight block uppercase">
