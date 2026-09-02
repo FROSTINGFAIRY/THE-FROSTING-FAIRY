@@ -56,9 +56,9 @@ service cloud.firestore {
       allow delete: if isRoleAdmin();
     }
 
-    // Payment sessions: admin-only reads, server-only writes
+    // Payment sessions: admin-only reads or authenticated user's own session read, server-only writes
     match /payment_sessions/{sessionId} {
-      allow read: if isAdmin();
+      allow read: if (request.auth != null && resource.data.userId == request.auth.uid) || isAdmin();
       allow write: if false;
     }
 

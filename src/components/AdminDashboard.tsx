@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { 
   DollarSign, 
   Image as ImageIcon, 
@@ -39,10 +40,10 @@ import {
   AlertCircle,
   X
 } from 'lucide-react';
-import { Recipe, PriceOption, MealPlanEntry, CategoryInfo } from '../types';
+import { Recipe, PriceOption, MealPlanEntry, CategoryInfo, LayoutContextType } from '../types';
 import { motion } from 'motion/react';
 import { INITIAL_RECIPES, INITIAL_CATEGORY_INFOS } from '../data';
-import defaultLogoImg from '../assets/images/frosting_fairy_logo_1784129178255.jpg';
+import defaultLogoImg from '../assets/images/frosting_fairy_logo_1784129178255.webp';
 import { PerformanceDashboard } from './PerformanceDashboard';
 import { GmailHub } from './GmailHub';
 import { db, auth, signInWithGoogle, logOutAdmin, checkIsAdminInFirestore, cleanFirestoreData } from '../lib/firebase';
@@ -69,25 +70,25 @@ const decodeJwt = (token: string) => {
 
 
 interface AdminDashboardProps {
-  recipes: Recipe[];
-  setRecipes: React.Dispatch<React.SetStateAction<Recipe[]>>;
+  recipes?: Recipe[];
+  setRecipes?: React.Dispatch<React.SetStateAction<Recipe[]>>;
   categoryInfos?: CategoryInfo[];
   setCategoryInfos?: React.Dispatch<React.SetStateAction<CategoryInfo[]>>;
-  logo: string;
-  setLogo: (logo: string) => void;
-  websiteName: string;
-  setWebsiteName: (name: string) => void;
-  websiteSlogan: string;
-  setWebsiteSlogan: (slogan: string) => void;
-  mealPlan: MealPlanEntry[];
-  setMealPlan: React.Dispatch<React.SetStateAction<MealPlanEntry[]>>;
-  addToast: (title: string, message: string, type?: 'success' | 'info' | 'warning') => void;
-  upiId: string;
-  setUpiId: (id: string) => void;
-  upiQrCode: string;
-  setUpiQrCode: (code: string) => void;
-  cashOnDeliveryEnabled: boolean;
-  setCashOnDeliveryEnabled: (enabled: boolean) => void;
+  logo?: string;
+  setLogo?: (logo: string) => void;
+  websiteName?: string;
+  setWebsiteName?: (name: string) => void;
+  websiteSlogan?: string;
+  setWebsiteSlogan?: (slogan: string) => void;
+  mealPlan?: MealPlanEntry[];
+  setMealPlan?: React.Dispatch<React.SetStateAction<MealPlanEntry[]>>;
+  addToast?: (title: string, message: string, type?: 'success' | 'info' | 'warning') => void;
+  upiId?: string;
+  setUpiId?: (id: string) => void;
+  upiQrCode?: string;
+  setUpiQrCode?: (code: string) => void;
+  cashOnDeliveryEnabled?: boolean;
+  setCashOnDeliveryEnabled?: (enabled: boolean) => void;
 }
 
 // Preset assets for logo customizer
@@ -112,27 +113,33 @@ const PRODUCT_IMAGE_PRESETS = [
   { name: 'Wild Harvest Blueberry Tart', url: 'https://images.unsplash.com/photo-1519869325930-281384150729?auto=format&fit=crop&w=600&q=80' },
 ];
 
-export default function AdminDashboard({
-  recipes,
-  setRecipes,
-  categoryInfos: passedCategoryInfos,
-  setCategoryInfos,
-  logo,
-  setLogo,
-  websiteName,
-  setWebsiteName,
-  websiteSlogan,
-  setWebsiteSlogan,
-  mealPlan,
-  setMealPlan,
-  addToast,
-  upiId,
-  setUpiId,
-  upiQrCode,
-  setUpiQrCode,
-  cashOnDeliveryEnabled,
-  setCashOnDeliveryEnabled,
-}: AdminDashboardProps) {
+export default function AdminDashboard(props: AdminDashboardProps) {
+  const context = useOutletContext<LayoutContextType | null>();
+
+  const recipes = props.recipes || context?.recipes || [];
+  const setRecipes = props.setRecipes || context?.setRecipes || (() => {});
+  const passedCategoryInfos = props.categoryInfos || context?.categoryInfos;
+  const setCategoryInfos = props.setCategoryInfos || context?.setCategoryInfos || (() => {});
+  const logo = props.logo || context?.logo || '';
+  const setLogo = props.setLogo || context?.setLogo || (() => {});
+  const websiteName = props.websiteName || context?.websiteName || 'The Frosting Fairy';
+  const setWebsiteName = props.setWebsiteName || context?.setWebsiteName || (() => {});
+  const websiteSlogan = props.websiteSlogan || context?.websiteSlogan || '';
+  const setWebsiteSlogan = props.setWebsiteSlogan || context?.setWebsiteSlogan || (() => {});
+  const mealPlan = props.mealPlan || context?.mealPlan || [];
+  const setMealPlan = props.setMealPlan || context?.setMealPlan || (() => {});
+  const addToast = props.addToast || context?.addToast || (() => {});
+  const upiId = props.upiId || context?.upiId || '';
+  const setUpiId = props.setUpiId || context?.setUpiId || (() => {});
+  const upiQrCode = props.upiQrCode || context?.upiQrCode || '';
+  const setUpiQrCode = props.setUpiQrCode || context?.setUpiQrCode || (() => {});
+  const cashOnDeliveryEnabled = props.cashOnDeliveryEnabled ?? context?.cashOnDeliveryEnabled ?? true;
+  const setCashOnDeliveryEnabled = props.setCashOnDeliveryEnabled || context?.setCashOnDeliveryEnabled || (() => {});
+
+  useEffect(() => {
+    document.title = 'Admin Panel | The Frosting Fairy';
+  }, []);
+
   const [adminTab, setAdminTab] = useState<'overview' | 'products' | 'categories' | 'branding' | 'authority' | 'orders' | 'gmail'>('overview');
   const [gmailPreselectedOrder, setGmailPreselectedOrder] = useState<MealPlanEntry | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -2829,7 +2836,7 @@ export default function AdminDashboard({
                           }`}
                           title={p.name}
                         >
-                          <img src={p.url} alt={p.name} loading="lazy" decoding="async" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                          <img src={p.url} alt={p.name} width="48" height="48" loading="lazy" decoding="async" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
                             <span className="text-[8px] font-bold text-white text-center p-1 leading-none">{p.name.split(' ').slice(0, 2).join(' ')}</span>
                           </div>

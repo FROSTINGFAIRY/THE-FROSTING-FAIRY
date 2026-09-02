@@ -122,6 +122,27 @@ export async function setFirestoreDoc(collection: string, docId: string, data: R
 }
 
 /**
+ * Patch specific fields of an existing document in Firestore via REST API using updateMask
+ */
+export async function updateFirestoreDoc(collection: string, docId: string, data: Record<string, any>): Promise<boolean> {
+  try {
+    const fieldKeys = Object.keys(data);
+    if (fieldKeys.length === 0) return true;
+    const maskParams = fieldKeys.map((k) => `updateMask.fieldPaths=${encodeURIComponent(k)}`).join("&");
+    const url = `${FIRESTORE_BASE_URL}/${collection}/${encodeURIComponent(docId)}?${maskParams}&key=${firebaseConfig.apiKey}`;
+    const res = await fetch(url, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fields: toFirestoreFields(data) }),
+    });
+    return res.ok;
+  } catch (err) {
+    console.warn(`[Firestore REST] Error updating doc ${collection}/${docId}:`, err);
+    return false;
+  }
+}
+
+/**
  * Add a new document with an auto-generated ID in Firestore via REST API
  */
 export async function addFirestoreDoc(collection: string, data: Record<string, any>): Promise<string | null> {

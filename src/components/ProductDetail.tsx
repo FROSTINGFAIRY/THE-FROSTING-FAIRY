@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate, useOutletContext } from 'react-router-dom';
 import { ArrowLeft, Heart, ShoppingCart, Info, Sparkles, Check, Flame, MessageSquare, Plus, Minus, Star, Gift, ChevronLeft, ChevronRight, ArrowUpDown, TrendingUp, Search, Trash2, CheckCircle2, Layers, ShoppingBag, X, ChevronDown, ChevronUp } from 'lucide-react';
-import { Recipe, PriceOption } from '../types';
+import { Recipe, PriceOption, LayoutContextType } from '../types';
 import { INITIAL_RECIPES } from '../data';
 import { motion, AnimatePresence } from 'motion/react';
 import { getRecipeImages } from './Dashboard';
@@ -9,11 +10,11 @@ import { auth } from '../lib/firebase';
 const BOX_ROUND_TIERS = [6, 12, 18, 24];
 
 interface ProductDetailProps {
-  recipe: Recipe;
+  recipe?: Recipe;
   allRecipes?: Recipe[];
-  onBack: () => void;
-  onToggleFavorite: (recipeId: string) => void;
-  onAddToCart: (item: {
+  onBack?: () => void;
+  onToggleFavorite?: (recipeId: string) => void;
+  onAddToCart?: (item: {
     productId: string;
     name: string;
     category: string;
@@ -26,17 +27,48 @@ interface ProductDetailProps {
     recipeName: string; // repurposed for selected frosting flavor/flavor
     boxContents?: { name: string; quantity: number; price: number }[];
   }) => void;
-  onGoToCart: () => void;
+  onGoToCart?: () => void;
 }
 
-export default function ProductDetail({
-  recipe,
-  allRecipes = [],
-  onBack,
-  onToggleFavorite,
-  onAddToCart,
-  onGoToCart,
-}: ProductDetailProps) {
+export default function ProductDetail(props: ProductDetailProps) {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const context = useOutletContext<LayoutContextType | null>();
+
+  const allRecipes = props.allRecipes || context?.recipes || INITIAL_RECIPES;
+  const recipe = props.recipe || (id ? allRecipes.find((r) => r.id === id) || INITIAL_RECIPES.find((r) => r.id === id) : undefined);
+
+  const onBack = props.onBack || (() => navigate(-1));
+  const onToggleFavorite = props.onToggleFavorite || ((rId: string) => context?.handleToggleFavorite(rId));
+  const onGoToCart = props.onGoToCart || (() => navigate('/cart'));
+  const onAddToCart = props.onAddToCart || ((item: any) => {
+    if (context?.handleAddToCart) {
+      context.handleAddToCart(item);
+    }
+    navigate('/cart');
+  });
+
+  useEffect(() => {
+    if (recipe) {
+      document.title = `${recipe.name} | The Frosting Fairy`;
+    }
+  }, [recipe]);
+
+  if (!recipe) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center p-12 text-center space-y-4">
+        <h2 className="text-2xl font-display font-bold text-brand-cocoa">Confection Not Found</h2>
+        <p className="text-sm text-brand-cocoa-light">We could not find the dessert you requested.</p>
+        <button
+          onClick={() => navigate('/shop')}
+          className="px-6 py-2.5 bg-brand-pink text-white rounded-full font-bold text-xs uppercase tracking-wider shadow-md hover:bg-brand-pink-dark transition-all cursor-pointer"
+        >
+          Explore Boutique Menu
+        </button>
+      </div>
+    );
+  }
+
   // E-commerce state
   const [selectedOptionIndex, setSelectedOptionIndex] = useState(0);
   const [frostingFlavor, setFrostingFlavor] = useState(() => {

@@ -41,6 +41,19 @@
         "role": { "type": "string" }
       },
       "required": ["email"]
+    },
+    "payment_sessions": {
+      "title": "payment_sessions",
+      "description": "Secure payment gateway sessions",
+      "type": "object",
+      "properties": {
+        "razorpayOrderId": { "type": "string" },
+        "amountInPaise": { "type": "number" },
+        "totalPrice": { "type": "number" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["razorpayOrderId", "amountInPaise", "status"]
     }
   }
 }

@@ -1,62 +1,62 @@
 import { Recipe, CategoryInfo } from './types';
 
-import imgCakeVanilla from './assets/images/classic_vanilla_cake_1784434668508.jpg';
-import imgCakeChocolate from './assets/images/chocolate_cake_1784434686481.jpg';
-import imgCakeStrawberry from './assets/images/strawberry_cake_1784434701070.jpg';
-import imgCakePineapple from './assets/images/pineapple_swirl_cake_1784434715973.jpg';
-import imgCakeButterscotch from './assets/images/butterscotch_cake_1784434731944.jpg';
-import imgCakeCaramel from './assets/images/whipped_caramel_cake_1784434744053.jpg';
-import imgCakeTruffle from './assets/images/choco_truffle_cake_1784434756904.jpg';
-import imgCakeLemonCream from './assets/images/lemon_cream_cheese_cake_1784434770151.jpg';
+import imgCakeVanilla from './assets/images/classic_vanilla_cake_1784434668508.webp';
+import imgCakeChocolate from './assets/images/chocolate_cake_1784434686481.webp';
+import imgCakeStrawberry from './assets/images/strawberry_cake_1784434701070.webp';
+import imgCakePineapple from './assets/images/pineapple_swirl_cake_1784434715973.webp';
+import imgCakeButterscotch from './assets/images/butterscotch_cake_1784434731944.webp';
+import imgCakeCaramel from './assets/images/whipped_caramel_cake_1784434744053.webp';
+import imgCakeTruffle from './assets/images/choco_truffle_cake_1784434756904.webp';
+import imgCakeLemonCream from './assets/images/lemon_cream_cheese_cake_1784434770151.webp';
 
-import imgCupcakeVanilla from './assets/images/classic_vanilla_cupcakes_1784434789514.jpg';
-import imgCupcakeStrawberry from './assets/images/strawberry_cupcakes_1784434803989.jpg';
-import imgCupcakeLemon from './assets/images/lemon_cupcakes_1784434818689.jpg';
-import imgCupcakeRedVelvet from './assets/images/red_velvet_cupcakes_1784434833154.jpg';
-import imgCupcakeOreo from './assets/images/oreo_cupcakes_1784434847600.jpg';
-import imgCupcakeNutella from './assets/images/choco_nutella_cupcakes_1784434862619.jpg';
+import imgCupcakeVanilla from './assets/images/classic_vanilla_cupcakes_1784434789514.webp';
+import imgCupcakeStrawberry from './assets/images/strawberry_cupcakes_1784434803989.webp';
+import imgCupcakeLemon from './assets/images/lemon_cupcakes_1784434818689.webp';
+import imgCupcakeRedVelvet from './assets/images/red_velvet_cupcakes_1784434833154.webp';
+import imgCupcakeOreo from './assets/images/oreo_cupcakes_1784434847600.webp';
+import imgCupcakeNutella from './assets/images/choco_nutella_cupcakes_1784434862619.webp';
 
-import imgBrownieClassic from './assets/images/classic_brownie_1784434884868.jpg';
-import imgBrownieOreo from './assets/images/oreo_brownie_1784434897494.jpg';
-import imgBrownieNutella from './assets/images/nutella_brownie_1784434912033.jpg';
-import imgBrownieKitkat from './assets/images/kitkat_brownie_1784434926370.jpg';
-import imgBrownieTriple from './assets/images/triple_chocolate_brownie_1784434940621.jpg';
-import imgBrownieBiscoff from './assets/images/biscoff_brownie_1784434954807.jpg';
-import imgBrownieBiscoffSwirl from './assets/images/biscoff_brownie_swirl_1787240182609.jpg';
-import imgBrownieBiscoffStack from './assets/images/biscoff_brownie_stack_1787240197373.jpg';
-import imgBrownieBiscoffBite from './assets/images/biscoff_brownie_bite_1787240210438.jpg';
-import imgBrowniePistachio from './assets/images/pistachio_brownie_1784434968825.jpg';
+import imgBrownieClassic from './assets/images/classic_brownie_1784434884868.webp';
+import imgBrownieOreo from './assets/images/oreo_brownie_1784434897494.webp';
+import imgBrownieNutella from './assets/images/nutella_brownie_1784434912033.webp';
+import imgBrownieKitkat from './assets/images/kitkat_brownie_1784434926370.webp';
+import imgBrownieTriple from './assets/images/triple_chocolate_brownie_1784434940621.webp';
+import imgBrownieBiscoff from './assets/images/biscoff_brownie_1784434954807.webp';
+import imgBrownieBiscoffSwirl from './assets/images/biscoff_brownie_swirl_1787240182609.webp';
+import imgBrownieBiscoffStack from './assets/images/biscoff_brownie_stack_1787240197373.webp';
+import imgBrownieBiscoffBite from './assets/images/biscoff_brownie_bite_1787240210438.webp';
+import imgBrowniePistachio from './assets/images/pistachio_brownie_1784434968825.webp';
 
-import imgCookieChocoChip from './assets/images/classic_choco_chip_cookies_1784434986464.jpg';
-import imgCookieDoubleChoco from './assets/images/double_chocolate_cookies_1784435001156.jpg';
-import imgCookieDarkChunks from './assets/images/dark_chocolate_chunks_cookies_1784435017492.jpg';
-import imgCookieTripleChoco from './assets/images/triple_brownie_cookie_1787065366431.jpg';
-import imgCookieMm from './assets/images/mm_cookies_1784435031411.jpg';
-import imgCookieRedVelvet from './assets/images/red_velvet_white_choco_cookies_1784435046208.jpg';
+import imgCookieChocoChip from './assets/images/classic_choco_chip_cookies_1784434986464.webp';
+import imgCookieDoubleChoco from './assets/images/double_chocolate_cookies_1784435001156.webp';
+import imgCookieDarkChunks from './assets/images/dark_chocolate_chunks_cookies_1784435017492.webp';
+import imgCookieTripleChoco from './assets/images/triple_brownie_cookie_1787065366431.webp';
+import imgCookieMm from './assets/images/mm_cookies_1784435031411.webp';
+import imgCookieRedVelvet from './assets/images/red_velvet_white_choco_cookies_1784435046208.webp';
 
-import imgBomboloniVanilla from './assets/images/classic_vanilla_custard_bombolonies_1784435060933.jpg';
-import imgBomboloniHazelnut from './assets/images/choco_hazelnut_bombolonies_1784435074139.jpg';
-import imgBomboloniStrawberry from './assets/images/strawberry_burst_bombolonies_1784435088155.jpg';
+import imgBomboloniVanilla from './assets/images/classic_vanilla_custard_bombolonies_1784435060933.webp';
+import imgBomboloniHazelnut from './assets/images/choco_hazelnut_bombolonies_1784435074139.webp';
+import imgBomboloniStrawberry from './assets/images/strawberry_burst_bombolonies_1784435088155.webp';
 
-import imgDonutGlazed from './assets/images/classic_glazed_donuts_1784435107615.jpg';
-import imgPinkFrostedDonut from './assets/images/pink_frosted_donut_1785428801914.jpg';
-import imgDonutCaramel from './assets/images/caramel_glazed_donuts_1785429045626.jpg';
-import imgDonutOreos from './assets/images/cookies_cream_donuts_1785429058056.jpg';
-import imgAssortedBoxes from './assets/images/assorted_boxes_collection_1786875438455.jpg';
+import imgDonutGlazed from './assets/images/classic_glazed_donuts_1784435107615.webp';
+import imgPinkFrostedDonut from './assets/images/pink_frosted_donut_1785428801914.webp';
+import imgDonutCaramel from './assets/images/caramel_glazed_donuts_1785429045626.webp';
+import imgDonutOreos from './assets/images/cookies_cream_donuts_1785429058056.webp';
+import imgAssortedBoxes from './assets/images/assorted_boxes_collection_1786875438455.webp';
 
-import imgOverloadedTubsCollection from './assets/images/overloaded_tubs_collection_1787220599283.jpg';
-import imgTubChocoBrownie from './assets/images/tub_choco_brownie_1787220620586.jpg';
-import imgTubChocoSpoon from './assets/images/tub_choco_spoon_1787224988044.jpg';
-import imgTubChocoAngle from './assets/images/tub_choco_angle_1787225000402.jpg';
-import imgTubTiramisu from './assets/images/tub_tiramisu_1787220638007.jpg';
-import imgTubTiramisuSpoon from './assets/images/tub_tiramisu_spoon_1787225012119.jpg';
-import imgTubTiramisuAngle from './assets/images/tub_tiramisu_angle_1787225023023.jpg';
-import imgTubBiscoffCaramel from './assets/images/tub_biscoff_caramel_1787220652387.jpg';
-import imgTubBiscoffSpoon from './assets/images/tub_biscoff_spoon_1787225033461.jpg';
-import imgTubBiscoffAngle from './assets/images/tub_biscoff_angle_1787225046011.jpg';
-import imgTubStrawberryCream from './assets/images/tub_strawberry_cream_1787220668306.jpg';
-import imgTubStrawSpoon from './assets/images/tub_straw_spoon_1787225061259.jpg';
-import imgTubStrawAngle from './assets/images/tub_straw_angle_1787225074027.jpg';
+import imgOverloadedTubsCollection from './assets/images/overloaded_tubs_collection_1787220599283.webp';
+import imgTubChocoBrownie from './assets/images/tub_choco_brownie_1787220620586.webp';
+import imgTubChocoSpoon from './assets/images/tub_choco_spoon_1787224988044.webp';
+import imgTubChocoAngle from './assets/images/tub_choco_angle_1787225000402.webp';
+import imgTubTiramisu from './assets/images/tub_tiramisu_1787220638007.webp';
+import imgTubTiramisuSpoon from './assets/images/tub_tiramisu_spoon_1787225012119.webp';
+import imgTubTiramisuAngle from './assets/images/tub_tiramisu_angle_1787225023023.webp';
+import imgTubBiscoffCaramel from './assets/images/tub_biscoff_caramel_1787220652387.webp';
+import imgTubBiscoffSpoon from './assets/images/tub_biscoff_spoon_1787225033461.webp';
+import imgTubBiscoffAngle from './assets/images/tub_biscoff_angle_1787225046011.webp';
+import imgTubStrawberryCream from './assets/images/tub_strawberry_cream_1787220668306.webp';
+import imgTubStrawSpoon from './assets/images/tub_straw_spoon_1787225061259.webp';
+import imgTubStrawAngle from './assets/images/tub_straw_angle_1787225074027.webp';
 
 export {
   imgCakeVanilla,

@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useNavigate, useOutletContext } from 'react-router-dom';
 import {
   Calendar,
   Trash2,
@@ -23,17 +24,17 @@ import {
   TrendingUp,
   Award
 } from 'lucide-react';
-import { Recipe, MealPlanEntry } from '../types';
+import { Recipe, MealPlanEntry, LayoutContextType } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { OrderReceiptModal } from './OrderReceiptModal';
 
 interface MyOrdersProps {
-  recipes: Recipe[];
-  mealPlan: MealPlanEntry[];
-  onAddMeal: (entry: MealPlanEntry) => void;
-  onRemoveMeal: (id: string) => void;
-  onAddIngredientsToShoppingList: (recipe: Recipe) => void;
-  onSelectRecipe: (recipe: Recipe) => void;
+  recipes?: Recipe[];
+  mealPlan?: MealPlanEntry[];
+  onAddMeal?: (entry: MealPlanEntry) => void;
+  onRemoveMeal?: (id: string) => void;
+  onAddIngredientsToShoppingList?: (recipe: Recipe) => void;
+  onSelectRecipe?: (recipe: Recipe) => void;
   onReorder?: (order: MealPlanEntry) => void;
   onUpdateOrderStatus?: (orderId: string, status: MealPlanEntry['status']) => void;
   onNavigateToShop?: () => void;
@@ -46,18 +47,25 @@ interface MyOrdersProps {
 
 type TabType = 'active' | 'history' | 'all';
 
-export default function MyOrders({
-  recipes,
-  mealPlan,
-  onRemoveMeal,
-  onSelectRecipe,
-  onReorder,
-  onUpdateOrderStatus,
-  onNavigateToShop,
-  cashOnDeliveryEnabled = true,
-  logo,
-  websiteName = 'The Frosting Fairy',
-}: MyOrdersProps) {
+export default function MyOrders(props: MyOrdersProps) {
+  const context = useOutletContext<LayoutContextType | null>();
+  const navigate = useNavigate();
+
+  const recipes = props.recipes || context?.recipes || [];
+  const mealPlan = props.mealPlan || context?.mealPlan || [];
+  const onRemoveMeal = props.onRemoveMeal || ((id: string) => context?.handleRemoveMeal(id));
+  const onSelectRecipe = props.onSelectRecipe || ((recipe: Recipe) => navigate(`/product/${recipe.id}`));
+  const onReorder = props.onReorder || ((order: MealPlanEntry) => context?.handleReorder(order));
+  const onUpdateOrderStatus = props.onUpdateOrderStatus || ((orderId: string, status: MealPlanEntry['status']) => context?.handleUpdateOrderStatus(orderId, status));
+  const onNavigateToShop = props.onNavigateToShop || (() => navigate('/shop'));
+  const cashOnDeliveryEnabled = props.cashOnDeliveryEnabled ?? context?.cashOnDeliveryEnabled ?? true;
+  const logo = props.logo || context?.logo || '';
+  const websiteName = props.websiteName || context?.websiteName || 'The Frosting Fairy';
+
+  useEffect(() => {
+    document.title = 'My Orders | The Frosting Fairy';
+  }, []);
+
   const [activeTab, setActiveTab] = useState<TabType>('active');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedReceiptOrder, setSelectedReceiptOrder] = useState<MealPlanEntry | null>(null);

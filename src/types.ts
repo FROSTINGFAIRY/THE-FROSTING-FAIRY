@@ -151,3 +151,68 @@ export interface MealPlanEntry {
   boxContents?: { name: string; quantity: number; price?: number }[]; // assorted box item selections with price
 }
 
+export interface LayoutContextType {
+  recipes: Recipe[];
+  setRecipes: React.Dispatch<React.SetStateAction<Recipe[]>>;
+  mealPlan: MealPlanEntry[];
+  setMealPlan: React.Dispatch<React.SetStateAction<MealPlanEntry[]>>;
+  categoryInfos: CategoryInfo[];
+  setCategoryInfos: React.Dispatch<React.SetStateAction<CategoryInfo[]>>;
+  logo: string;
+  setLogo: React.Dispatch<React.SetStateAction<string>>;
+  websiteName: string;
+  setWebsiteName: React.Dispatch<React.SetStateAction<string>>;
+  websiteSlogan: string;
+  setWebsiteSlogan: React.Dispatch<React.SetStateAction<string>>;
+  upiId: string;
+  setUpiId: React.Dispatch<React.SetStateAction<string>>;
+  upiQrCode: string;
+  setUpiQrCode: React.Dispatch<React.SetStateAction<string>>;
+  cashOnDeliveryEnabled: boolean;
+  setCashOnDeliveryEnabled: React.Dispatch<React.SetStateAction<boolean>>;
+  shoppingList: ShoppingItem[];
+  setShoppingList: React.Dispatch<React.SetStateAction<ShoppingItem[]>>;
+  toasts: { id: string; title: string; message: string; type: 'success' | 'info' | 'warning' }[];
+  setToasts: React.Dispatch<React.SetStateAction<{ id: string; title: string; message: string; type: 'success' | 'info' | 'warning' }[]>>;
+  addToast: (title: string, message: string, type?: 'success' | 'info' | 'warning') => void;
+  theme: 'light' | 'dark';
+  setTheme: React.Dispatch<React.SetStateAction<'light' | 'dark'>>;
+  toggleTheme: () => void;
+  handleToggleFavorite: (recipeId: string) => void;
+  handleSelectRecipe: (recipe: Recipe) => void;
+  handleAddMeal: (entry: MealPlanEntry) => void;
+  handleRemoveMeal: (id: string) => Promise<void>;
+  handleReorder: (order: MealPlanEntry) => void;
+  handleUpdateOrderStatus: (orderId: string, newStatus: MealPlanEntry['status']) => Promise<void>;
+  handleAddToCart: (item: {
+    productId: string;
+    name: string;
+    category: string;
+    selectedOption: string;
+    price: number;
+    amount: number;
+    unit: string;
+    image: string;
+    customMessage: string;
+    recipeName: string;
+    boxContents?: { name: string; quantity: number; price: number }[];
+  }) => void;
+  handleCheckout: (checkoutData: CheckoutData) => Promise<void>;
+  handleUpiPaymentSuccess: (verifiedData: {
+    orderIds: string[];
+    orderNumber: string;
+    paidAmount: number;
+    transactionId: string;
+    paidAt: string;
+    gatewayRef: string;
+    checkoutData: any;
+  }) => void;
+  handleToggleBought: (id: string) => void;
+  handleUpdateQuantity: (id: string, newAmount: number) => void;
+  handleRemoveShoppingItem: (id: string) => void;
+  handleClearCompleted: () => void;
+  handleClearAllShopping: () => void;
+  handleAddIngredientsToShoppingList: (recipe: Recipe, scaledServings?: number) => void;
+  setIsBakeryMapOpen: (open: boolean) => void;
+}
+

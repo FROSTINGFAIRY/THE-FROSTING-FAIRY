@@ -1,6 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useSearchParams, useNavigate, useOutletContext } from 'react-router-dom';
 import { Search, Flame, Clock, ChefHat, Star, Heart, ArrowRight, ChevronLeft, ChevronRight, ArrowLeft, Sparkles, LayoutGrid, Cake, Cookie, Gift } from 'lucide-react';
-import { Recipe, CategoryInfo } from '../types';
+import { Recipe, CategoryInfo, LayoutContextType } from '../types';
 import {
   imgCakeVanilla,
   imgCakeChocolate,
@@ -153,41 +154,44 @@ export function getRecipeImages(recipe: { id: string; category?: string; image: 
 }
 
 interface DashboardProps {
-  recipes: Recipe[];
+  recipes?: Recipe[];
   categoryInfos?: CategoryInfo[];
-  onSelectRecipe: (recipe: Recipe) => void;
-  onToggleFavorite: (recipeId: string) => void;
-  activeCategory: string;
-  setActiveCategory: (category: string) => void;
-  logo: string;
-  websiteName: string;
-  websiteSlogan: string;
+  onSelectRecipe?: (recipe: Recipe) => void;
+  onToggleFavorite?: (recipeId: string) => void;
+  activeCategory?: string;
+  setActiveCategory?: (category: string) => void;
+  logo?: string;
+  websiteName?: string;
+  websiteSlogan?: string;
 }
 
-export default function Dashboard({
-  recipes,
-  categoryInfos: passedCategoryInfos,
-  onSelectRecipe,
-  onToggleFavorite,
-  activeCategory,
-  setActiveCategory,
-  logo,
-  websiteName,
-  websiteSlogan,
-}: DashboardProps) {
+export default function Dashboard(props: DashboardProps) {
+  const context = useOutletContext<LayoutContextType | null>();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const recipes = props.recipes || context?.recipes || [];
+  const passedCategoryInfos = props.categoryInfos || context?.categoryInfos;
+  const onSelectRecipe = props.onSelectRecipe || ((recipe: Recipe) => navigate(`/product/${recipe.id}`));
+  const onToggleFavorite = props.onToggleFavorite || ((id: string) => context?.handleToggleFavorite(id));
+  const logo = props.logo || context?.logo || '';
+  const websiteName = props.websiteName || context?.websiteName || 'THE FROSTING FAIRY';
+  const websiteSlogan = props.websiteSlogan || context?.websiteSlogan || 'CREATING EDIBLE MAGIC';
+  const passedActiveCategory = props.activeCategory;
+  const passedSetActiveCategory = props.setActiveCategory;
+
+  useEffect(() => {
+    document.title = 'Our Menu | The Frosting Fairy';
+  }, []);
+
   const categoryInfos = passedCategoryInfos && passedCategoryInfos.length > 0
     ? passedCategoryInfos
     : INITIAL_CATEGORY_INFOS;
   const [searchQuery, setSearchQuery] = useState('');
   const [recipeImageIndexes, setRecipeImageIndexes] = useState<Record<string, number>>({});
 
-  // Choose a recipe of the day (e.g., Cream Cheese Glaze Cinnamon Rolls as featured item)
-  const heroRecipe = useMemo(() => {
-    return recipes.find((r) => r.id === 'add-roll-cream-cheese') || recipes[0];
-  }, [recipes]);
-
   // Categories matching the image categories
-  const categories = [
+  const categories = useMemo(() => [
     { name: 'All', emoji: '✨' },
     { name: 'Favorites', emoji: '❤️' },
     { name: 'Signature Cakes', emoji: '🎂' },
@@ -199,7 +203,38 @@ export default function Dashboard({
     { name: 'Bombolonis', emoji: '🥯' },
     { name: 'Cinnamon Rolls', emoji: '🌀' },
     { name: 'Assorted Boxes', emoji: '🎁' },
-  ];
+  ], []);
+
+  // Determine active category from URL search param or prop fallback
+  const activeCategory = useMemo(() => {
+    const catParam = searchParams.get('category');
+    if (!catParam) return passedActiveCategory || 'All';
+    const found = categories.find(
+      (c) =>
+        c.name.toLowerCase() === catParam.toLowerCase() ||
+        c.name.toLowerCase().replace(/\s+/g, '-') === catParam.toLowerCase() ||
+        c.name.toLowerCase().replace(/[^a-z0-9]/g, '') === catParam.toLowerCase().replace(/[^a-z0-9]/g, '')
+    );
+    return found ? found.name : catParam;
+  }, [searchParams, passedActiveCategory, categories]);
+
+  const setActiveCategory = (categoryName: string) => {
+    if (passedSetActiveCategory) {
+      passedSetActiveCategory(categoryName);
+    }
+    const nextParams = new URLSearchParams(searchParams);
+    if (categoryName === 'All') {
+      nextParams.delete('category');
+    } else {
+      nextParams.set('category', categoryName);
+    }
+    setSearchParams(nextParams, { replace: true });
+  };
+
+  // Choose a recipe of the day (e.g., Cream Cheese Glaze Cinnamon Rolls as featured item)
+  const heroRecipe = useMemo(() => {
+    return recipes.find((r) => r.id === 'add-roll-cream-cheese') || recipes[0];
+  }, [recipes]);
 
   // Filter recipes based on category and search query
   const filteredRecipes = useMemo(() => {
@@ -222,7 +257,7 @@ export default function Dashboard({
       <header id="dashboard-header" className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div id="header-greetings" className="flex items-center gap-4 text-left">
           <div className="w-16 h-16 rounded-full border border-brand-cocoa-border overflow-hidden bg-white shadow-xs shrink-0 p-0.5">
-            <img src={logo} alt="The Frosting Fairy Logo" width="64" height="64" className="w-full h-full object-cover rounded-full" />
+            <img src={logo} alt="The Frosting Fairy Logo" width="64" height="64" loading="lazy" decoding="async" className="w-full h-full object-cover rounded-full" />
           </div>
           <div>
             <h2 id="welcome-title" className="font-display font-black text-3xl text-brand-cocoa tracking-tight uppercase">
@@ -274,7 +309,9 @@ export default function Dashboard({
               alt={heroRecipe.name}
               width="700"
               height="400"
+              loading="eager"
               fetchPriority="high"
+              decoding="async"
               className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
             />
             {/* Badges on Hero Image */}

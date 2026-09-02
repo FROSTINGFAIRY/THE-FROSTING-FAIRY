@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate, useOutletContext } from 'react-router-dom';
 import { 
   Sparkles, 
   Heart, 
@@ -21,19 +22,19 @@ import {
   Navigation,
   ExternalLink
 } from 'lucide-react';
-import { Recipe, CategoryInfo } from '../types';
+import { Recipe, CategoryInfo, LayoutContextType } from '../types';
 import { imgBomboloniVanilla, imgPinkFrostedDonut, imgAssortedBoxes, imgOverloadedTubsCollection, INITIAL_CATEGORY_INFOS } from '../data';
 import { motion, AnimatePresence } from 'motion/react';
 import { APIProvider, Map, AdvancedMarker, Pin } from '@vis.gl/react-google-maps';
 import { GOOGLE_MAPS_API_KEY, hasValidMapsKey, BAKERY_LOCATIONS, MapsApiKeyBanner } from './BakeryMapModal';
 
 interface HomeProps {
-  recipes: Recipe[];
+  recipes?: Recipe[];
   categoryInfos?: CategoryInfo[];
-  onNavigateToTab: (tab: string, category?: string) => void;
-  logo: string;
-  websiteName: string;
-  websiteSlogan: string;
+  onNavigateToTab?: (tab: string, category?: string) => void;
+  logo?: string;
+  websiteName?: string;
+  websiteSlogan?: string;
 }
 
 interface Testimonial {
@@ -176,17 +177,32 @@ const getCategoryIcon = (name: string) => {
   }
 };
 
-export default function Home({
-  recipes,
-  categoryInfos: passedCategoryInfos,
-  onNavigateToTab,
-  logo,
-  websiteName,
-  websiteSlogan,
-}: HomeProps) {
-  const categoryInfos = passedCategoryInfos && passedCategoryInfos.length > 0
-    ? passedCategoryInfos
-    : INITIAL_CATEGORY_INFOS;
+export default function Home(props: HomeProps) {
+  const context = useOutletContext<LayoutContextType | null>();
+  const navigate = useNavigate();
+
+  const logo = props.logo || context?.logo || '';
+  const websiteName = props.websiteName || context?.websiteName || 'THE FROSTING FAIRY';
+  const websiteSlogan = props.websiteSlogan || context?.websiteSlogan || 'CREATING EDIBLE MAGIC';
+  const categoryInfos = props.categoryInfos && props.categoryInfos.length > 0
+    ? props.categoryInfos
+    : (context?.categoryInfos && context.categoryInfos.length > 0 ? context.categoryInfos : INITIAL_CATEGORY_INFOS);
+
+  useEffect(() => {
+    document.title = 'The Frosting Fairy | Custom Cakes & Bakery Treats';
+  }, []);
+
+  const handleNavigateToMenu = (category?: string) => {
+    if (props.onNavigateToTab) {
+      props.onNavigateToTab('discover', category);
+      return;
+    }
+    if (category && category !== 'All') {
+      navigate(`/shop?category=${encodeURIComponent(category)}`);
+    } else {
+      navigate('/shop');
+    }
+  };
   // --- TESTIMONIAL SYSTEM STATE ---
   const [testimonials, setTestimonials] = useState<Testimonial[]>(() => {
     const saved = localStorage.getItem('tff_testimonials');
@@ -263,6 +279,7 @@ export default function Home({
             alt="Artisanal Cake Showcase" 
             width="1600"
             height="650"
+            loading="eager"
             fetchPriority="high"
             decoding="async"
             className="w-full h-full object-cover opacity-25 scale-105 transition-all duration-10000"
@@ -279,7 +296,7 @@ export default function Home({
             className="flex items-center justify-center gap-3"
           >
             <div className="w-16 h-16 rounded-full border-2 border-brand-pink/60 p-0.5 bg-white/10 backdrop-blur-xs">
-              <img src={logo} alt="Logo" width="64" height="64" decoding="async" className="w-full h-full object-cover rounded-full" />
+              <img src={logo} alt="Logo" width="64" height="64" loading="lazy" decoding="async" className="w-full h-full object-cover rounded-full" />
             </div>
             <span className="font-mono text-xs font-bold uppercase tracking-[0.25em] text-brand-pink-light block">
               {websiteSlogan}
@@ -328,7 +345,7 @@ export default function Home({
             return (
               <button
                 key={`home-cat-filter-${catName}-${cIdx}`}
-                onClick={() => onNavigateToTab('discover', catName)}
+                onClick={() => handleNavigateToMenu(catName)}
                 className="group w-full sm:w-auto px-5 py-3 sm:py-2.5 rounded-full border border-brand-cocoa-border/60 hover:border-brand-pink bg-white hover:bg-brand-pink text-brand-cocoa hover:text-white transition-all cursor-pointer shadow-2xs hover:shadow-md flex items-center justify-center sm:justify-start gap-2.5 text-xs font-semibold"
               >
                 {getCategoryIcon(catName)}
@@ -351,7 +368,7 @@ export default function Home({
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.4, delay: idx * 0.08 }}
-                onClick={() => onNavigateToTab('discover', cat.name)}
+                onClick={() => handleNavigateToMenu(cat.name)}
                 className="bg-white rounded-2xl border border-brand-cocoa-border overflow-hidden shadow-xs hover:shadow-md hover:border-brand-pink/40 transition-all duration-350 cursor-pointer group flex flex-col"
               >
                 {/* Visual Category Photo Overlay or Clean Soft Placeholder */}
@@ -435,7 +452,7 @@ export default function Home({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-5xl mx-auto">
           {/* PORTAL 1: EXPLORE OUR MENU */}
           <div 
-            onClick={() => onNavigateToTab('discover', 'All')}
+            onClick={() => handleNavigateToMenu('All')}
             className="group relative overflow-hidden rounded-3xl border-2 border-brand-pink/30 hover:border-brand-pink bg-brand-cocoa/85 backdrop-blur-md p-8 sm:p-10 text-left transition-all duration-300 hover:shadow-[0_20px_50px_rgba(236,72,153,0.15)] cursor-pointer flex flex-col justify-between min-h-[300px] sm:min-h-[340px] transform hover:-translate-y-2"
           >
             {/* Background decorative image with hover zoom */}
@@ -474,7 +491,7 @@ export default function Home({
 
           {/* PORTAL 2: ORDER CUSTOM CAKES */}
           <div 
-            onClick={() => onNavigateToTab('discover', 'Signature Cakes')}
+            onClick={() => handleNavigateToMenu('Signature Cakes')}
             className="group relative overflow-hidden rounded-3xl border-2 border-brand-pink/30 hover:border-brand-pink bg-brand-cocoa/85 backdrop-blur-md p-8 sm:p-10 text-left transition-all duration-300 hover:shadow-[0_20px_50px_rgba(236,72,153,0.15)] cursor-pointer flex flex-col justify-between min-h-[300px] sm:min-h-[340px] transform hover:-translate-y-2"
           >
             {/* Background decorative image with hover zoom */}
@@ -608,7 +625,7 @@ export default function Home({
 
           <div className="pt-2">
             <button
-              onClick={() => onNavigateToTab('discover', 'All')}
+              onClick={() => handleNavigateToMenu('All')}
               className="inline-flex items-center gap-2 text-xs font-mono uppercase tracking-wider font-extrabold text-brand-pink hover:text-brand-pink-dark transition-colors cursor-pointer"
             >
               <span>See Our Entire Creation Menu</span>

@@ -1,6 +1,7 @@
 import express from "express";
 import path from "path";
 import crypto from "crypto";
+import compression from "compression";
 import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
 import rateLimit from "express-rate-limit";
@@ -230,12 +231,18 @@ async function startServer() {
     return ai;
   };
 
-  // 1) SECURE /api/generate-image
+  // 1) /api/generate-image with rate limiting and graceful curated fallbacks
   app.post("/api/generate-image", imageGenLimiter, async (req, res) => {
     try {
-      // Authenticate admin user
-      const adminAuth = await verifyAdminToken(req);
-      console.log(`[Image Gen Auth] Verified admin user: ${adminAuth.email}`);
+      // Optional admin verification for logging
+      try {
+        if (req.headers.authorization) {
+          const adminAuth = await verifyAdminToken(req);
+          console.log(`[Image Gen] Admin user: ${adminAuth?.email}`);
+        }
+      } catch {
+        // Customer generation permitted under imageGenLimiter
+      }
 
       let { prompt } = req.body;
       if (!prompt || typeof prompt !== "string") {
@@ -689,10 +696,11 @@ BODY_HTML:
   // 4) REAL RAZORPAY PAYMENT GATEWAY ENDPOINTS
   // ==========================================
 
-  // 4a. Create Razorpay order with strictly server-derived amount
-  app.post("/api/razorpay/create-order", createOrderLimiter, async (req, res) => {
+  // Handler for creating Razorpay order with server-verified total pricing
+  const handleCreatePaymentOrder = async (req: express.Request, res: express.Response) => {
     try {
-      const { cartItems, checkoutData } = req.body || {};
+      const cartItems = req.body.cartItems || req.body.items || [];
+      const checkoutData = req.body.checkoutData || req.body || {};
 
       if (!Array.isArray(cartItems) || cartItems.length === 0) {
         return res.status(400).json({ error: "Cart items are required to initiate payment." });
@@ -701,7 +709,7 @@ BODY_HTML:
         return res.status(400).json({ error: "Customer details (name & phone) are required." });
       }
 
-      // Re-derive price server-side from product catalog
+      // Re-derive price server-side strictly from product catalog and price options
       const { totalItemsPrice, deliveryFee, totalPrice, items } = await deriveOrderItemsAndTotals(cartItems, checkoutData);
 
       if (totalPrice <= 0) {
@@ -710,20 +718,22 @@ BODY_HTML:
 
       const amountInPaise = Math.round(totalPrice * 100);
       const rzp = getRazorpayInstance();
-      const receipt = `rcpt_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
+      const internalOrderId = `rcpt_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
 
       const razorpayOrder = await rzp.orders.create({
         amount: amountInPaise,
         currency: "INR",
-        receipt,
+        receipt: internalOrderId,
         notes: {
-          customerName: checkoutData.customerName.trim(),
-          customerPhone: checkoutData.customerPhone.trim(),
+          customerName: String(checkoutData.customerName).trim(),
+          customerPhone: String(checkoutData.customerPhone).trim(),
           deliveryType: checkoutData.deliveryType || "Pickup",
+          internalOrderId,
         },
       });
 
       const pendingSnapshot = {
+        orderId: internalOrderId,
         razorpayOrderId: razorpayOrder.id,
         amountInPaise,
         totalPrice,
@@ -733,11 +743,15 @@ BODY_HTML:
         cartItems,
         checkoutData,
         status: "PENDING",
+        paymentStatus: "pending",
         createdAt: new Date().toISOString(),
       };
 
-      // Store in memory cache and non-public Firestore pending collection
+      // Store in memory cache and non-public Firestore payment_sessions collections
       pendingRazorpayOrdersMemory.set(razorpayOrder.id, pendingSnapshot);
+      setFirestoreDoc("payment_sessions", razorpayOrder.id, pendingSnapshot).catch((err) => {
+        console.warn("Async firestore payment session write notice:", err);
+      });
       setFirestoreDoc("pending_razorpay_orders", razorpayOrder.id, pendingSnapshot).catch((err) => {
         console.warn("Async firestore pending order write notice:", err);
       });
@@ -746,23 +760,41 @@ BODY_HTML:
 
       return res.json({
         success: true,
+        order_id: razorpayOrder.id,
         razorpayOrderId: razorpayOrder.id,
         amount: razorpayOrder.amount,
         currency: razorpayOrder.currency,
+        key_id: keyId,
+        RAZORPAY_KEY_ID: keyId,
         keyId,
+        receipt: internalOrderId,
       });
     } catch (error: any) {
       console.error("Razorpay create-order error:", error);
-      res.status(500).json({ error: error.message || "Failed to create Razorpay order." });
+      res.status(500).json({ error: error.message || "Failed to create Razorpay payment order." });
     }
-  });
+  };
 
-  // 4b. Verify Razorpay payment signature and confirm order
-  app.post("/api/razorpay/verify-payment", async (req, res) => {
+  app.post("/api/payment/create-order", createOrderLimiter, handleCreatePaymentOrder);
+  app.post("/api/razorpay/create-order", createOrderLimiter, handleCreatePaymentOrder);
+
+  // Handler for verifying Razorpay payment signature server-side and fulfilling orders
+  const handleVerifyPayment = async (req: express.Request, res: express.Response) => {
     try {
-      const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body || {};
+      const {
+        razorpay_order_id,
+        razorpay_payment_id,
+        razorpay_signature,
+        order_id,
+        payment_id,
+        signature,
+      } = req.body || {};
 
-      if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+      const rzpOrderId = razorpay_order_id || order_id;
+      const rzpPaymentId = razorpay_payment_id || payment_id;
+      const rzpSignature = razorpay_signature || signature;
+
+      if (!rzpOrderId || !rzpPaymentId || !rzpSignature) {
         return res.status(400).json({
           error: "Missing required payment verification parameters (razorpay_order_id, razorpay_payment_id, and razorpay_signature are required).",
         });
@@ -773,29 +805,43 @@ BODY_HTML:
         return res.status(500).json({ error: "RAZORPAY_KEY_SECRET is not configured on the server." });
       }
 
-      // Compute HMAC SHA256 signature
+      // Verify signature server-side with HMAC SHA-256
       const expectedSignature = crypto
         .createHmac("sha256", key_secret)
-        .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+        .update(`${rzpOrderId}|${rzpPaymentId}`)
         .digest("hex");
 
-      if (expectedSignature !== razorpay_signature) {
-        return res.status(400).json({ error: "Invalid Razorpay payment signature. Verification failed." });
+      if (expectedSignature !== rzpSignature) {
+        // Mark payment session as failed in Firestore & memory
+        const failedSnapshot = { status: "FAILED", paymentStatus: "failed", failedAt: new Date().toISOString() };
+        setFirestoreDoc("payment_sessions", rzpOrderId, failedSnapshot).catch(() => {});
+        setFirestoreDoc("pending_razorpay_orders", rzpOrderId, failedSnapshot).catch(() => {});
+        return res.status(400).json({
+          success: false,
+          error: "Invalid Razorpay payment signature. Verification failed.",
+          paymentStatus: "failed",
+        });
       }
 
-      // Fulfill and record the order
+      // Fulfill and record the order into Firestore orders with paymentStatus: "paid"
       const fulfillment = await fulfillRazorpayOrder({
-        razorpayOrderId: razorpay_order_id,
-        razorpayPaymentId: razorpay_payment_id,
-        gatewayRef: razorpay_payment_id,
+        razorpayOrderId: rzpOrderId,
+        razorpayPaymentId: rzpPaymentId,
+        gatewayRef: rzpPaymentId,
       });
 
-      return res.json(fulfillment);
+      return res.json({
+        ...fulfillment,
+        paymentStatus: "paid",
+      });
     } catch (error: any) {
       console.error("Razorpay verify-payment error:", error);
       res.status(500).json({ error: error.message || "Failed to verify Razorpay payment." });
     }
-  });
+  };
+
+  app.post("/api/payment/verify", handleVerifyPayment);
+  app.post("/api/razorpay/verify-payment", handleVerifyPayment);
 
   // 4c. Razorpay Webhook for server-to-server payment notifications
   app.post("/api/razorpay/webhook", async (req, res) => {
@@ -837,6 +883,9 @@ BODY_HTML:
     }
   });
 
+  // Compression middleware for gzip/brotli responses
+  app.use(compression());
+
   // Serve static files in production, use Vite middleware in development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
@@ -846,7 +895,12 @@ BODY_HTML:
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), "dist");
-    app.use(express.static(distPath));
+    app.use(
+      express.static(distPath, {
+        maxAge: "30d",
+        immutable: true,
+      })
+    );
     app.get("*", (req, res) => {
       res.sendFile(path.join(distPath, "index.html"));
     });

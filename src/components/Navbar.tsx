@@ -1,9 +1,8 @@
 import React from 'react';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Cake, ShoppingBag, Calendar, Heart, Menu, X, Sparkles, Settings, Mail, Instagram, Sun, Moon, MapPin } from 'lucide-react';
 
 interface NavbarProps {
-  activeTab: string;
-  setActiveTab: (tab: string) => void;
   shoppingItemsCount: number;
   ordersCount: number;
   logo: string;
@@ -15,8 +14,6 @@ interface NavbarProps {
 }
 
 export default function Navbar({
-  activeTab,
-  setActiveTab,
   shoppingItemsCount,
   ordersCount,
   logo,
@@ -28,6 +25,14 @@ export default function Navbar({
 }: NavbarProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   const [showContactDropdown, setShowContactDropdown] = React.useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const isHomeActive = location.pathname === '/';
+  const isShopActive = location.pathname === '/shop' || location.pathname === '/menu' || location.pathname.startsWith('/product');
+  const isOrdersActive = location.pathname === '/orders' || location.pathname === '/my-orders';
+  const isAdminActive = location.pathname === '/admin';
+  const isCartActive = location.pathname === '/cart';
 
   return (
     <nav id="website-navbar" className="bg-white border-b border-brand-cocoa-border sticky top-0 z-50 shadow-sm">
@@ -35,15 +40,13 @@ export default function Navbar({
         <div className="flex justify-between h-20">
           {/* Logo Brand Section */}
           <div className="flex items-center">
-            <button
-              onClick={() => {
-                setActiveTab('home');
-                setIsOpen(false);
-              }}
+            <NavLink
+              to="/"
+              onClick={() => setIsOpen(false)}
               className="flex items-center gap-3 group focus:outline-none cursor-pointer"
             >
               <div className="w-12 h-12 rounded-full border border-brand-cocoa-border overflow-hidden shadow-xs group-hover:scale-105 transition-transform flex items-center justify-center bg-white shrink-0">
-                <img src={logo} alt="The Frosting Fairy Logo" width="48" height="48" decoding="async" className="w-full h-full object-cover" />
+                <img src={logo} alt="The Frosting Fairy Logo" width="48" height="48" loading="eager" decoding="async" className="w-full h-full object-cover" />
               </div>
               <div className="text-left">
                 <span className="font-display font-black text-lg md:text-xl text-brand-cocoa tracking-tight block uppercase">
@@ -54,31 +57,35 @@ export default function Navbar({
                   <span>{websiteSlogan}</span>
                 </span>
               </div>
-            </button>
+            </NavLink>
           </div>
 
           {/* Desktop Navigation Links */}
           <div className="hidden md:flex items-center space-x-1">
-            <button
-              onClick={() => setActiveTab('home')}
-              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
-                activeTab === 'home'
-                  ? 'text-brand-pink bg-brand-pink-light/30'
-                  : 'text-brand-cocoa-light hover:text-brand-cocoa hover:bg-brand-cream-light/40'
-              }`}
+            <NavLink
+              to="/"
+              className={({ isActive }) =>
+                `px-4 py-2 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
+                  isActive
+                    ? 'text-brand-pink bg-brand-pink-light/30'
+                    : 'text-brand-cocoa-light hover:text-brand-cocoa hover:bg-brand-cream-light/40'
+                }`
+              }
             >
               Home
-            </button>
-            <button
-              onClick={() => setActiveTab('discover')}
-              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
-                activeTab === 'discover'
-                  ? 'text-brand-pink bg-brand-pink-light/30'
-                  : 'text-brand-cocoa-light hover:text-brand-cocoa hover:bg-brand-cream-light/40'
-              }`}
+            </NavLink>
+            <NavLink
+              to="/shop"
+              className={() =>
+                `px-4 py-2 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
+                  isShopActive
+                    ? 'text-brand-pink bg-brand-pink-light/30'
+                    : 'text-brand-cocoa-light hover:text-brand-cocoa hover:bg-brand-cream-light/40'
+                }`
+              }
             >
               Our Menu
-            </button>
+            </NavLink>
             {onOpenMap && (
               <button
                 onClick={onOpenMap}
@@ -89,13 +96,15 @@ export default function Navbar({
                 <span>Find Us</span>
               </button>
             )}
-            <button
-              onClick={() => setActiveTab('planner')}
-              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
-                activeTab === 'planner'
-                  ? 'text-brand-pink bg-brand-pink-light/30'
-                  : 'text-brand-cocoa-light hover:text-brand-cocoa hover:bg-brand-cream-light/40'
-              }`}
+            <NavLink
+              to="/orders"
+              className={() =>
+                `px-4 py-2 rounded-xl text-sm font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  isOrdersActive
+                    ? 'text-brand-pink bg-brand-pink-light/30'
+                    : 'text-brand-cocoa-light hover:text-brand-cocoa hover:bg-brand-cream-light/40'
+                }`
+              }
             >
               <Calendar className="w-4 h-4" />
               <span>My Orders</span>
@@ -104,18 +113,20 @@ export default function Navbar({
                   {ordersCount}
                 </span>
               )}
-            </button>
-            <button
-              onClick={() => setActiveTab('admin')}
-              className={`px-4 py-2 rounded-xl text-sm font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                activeTab === 'admin'
-                  ? 'text-brand-cocoa bg-brand-cream-light border border-brand-cocoa-border shadow-2xs'
-                  : 'text-brand-pink-dark hover:text-brand-pink hover:bg-brand-pink-light/20'
-              }`}
+            </NavLink>
+            <NavLink
+              to="/admin"
+              className={() =>
+                `px-4 py-2 rounded-xl text-sm font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  isAdminActive
+                    ? 'text-brand-cocoa bg-brand-cream-light border border-brand-cocoa-border shadow-2xs'
+                    : 'text-brand-pink-dark hover:text-brand-pink hover:bg-brand-pink-light/20'
+                }`
+              }
             >
               <Settings className="w-4 h-4 animate-spin-slow" />
               <span>Admin Panel</span>
-            </button>
+            </NavLink>
             <div className="relative">
               <button
                 onClick={() => setShowContactDropdown(!showContactDropdown)}
@@ -180,13 +191,15 @@ export default function Navbar({
               )}
             </button>
 
-            <button
-              onClick={() => setActiveTab('shopping')}
-              className={`relative p-3 rounded-full border border-brand-cocoa-border transition-all cursor-pointer ${
-                activeTab === 'shopping'
-                  ? 'bg-brand-pink text-white border-brand-pink shadow-xs'
-                  : 'bg-white text-brand-cocoa hover:border-brand-pink-accent/50 hover:bg-brand-pink-light/20'
-              }`}
+            <NavLink
+              to="/cart"
+              className={() =>
+                `relative p-3 rounded-full border border-brand-cocoa-border transition-all cursor-pointer ${
+                  isCartActive
+                    ? 'bg-brand-pink text-white border-brand-pink shadow-xs'
+                    : 'bg-white text-brand-cocoa hover:border-brand-pink-accent/50 hover:bg-brand-pink-light/20'
+                }`
+              }
             >
               <ShoppingBag className="w-5 h-5" />
               {shoppingItemsCount > 0 && (
@@ -194,7 +207,7 @@ export default function Navbar({
                   {shoppingItemsCount}
                 </span>
               )}
-            </button>
+            </NavLink>
           </div>
 
           {/* Mobile Menu Button */}
@@ -212,8 +225,8 @@ export default function Navbar({
               )}
             </button>
 
-            <button
-              onClick={() => setActiveTab('shopping')}
+            <NavLink
+              to="/cart"
               className="relative p-2 rounded-full border border-brand-cocoa-border text-brand-cocoa mr-1 cursor-pointer"
             >
               <ShoppingBag className="w-5 h-5" />
@@ -222,7 +235,7 @@ export default function Navbar({
                   {shoppingItemsCount}
                 </span>
               )}
-            </button>
+            </NavLink>
             <button
               onClick={() => setIsOpen(!isOpen)}
               className="p-2 rounded-xl text-brand-cocoa-light hover:text-brand-cocoa hover:bg-brand-cream-light/40 border border-brand-cocoa-border focus:outline-none cursor-pointer"
@@ -236,32 +249,32 @@ export default function Navbar({
       {/* Mobile Drawer menu */}
       {isOpen && (
         <div className="md:hidden bg-white border-t border-brand-cocoa-border px-4 py-3 space-y-2 text-left">
-          <button
-            onClick={() => {
-              setActiveTab('home');
-              setIsOpen(false);
-            }}
-            className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-semibold block ${
-              activeTab === 'home'
-                ? 'text-brand-pink bg-brand-pink-light/30'
-                : 'text-brand-cocoa-light hover:text-brand-cocoa'
-            }`}
+          <NavLink
+            to="/"
+            onClick={() => setIsOpen(false)}
+            className={({ isActive }) =>
+              `w-full text-left px-4 py-2.5 rounded-xl text-sm font-semibold block ${
+                isActive
+                  ? 'text-brand-pink bg-brand-pink-light/30'
+                  : 'text-brand-cocoa-light hover:text-brand-cocoa'
+              }`
+            }
           >
             Home
-          </button>
-          <button
-            onClick={() => {
-              setActiveTab('discover');
-              setIsOpen(false);
-            }}
-            className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-semibold block ${
-              activeTab === 'discover'
-                ? 'text-brand-pink bg-brand-pink-light/30'
-                : 'text-brand-cocoa-light hover:text-brand-cocoa'
-            }`}
+          </NavLink>
+          <NavLink
+            to="/shop"
+            onClick={() => setIsOpen(false)}
+            className={() =>
+              `w-full text-left px-4 py-2.5 rounded-xl text-sm font-semibold block ${
+                isShopActive
+                  ? 'text-brand-pink bg-brand-pink-light/30'
+                  : 'text-brand-cocoa-light hover:text-brand-cocoa'
+              }`
+            }
           >
             Our Menu
-          </button>
+          </NavLink>
           {onOpenMap && (
             <button
               onClick={() => {
@@ -274,16 +287,16 @@ export default function Navbar({
               <span>Find Us (Google Maps)</span>
             </button>
           )}
-          <button
-            onClick={() => {
-              setActiveTab('planner');
-              setIsOpen(false);
-            }}
-            className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center justify-between ${
-              activeTab === 'planner'
-                ? 'text-brand-pink bg-brand-pink-light/30'
-                : 'text-brand-cocoa-light hover:text-brand-cocoa'
-            }`}
+          <NavLink
+            to="/orders"
+            onClick={() => setIsOpen(false)}
+            className={() =>
+              `w-full text-left px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center justify-between ${
+                isOrdersActive
+                  ? 'text-brand-pink bg-brand-pink-light/30'
+                  : 'text-brand-cocoa-light hover:text-brand-cocoa'
+              }`
+            }
           >
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4" />
@@ -294,21 +307,21 @@ export default function Navbar({
                 {ordersCount}
               </span>
             )}
-          </button>
-          <button
-            onClick={() => {
-              setActiveTab('admin');
-              setIsOpen(false);
-            }}
-            className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 ${
-              activeTab === 'admin'
-                ? 'text-brand-cocoa bg-brand-cream-light border border-brand-cocoa-border'
-                : 'text-brand-pink-dark hover:text-brand-pink'
-            }`}
+          </NavLink>
+          <NavLink
+            to="/admin"
+            onClick={() => setIsOpen(false)}
+            className={() =>
+              `w-full text-left px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 ${
+                isAdminActive
+                  ? 'text-brand-cocoa bg-brand-cream-light border border-brand-cocoa-border'
+                  : 'text-brand-pink-dark hover:text-brand-pink'
+              }`
+            }
           >
             <Settings className="w-4 h-4 animate-spin-slow" />
             <span>Admin Panel</span>
-          </button>
+          </NavLink>
           {/* Mobile Accordion Contact Toggle containing Instagram */}
           <div className="space-y-1">
             <button
@@ -336,7 +349,7 @@ export default function Navbar({
                   }}
                   className="w-full text-left px-3 py-1.5 text-xs font-semibold flex items-center gap-2 text-brand-cocoa-light hover:text-brand-pink transition-colors"
                 >
-                  <Mail className="w-3.5 h-3.5 text-brand-pink" />
+                  <Mail className="w-3.5 h-3.5 text-brand-pink-dark" />
                   <span>Email: hellofrostingfairy@gmail.com</span>
                 </a>
                 <a
