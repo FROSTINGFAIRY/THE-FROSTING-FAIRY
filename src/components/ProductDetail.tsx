@@ -6,6 +6,7 @@ import { INITIAL_RECIPES } from '../data';
 import { motion, AnimatePresence } from 'motion/react';
 import { getRecipeImages } from './Dashboard';
 import { auth } from '../lib/firebase';
+import ProductReviews from './ProductReviews';
 
 const BOX_ROUND_TIERS = [6, 12, 18, 24];
 
@@ -1145,6 +1146,9 @@ export default function ProductDetail(props: ProductDetailProps) {
           </div>
         </div>
       </div>
+
+      {/* Customer Product Reviews Section */}
+      <ProductReviews productId={recipe.id} productName={recipe.name} />
 
       {/* Floating Sticky Bottom Bar for Assorted Box */}
       {isBox && (

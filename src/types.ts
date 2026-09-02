@@ -1,3 +1,15 @@
+export interface ProductReview {
+  id: string; // `${productId}_${userId}`
+  productId: string;
+  userId: string;
+  userName: string;
+  userPhoto?: string;
+  rating: number; // 1 to 5
+  comment: string;
+  createdAt: any;
+  updatedAt?: any;
+}
+
 export type Difficulty = 'Easy' | 'Medium' | 'Hard';
 
 export interface NutritionalInfo {

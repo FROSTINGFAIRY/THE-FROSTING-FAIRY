@@ -43,6 +43,31 @@ service cloud.firestore {
       allow delete: if isRoleAdmin();
     }
 
+    // Reviews collection: public read, authenticated user write, user/admin delete
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if request.auth != null 
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.rating is number
+        && request.resource.data.rating >= 1 
+        && request.resource.data.rating <= 5
+        && request.resource.data.comment is string
+        && request.resource.data.comment.size() > 0 
+        && request.resource.data.comment.size() <= 1000;
+      allow update: if request.auth != null 
+        && (resource.data.userId == request.auth.uid || isRoleChefOrAdmin())
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.productId == resource.data.productId
+        && request.resource.data.rating is number
+        && request.resource.data.rating >= 1 
+        && request.resource.data.rating <= 5
+        && request.resource.data.comment is string
+        && request.resource.data.comment.size() > 0 
+        && request.resource.data.comment.size() <= 1000;
+      allow delete: if request.auth != null 
+        && (resource.data.userId == request.auth.uid || isRoleChefOrAdmin());
+    }
+
     // Categories collection: public read, admin-only write
     match /categories/{categoryId} {
       allow read: if true;
