@@ -31,6 +31,27 @@ interface ProductDetailProps {
   onGoToCart?: () => void;
 }
 
+interface ProductDetailViewProps {
+  recipe: Recipe;
+  allRecipes: Recipe[];
+  onBack: () => void;
+  onToggleFavorite: (recipeId: string) => void;
+  onAddToCart: (item: {
+    productId: string;
+    name: string;
+    category: string;
+    selectedOption: string;
+    price: number;
+    amount: number;
+    unit: string;
+    image: string;
+    customMessage: string;
+    recipeName: string;
+    boxContents?: { name: string; quantity: number; price: number }[];
+  }) => void;
+  onGoToCart: () => void;
+}
+
 export default function ProductDetail(props: ProductDetailProps) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -70,6 +91,26 @@ export default function ProductDetail(props: ProductDetailProps) {
     );
   }
 
+  return (
+    <ProductDetailView
+      recipe={recipe}
+      allRecipes={allRecipes}
+      onBack={onBack}
+      onToggleFavorite={onToggleFavorite}
+      onAddToCart={onAddToCart}
+      onGoToCart={onGoToCart}
+    />
+  );
+}
+
+function ProductDetailView({
+  recipe,
+  allRecipes,
+  onBack,
+  onToggleFavorite,
+  onAddToCart,
+  onGoToCart,
+}: ProductDetailViewProps) {
   // E-commerce state
   const [selectedOptionIndex, setSelectedOptionIndex] = useState(0);
   const [frostingFlavor, setFrostingFlavor] = useState(() => {
