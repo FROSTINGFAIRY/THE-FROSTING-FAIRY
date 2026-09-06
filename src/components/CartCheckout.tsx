@@ -23,7 +23,9 @@ import {
   Lock,
   Smartphone,
   Check,
-  Cake
+  Cake,
+  Truck,
+  Store
 } from 'lucide-react';
 import { ShoppingItem, CheckoutData, LayoutContextType } from '../types';
 
@@ -79,39 +81,6 @@ interface CartCheckoutProps {
   upiQrCode?: string;
   cashOnDeliveryEnabled?: boolean;
 }
-
-// 1. Standard Modal Razorpay Loader (checkout.js)
-const loadRazorpaySdk = (): Promise<boolean> => {
-  return new Promise((resolve) => {
-    if ((window as any).Razorpay) {
-      resolve(true);
-      return;
-    }
-    const script = document.createElement('script');
-    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-    script.async = true;
-    script.onload = () => resolve(true);
-    script.onerror = () => resolve(false);
-    document.body.appendChild(script);
-  });
-};
-
-// 2. Razorpay Custom/Intent SDK Loader (razorpay.js) for Direct UPI App Deep-Linking
-const loadRazorpayCustomSdk = (): Promise<boolean> => {
-  return new Promise((resolve) => {
-    const existing = document.querySelector('script[src="https://checkout.razorpay.com/v1/razorpay.js"]');
-    if (existing) {
-      resolve(true);
-      return;
-    }
-    const script = document.createElement('script');
-    script.src = 'https://checkout.razorpay.com/v1/razorpay.js';
-    script.async = true;
-    script.onload = () => resolve(true);
-    script.onerror = () => resolve(false);
-    document.body.appendChild(script);
-  });
-};
 
 export default function CartCheckout(props: CartCheckoutProps) {
   const context = useOutletContext<LayoutContextType | null>();
@@ -210,30 +179,22 @@ export default function CartCheckout(props: CartCheckoutProps) {
   const [specialInstructions, setSpecialInstructions] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [payingWithApp, setPayingWithApp] = useState<string | null>(null);
 
-  // Delivery & location state
-  const [deliveryType, setDeliveryType] = useState<'Pickup' | 'Delivery'>('Pickup');
+  // Delivery & location state - Home Delivery is default primary option
+  const [deliveryType, setDeliveryType] = useState<'Pickup' | 'Delivery'>('Delivery');
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [gpsCoordinates, setGpsCoordinates] = useState('');
   const [isLocating, setIsLocating] = useState(false);
   const [locationFeedback, setLocationFeedback] = useState('');
 
-  // Payment Method: 'Razorpay' (Pay Online via UPI, Cards, NetBanking, Wallets) or 'COD'
-  const [paymentMethod, setPaymentMethod] = useState<'Razorpay' | 'COD'>('Razorpay');
-  const [selectedUpiApp, setSelectedUpiApp] = useState<'all' | 'google_pay' | 'phonepe' | 'paytm' | 'bhim' | 'cred'>('all');
+  // Payment Method: 'UPI' (Direct UPI payment via QR code or app) or 'COD'
+  const [paymentMethod, setPaymentMethod] = useState<'UPI' | 'COD'>('UPI');
 
   useEffect(() => {
     if (!cashOnDeliveryEnabled && paymentMethod === 'COD') {
-      setPaymentMethod('Razorpay');
+      setPaymentMethod('UPI');
     }
   }, [cashOnDeliveryEnabled, paymentMethod]);
-
-  // Preload Razorpay SDK dynamically on mount when entering checkout flow
-  useEffect(() => {
-    loadRazorpaySdk().catch(() => {});
-    loadRazorpayCustomSdk().catch(() => {});
-  }, []);
 
   // Cart totals calculation
   const totalItemsCount = shoppingList.reduce((sum, item) => sum + item.amount, 0);
@@ -337,215 +298,14 @@ export default function CartCheckout(props: CartCheckoutProps) {
     }
 
     if (paymentMethod === 'COD' && !cashOnDeliveryEnabled) {
-      setErrorMessage('Cash on Delivery is currently disabled by store management. Please select Pay Online.');
+      setErrorMessage('Cash on Delivery is currently disabled by store management. Please select UPI Payment.');
       return false;
     }
 
     return true;
   };
 
-  // --- REUSABLE SERVER ORDER CREATION ---
-  const createRazorpayOrder = async (preferredApp?: string) => {
-    const checkoutPayload = {
-      customerName: customerName.trim(),
-      customerPhone: customerPhone.trim(),
-      pickupDate,
-      pickupTime,
-      specialInstructions: specialInstructions.trim(),
-      deliveryType,
-      deliveryAddress: deliveryType === 'Delivery' ? deliveryAddress.trim() : 'Store Pick-up',
-      gpsCoordinates,
-      paymentMethod: 'Razorpay' as const,
-    };
-
-    let createOrderRes = await fetch('/api/payment/create-order', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        cartItems: shoppingList.map((item) => ({
-          productId: item.productId,
-          name: item.name,
-          recipeName: item.recipeName,
-          selectedOption: item.selectedOption,
-          amount: item.amount,
-          unit: item.unit,
-          customMessage: item.customMessage,
-          boxContents: item.boxContents,
-        })),
-        checkoutData: {
-          ...checkoutPayload,
-          preferredUpiApp: preferredApp || selectedUpiApp,
-        },
-      }),
-    });
-
-    // Fallback to /api/razorpay/create-order if /api/payment/create-order returned 404
-    if (createOrderRes.status === 404) {
-      createOrderRes = await fetch('/api/razorpay/create-order', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          cartItems: shoppingList.map((item) => ({
-            productId: item.productId,
-            name: item.name,
-            recipeName: item.recipeName,
-            selectedOption: item.selectedOption,
-            amount: item.amount,
-            unit: item.unit,
-            customMessage: item.customMessage,
-            boxContents: item.boxContents,
-          })),
-          checkoutData: checkoutPayload,
-        }),
-      });
-    }
-
-    const orderData = await createOrderRes.json();
-    if (!createOrderRes.ok || !orderData.success) {
-      throw new Error(orderData.error || 'Failed to initialize payment gateway order.');
-    }
-
-    const razorpayOrderId = orderData.order_id || orderData.razorpayOrderId;
-    const amount = orderData.amount;
-    const currency = orderData.currency || 'INR';
-    const resolvedKeyId = orderData.key_id || orderData.RAZORPAY_KEY_ID || orderData.keyId || (import.meta as any).env.VITE_RAZORPAY_KEY_ID || '';
-
-    return { razorpayOrderId, amount, currency, resolvedKeyId, checkoutPayload };
-  };
-
-  // --- REUSABLE SERVER PAYMENT VERIFICATION & COMPLETION ---
-  const verifyAndCompleteRazorpayPayment = async (
-    response: {
-      razorpay_payment_id: string;
-      razorpay_order_id: string;
-      razorpay_signature: string;
-    },
-    checkoutPayload: any
-  ) => {
-    try {
-      setIsSubmitting(true);
-      // 3. Verify payment signature on backend
-      let verifyRes = await fetch('/api/payment/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          razorpay_order_id: response.razorpay_order_id,
-          razorpay_payment_id: response.razorpay_payment_id,
-          razorpay_signature: response.razorpay_signature,
-        }),
-      });
-
-      if (verifyRes.status === 404) {
-        verifyRes = await fetch('/api/razorpay/verify-payment', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            razorpay_order_id: response.razorpay_order_id,
-            razorpay_payment_id: response.razorpay_payment_id,
-            razorpay_signature: response.razorpay_signature,
-          }),
-        });
-      }
-
-      const verifyData = await verifyRes.json();
-      if (!verifyRes.ok || !verifyData.success) {
-        throw new Error(verifyData.error || 'Payment signature verification failed.');
-      }
-
-      // 4. Trigger celebration & confirmed order modal
-      if (onUpiPaymentSuccess) {
-        onUpiPaymentSuccess({
-          orderIds: verifyData.orderIds || [verifyData.orderNumber],
-          orderNumber: verifyData.orderNumber,
-          paidAmount: verifyData.paidAmount || grandTotal,
-          transactionId: verifyData.transactionId,
-          paidAt: verifyData.paidAt,
-          gatewayRef: verifyData.gatewayRef,
-          checkoutData: {
-            ...checkoutPayload,
-            paymentStatus: 'Paid',
-            paymentDetails: {
-              gateway: 'Razorpay',
-              razorpayOrderId: response.razorpay_order_id,
-              razorpayPaymentId: response.razorpay_payment_id,
-              gatewayRef: response.razorpay_payment_id,
-              paidAt: verifyData.paidAt,
-              verifiedOnServer: true,
-            },
-          },
-        });
-      } else {
-        onCheckout({
-          ...checkoutPayload,
-          paymentStatus: 'Paid',
-          paymentDetails: {
-            gateway: 'Razorpay',
-            razorpayOrderId: response.razorpay_order_id,
-            razorpayPaymentId: response.razorpay_payment_id,
-            gatewayRef: response.razorpay_payment_id,
-            paidAt: verifyData.paidAt,
-            verifiedOnServer: true,
-          },
-        });
-      }
-    } catch (verErr: any) {
-      console.error('Razorpay verification error:', verErr);
-      setErrorMessage(verErr.message || 'Payment verification failed. If your money was deducted, our bakery team will confirm your order shortly.');
-    } finally {
-      setIsSubmitting(false);
-      setPayingWithApp(null);
-    }
-  };
-
-  // --- DIRECT UPI APP DEEP-LINK HANDLER (Razorpay UPI Custom Intent) ---
-  const handleDirectUpiAppPay = async (appId: 'gpay' | 'phonepe' | 'paytm' | 'bhim' | 'cred') => {
-    if (!validateCheckoutForm()) {
-      return;
-    }
-
-    setIsSubmitting(true);
-    setPayingWithApp(appId);
-
-    try {
-      const { razorpayOrderId, amount, currency, resolvedKeyId, checkoutPayload } = await createRazorpayOrder(appId);
-      const isSdkLoaded = await loadRazorpayCustomSdk();
-      if (!isSdkLoaded || !(window as any).Razorpay) {
-        throw new Error('Could not load Razorpay UPI SDK. Please check your internet connection and try again.');
-      }
-
-      const razorpayInstance = new (window as any).Razorpay({ key: resolvedKeyId });
-
-      razorpayInstance.on('payment.success', async (response: any) => {
-        await verifyAndCompleteRazorpayPayment(response, checkoutPayload);
-      });
-
-      razorpayInstance.on('payment.error', (error: any) => {
-        console.error('Direct UPI payment failed:', error);
-        setErrorMessage(error?.error?.description || 'Payment failed or was cancelled. Please try again.');
-        setIsSubmitting(false);
-        setPayingWithApp(null);
-      });
-
-      razorpayInstance.createPayment(
-        {
-          amount,
-          currency: currency || 'INR',
-          order_id: razorpayOrderId,
-          contact: customerPhone.trim(),
-        },
-        {
-          app: appId,
-        }
-      );
-    } catch (err: any) {
-      console.error('Direct UPI App checkout error:', err);
-      setErrorMessage(err.message || 'Unable to open UPI application. Please try standard Razorpay checkout.');
-      setIsSubmitting(false);
-      setPayingWithApp(null);
-    }
-  };
-
-  // --- MAIN FORM SUBMISSION (Standard Modal or COD) ---
+  // --- MAIN FORM SUBMISSION (Direct UPI or COD) ---
   const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateCheckoutForm()) {
@@ -564,86 +324,77 @@ export default function CartCheckout(props: CartCheckoutProps) {
       paymentMethod,
     };
 
-    // ============================================
-    // 1) REAL RAZORPAY CHECKOUT POPUP PAYMENT FLOW
-    // ============================================
-    if (paymentMethod === 'Razorpay') {
+    // 1) DIRECT UPI ORDER FLOW -> Automatically opens dedicated UPI payment page
+    if (paymentMethod === 'UPI') {
       setIsSubmitting(true);
+      setErrorMessage('');
+
       try {
-        const isSdkLoaded = await loadRazorpaySdk();
-        if (!isSdkLoaded || !(window as any).Razorpay) {
-          throw new Error('Could not load Razorpay payment gateway. Please check your internet connection and try again.');
-        }
-
-        const { razorpayOrderId, amount, currency, resolvedKeyId } = await createRazorpayOrder();
-
-        // 2. Open official Razorpay Checkout modal
-        const options: any = {
-          key: resolvedKeyId,
-          amount: amount,
-          currency: currency,
-          name: 'The Frosting Fairy',
-          description: `Bakery Order (${totalItemsCount} item${totalItemsCount > 1 ? 's' : ''})`,
-          order_id: razorpayOrderId,
-          prefill: {
-            name: customerName.trim(),
-            contact: customerPhone.trim(),
-          },
-          method: {
-            upi: true,
-            card: true,
-            netbanking: true,
-            wallet: true,
-          },
-          config: {
-            display: {
-              blocks: {
-                upi: {
-                  name: "Pay via UPI apps",
-                  instruments: [{ method: "upi" }]
-                }
-              },
-              sequence: ["block.upi"],
-              preferences: { show_default_blocks: true }
-            }
-          },
-          theme: {
-            color: '#d946ef', // brand-pink accent
-          },
-          modal: {
-            ondismiss: () => {
-              setIsSubmitting(false);
-            },
-          },
-          handler: async (response: {
-            razorpay_payment_id: string;
-            razorpay_order_id: string;
-            razorpay_signature: string;
-          }) => {
-            await verifyAndCompleteRazorpayPayment(response, checkoutPayload);
-          },
-        };
-
-        const rzp = new (window as any).Razorpay(options);
-        rzp.on('payment.failed', (failRes: any) => {
-          console.error('Razorpay payment failed:', failRes);
-          setErrorMessage(failRes?.error?.description || 'Payment was unsuccessful or cancelled. Please try again.');
-          setIsSubmitting(false);
+        const orderRes = await fetch('/api/create-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            cartItems: shoppingList.map((item) => ({
+              productId: item.productId,
+              name: item.name,
+              recipeName: item.recipeName,
+              selectedOption: item.selectedOption,
+              amount: item.amount,
+              unit: item.unit,
+              customMessage: item.customMessage,
+              boxContents: item.boxContents,
+            })),
+            checkoutData: checkoutPayload,
+          }),
         });
 
-        rzp.open();
+        const orderData = await orderRes.json();
+        if (!orderRes.ok || !orderData.success) {
+          throw new Error(orderData.error || 'Failed to initialize order for UPI payment.');
+        }
+
+        const resolvedOrderId = orderData.orderId;
+        const resolvedTotal = orderData.totalPrice || grandTotal;
+
+        // Automatically open/redirect to dedicated UPI Payment Page
+        navigate(`/upi-payment?orderId=${encodeURIComponent(resolvedOrderId)}`, {
+          state: {
+            orderId: resolvedOrderId,
+            orderNumber: resolvedOrderId,
+            grandTotal: resolvedTotal,
+            totalPrice: resolvedTotal,
+            customerName: customerName.trim(),
+            customerPhone: customerPhone.trim(),
+            deliveryType,
+            deliveryAddress: deliveryType === 'Delivery' ? deliveryAddress.trim() : 'Store Pick-up',
+            pickupDate,
+            pickupTime,
+            orderDetails: {
+              id: resolvedOrderId,
+              customerName: customerName.trim(),
+              customerPhone: customerPhone.trim(),
+              deliveryType,
+              deliveryAddress: deliveryType === 'Delivery' ? deliveryAddress.trim() : 'Store Pick-up',
+              pickupDate,
+              pickupTime,
+              totalPrice: resolvedTotal,
+              paymentMethod: 'UPI',
+              paymentStatus: 'Pending',
+            },
+          },
+        });
       } catch (err: any) {
-        console.error('Razorpay checkout error:', err);
-        setErrorMessage(err.message || 'Unable to connect to Razorpay payment gateway. Please check your connection.');
+        console.error('UPI Order initialization error:', err);
+        setErrorMessage(err.message || 'Unable to connect to order service. Please check your connection.');
+      } finally {
         setIsSubmitting(false);
       }
       return;
     }
 
-    // ============================================
     // 2) CASH ON DELIVERY (COD) ORDER FLOW
-    // ============================================
     setIsSubmitting(true);
+    setErrorMessage('');
     try {
       await onCheckout({
         ...checkoutPayload,
@@ -831,7 +582,7 @@ export default function CartCheckout(props: CartCheckoutProps) {
             </div>
           </div>
 
-          {/* Right Column: Checkout Form & Razorpay Gateway */}
+          {/* Right Column: Checkout Form & Direct UPI Payment */}
           <div id="checkout-form-container" className="lg:col-span-5 bg-white border border-brand-cocoa-border rounded-lg p-5 sm:p-6 space-y-4">
             <div className="border-b border-brand-cocoa-border/60 pb-3">
               <h3 className="font-display font-bold text-base sm:text-lg text-brand-cocoa">
@@ -890,43 +641,161 @@ export default function CartCheckout(props: CartCheckoutProps) {
                 </div>
               </div>
 
-              {/* Delivery or Pickup Selection */}
-              <div className="space-y-1.5 pt-2 border-t border-brand-cocoa-border/40">
-                <label className="text-[10px] font-bold font-mono uppercase tracking-widest text-brand-cocoa-light">
-                  Fulfilment Method
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setDeliveryType('Pickup')}
-                    className={`py-2 px-2.5 border rounded-md flex items-center justify-center gap-1.5 text-xs transition-colors cursor-pointer ${
-                      deliveryType === 'Pickup'
-                        ? 'border-brand-cocoa bg-slate-50 text-brand-cocoa font-bold'
-                        : 'border-brand-cocoa-border bg-white text-brand-cocoa hover:border-slate-400 font-normal'
-                    }`}
-                  >
-                    <span>Store Pick-up</span>
-                    <span className="text-[9px] font-mono text-green-700 bg-green-50 px-1 py-0.2 rounded border border-green-200">FREE</span>
-                  </button>
+              {/* Fulfillment Method Selection */}
+              <div id="fulfillment-method-section" className="space-y-2 pt-2 border-t border-brand-cocoa-border/40">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-bold font-mono uppercase tracking-widest text-brand-cocoa-light flex items-center gap-1.5">
+                    <Truck className="w-3.5 h-3.5 text-brand-pink" />
+                    <span>Fulfillment Method</span>
+                  </label>
+                  <span className="text-[9px] font-mono font-semibold text-brand-cocoa-light">
+                    {deliveryType === 'Delivery' ? 'Direct to Doorstep' : 'Boutique Collection'}
+                  </span>
+                </div>
 
+                {/* Side-by-side on desktop, stacked on mobile: Home Delivery first (left), Store Collection second (right) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {/* Option 1: Home Delivery (Primary & Default on Left / Top) */}
                   <button
+                    id="btn-fulfillment-home-delivery"
                     type="button"
                     onClick={() => setDeliveryType('Delivery')}
-                    className={`py-2 px-2.5 border rounded-md flex items-center justify-center gap-1.5 text-xs transition-colors cursor-pointer ${
+                    className={`relative p-3 rounded-lg border text-left transition-all cursor-pointer flex flex-col justify-between gap-2.5 ${
                       deliveryType === 'Delivery'
-                        ? 'border-brand-cocoa bg-slate-50 text-brand-cocoa font-bold'
-                        : 'border-brand-cocoa-border bg-white text-brand-cocoa hover:border-slate-400 font-normal'
+                        ? 'border-brand-pink bg-pink-50/50 ring-2 ring-brand-pink/20 shadow-3xs'
+                        : 'border-brand-cocoa-border bg-white text-brand-cocoa hover:border-brand-cocoa/40'
                     }`}
                   >
-                    <span>Home Delivery</span>
-                    {cartSubtotal >= 600 ? (
-                      <span className="text-[9px] font-mono text-green-700 bg-green-50 px-1 py-0.2 rounded border border-green-200">FREE</span>
-                    ) : (
-                      <span className="text-[9px] font-mono text-brand-cocoa-light bg-brand-cream px-1 py-0.2 rounded border border-brand-cocoa-border">₹50</span>
-                    )}
+                    <div className="flex items-start justify-between gap-2 w-full">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 transition-colors ${
+                            deliveryType === 'Delivery'
+                              ? 'bg-brand-pink text-white shadow-3xs'
+                              : 'bg-brand-cream text-brand-cocoa-light'
+                          }`}
+                        >
+                          <Truck className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-display font-bold text-xs sm:text-sm text-brand-cocoa">
+                              Home Delivery
+                            </span>
+                            <span className="text-[8px] font-mono font-bold uppercase tracking-wider text-brand-pink bg-brand-pink-light/30 border border-brand-pink/30 px-1.5 py-0.2 rounded">
+                              Primary
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-brand-cocoa-light font-sans mt-0.5 leading-tight">
+                            Delivered fresh to your doorstep
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Selection Radio Circle */}
+                      <div
+                        className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 mt-0.5 transition-colors ${
+                          deliveryType === 'Delivery'
+                            ? 'border-brand-pink bg-brand-pink text-white'
+                            : 'border-slate-300 bg-white'
+                        }`}
+                      >
+                        {deliveryType === 'Delivery' && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-white" />
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Price tag */}
+                    <div className="flex items-center justify-between pt-1 border-t border-brand-cocoa-border/30 w-full text-[10px] font-mono">
+                      <span className="text-brand-cocoa-light text-[9px] uppercase tracking-wide">
+                        Delivery Fee:
+                      </span>
+                      {cartSubtotal >= 600 ? (
+                        <span className="font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.2 rounded flex items-center gap-1">
+                          <Sparkles className="w-2.5 h-2.5" /> FREE (&gt;₹600)
+                        </span>
+                      ) : (
+                        <span className="font-semibold text-brand-cocoa bg-brand-cream border border-brand-cocoa-border px-1.5 py-0.2 rounded">
+                          ₹50 (Free &gt; ₹600)
+                        </span>
+                      )}
+                    </div>
+                  </button>
+
+                  {/* Option 2: Store Collection (Alternative on Right / Bottom) */}
+                  <button
+                    id="btn-fulfillment-store-collection"
+                    type="button"
+                    onClick={() => setDeliveryType('Pickup')}
+                    className={`relative p-3 rounded-lg border text-left transition-all cursor-pointer flex flex-col justify-between gap-2.5 ${
+                      deliveryType === 'Pickup'
+                        ? 'border-brand-pink bg-pink-50/50 ring-2 ring-brand-pink/20 shadow-3xs'
+                        : 'border-brand-cocoa-border bg-white text-brand-cocoa hover:border-brand-cocoa/40'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2 w-full">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 transition-colors ${
+                            deliveryType === 'Pickup'
+                              ? 'bg-brand-pink text-white shadow-3xs'
+                              : 'bg-brand-cream text-brand-cocoa-light'
+                          }`}
+                        >
+                          <Store className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-display font-bold text-xs sm:text-sm text-brand-cocoa">
+                              Store Collection
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-brand-cocoa-light font-sans mt-0.5 leading-tight">
+                            Pick up in person from boutique
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Selection Radio Circle */}
+                      <div
+                        className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 mt-0.5 transition-colors ${
+                          deliveryType === 'Pickup'
+                            ? 'border-brand-pink bg-brand-pink text-white'
+                            : 'border-slate-300 bg-white'
+                        }`}
+                      >
+                        {deliveryType === 'Pickup' && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-white" />
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Price tag */}
+                    <div className="flex items-center justify-between pt-1 border-t border-brand-cocoa-border/30 w-full text-[10px] font-mono">
+                      <span className="text-brand-cocoa-light text-[9px] uppercase tracking-wide">
+                        Collection Fee:
+                      </span>
+                      <span className="font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.2 rounded flex items-center gap-1">
+                        <Check className="w-2.5 h-2.5" /> FREE Pickup
+                      </span>
+                    </div>
                   </button>
                 </div>
               </div>
+
+              {/* Informative Note for Store Collection */}
+              {deliveryType === 'Pickup' && (
+                <div className="p-3 bg-amber-50/80 border border-amber-200/80 rounded-md text-xs text-amber-900 space-y-1">
+                  <div className="flex items-center gap-1.5 font-bold font-sans">
+                    <Store className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                    <span>Boutique Store Collection</span>
+                  </div>
+                  <p className="text-[11px] text-amber-800 leading-relaxed">
+                    Your confections will be freshly baked and packaged for pick-up at our boutique kitchen on your selected date and time.
+                  </p>
+                </div>
+              )}
 
               {/* Address / GPS Section (Show only if Delivery is selected) */}
               {deliveryType === 'Delivery' && (
@@ -1015,7 +884,7 @@ export default function CartCheckout(props: CartCheckoutProps) {
                 </div>
               </div>
 
-              {/* Real Razorpay Payment Options */}
+              {/* Payment Method Options */}
               <div className="space-y-2 border-t border-brand-cocoa-border/40 pt-3">
                 <div className="flex items-center justify-between">
                   <label className="text-[10px] font-bold font-mono uppercase tracking-widest text-brand-cocoa-light">
@@ -1028,25 +897,25 @@ export default function CartCheckout(props: CartCheckoutProps) {
                 </div>
 
                 <div className={`grid ${cashOnDeliveryEnabled ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'} gap-2.5`}>
-                  {/* Single Pay Online (Razorpay) Card */}
+                  {/* Direct UPI Payment Option */}
                   <button
                     type="button"
-                    onClick={() => setPaymentMethod('Razorpay')}
+                    onClick={() => setPaymentMethod('UPI')}
                     className={`p-3.5 border rounded-md flex flex-col justify-between gap-2.5 transition-colors cursor-pointer relative text-left w-full ${
-                      paymentMethod === 'Razorpay'
+                      paymentMethod === 'UPI'
                         ? 'border-brand-cocoa bg-slate-50 text-brand-cocoa'
                         : 'border-brand-cocoa-border bg-white text-brand-cocoa hover:border-slate-400'
                     }`}
                   >
                     <div className="flex items-center justify-between w-full">
                       <div className="flex items-center gap-1.5">
-                        <Lock className="w-3.5 h-3.5 text-brand-pink shrink-0" />
+                        <Smartphone className="w-3.5 h-3.5 text-brand-pink shrink-0" />
                         <span className="text-xs font-bold font-sans text-brand-cocoa">
-                          Pay Online (Razorpay)
+                          Direct UPI Payment
                         </span>
                       </div>
                       <span className="text-[9px] font-mono font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.2 rounded shrink-0">
-                        Instant
+                        Zero Fees • Instant
                       </span>
                     </div>
 
@@ -1058,13 +927,13 @@ export default function CartCheckout(props: CartCheckoutProps) {
                         <PaytmLogo />
                       </div>
 
-                      <p className="text-[11px] text-slate-500 font-normal leading-tight">
-                        + BHIM, Cards &amp; NetBanking also accepted
+                      <p className="text-[11px] text-slate-600 font-normal leading-tight">
+                        Google Pay, PhonePe, Paytm, BHIM &amp; QR scan
                       </p>
                     </div>
 
-                    <span className="text-[9px] font-mono text-slate-500">
-                      100% Secure via Razorpay Gateway
+                    <span className="text-[9px] font-mono text-emerald-700 font-medium">
+                      Direct bank-to-bank UPI payment
                     </span>
                   </button>
 
@@ -1107,65 +976,6 @@ export default function CartCheckout(props: CartCheckoutProps) {
                     </button>
                   )}
                 </div>
-
-                {/* DIRECT UPI APP INTENT GRID (Only rendered when paymentMethod === 'Razorpay' and isMobileView is true) */}
-                {paymentMethod === 'Razorpay' && isMobileView && (
-                  <div className="pt-2 border-t border-brand-cocoa-border/40 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <label className="text-[10px] font-bold font-mono uppercase tracking-widest text-brand-cocoa-light">
-                        Pay Directly with UPI App
-                      </label>
-                      <span className="text-[9px] font-mono text-green-700 bg-green-50 px-1.5 py-0.2 rounded border border-green-200 font-semibold">
-                        Mobile Instant
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-2">
-                      {[
-                        { id: 'gpay' as const, name: 'Google Pay', dot: 'bg-[#4285F4]' },
-                        { id: 'phonepe' as const, name: 'PhonePe', dot: 'bg-[#5f259f]' },
-                        { id: 'paytm' as const, name: 'Paytm', dot: 'bg-[#00BAF2]' },
-                        { id: 'bhim' as const, name: 'BHIM UPI', dot: 'bg-[#0088cc]' },
-                        { id: 'cred' as const, name: 'CRED UPI', dot: 'bg-black' },
-                      ].map((app) => {
-                        const isThisAppPaying = payingWithApp === app.id;
-                        return (
-                          <button
-                            key={app.id}
-                            type="button"
-                            disabled={isSubmitting}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              handleDirectUpiAppPay(app.id);
-                            }}
-                            className="p-2 border border-brand-cocoa-border rounded-lg bg-white hover:border-brand-pink-accent/50 text-brand-cocoa transition-colors flex flex-col items-center justify-center gap-1 text-center cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed min-h-[52px]"
-                          >
-                            {isThisAppPaying ? (
-                              <div className="flex flex-col items-center gap-0.5">
-                                <Loader2 className="w-3.5 h-3.5 animate-spin text-brand-pink" />
-                                <span className="text-[10px] font-semibold text-brand-pink font-sans">Opening...</span>
-                              </div>
-                            ) : (
-                              <>
-                                <div className="flex items-center gap-1.5">
-                                  <span className={`w-2 h-2 rounded-full ${app.dot} shrink-0`} />
-                                  <Smartphone className="w-3 h-3 text-slate-500" />
-                                </div>
-                                <span className="text-[11px] font-bold font-sans truncate max-w-full">
-                                  {app.name}
-                                </span>
-                              </>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    <p className="text-[11px] text-brand-cocoa-light font-sans leading-tight">
-                      Opens your chosen UPI app with the order amount pre-filled. Works on mobile only.
-                    </p>
-                  </div>
-                )}
               </div>
 
               {/* Special Instructions */}
@@ -1192,7 +1002,7 @@ export default function CartCheckout(props: CartCheckoutProps) {
                 <div className="flex justify-between font-sans text-slate-600">
                   <span>Delivery Charges:</span>
                   {deliveryType === 'Pickup' ? (
-                    <span className="font-bold text-green-700 uppercase text-[9px] tracking-wider">FREE PICKUP</span>
+                    <span className="font-bold text-green-700 uppercase text-[9px] tracking-wider">FREE STORE COLLECTION</span>
                   ) : deliveryCharge === 0 ? (
                     <span className="font-bold text-green-700 uppercase text-[9px] tracking-wider">FREE (Orders &gt; ₹600)</span>
                   ) : (
@@ -1222,12 +1032,12 @@ export default function CartCheckout(props: CartCheckoutProps) {
                 {isSubmitting ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Connecting to Razorpay...</span>
+                    <span>{paymentMethod === 'UPI' ? 'Opening UPI Payment Page...' : 'Placing Order...'}</span>
                   </>
-                ) : paymentMethod === 'Razorpay' ? (
+                ) : paymentMethod === 'UPI' ? (
                   <>
-                    <Lock className="w-4 h-4 text-white" />
-                    <span>Pay ₹{grandTotal} with Razorpay</span>
+                    <Smartphone className="w-4 h-4 text-white" />
+                    <span>Proceed to UPI Payment (₹{grandTotal})</span>
                     <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                   </>
                 ) : (

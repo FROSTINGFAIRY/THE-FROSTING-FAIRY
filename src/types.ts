@@ -102,18 +102,16 @@ export interface CheckoutData {
   deliveryType: 'Pickup' | 'Delivery';
   deliveryAddress: string;
   gpsCoordinates: string;
-  paymentMethod: 'Razorpay' | 'COD';
+  paymentMethod: 'UPI' | 'COD';
   paymentStatus?: 'Unpaid' | 'Paid' | 'Pending' | 'Failed';
-  paymentDetails: {
+  paymentDetails?: {
     gateway?: string;
-    razorpayOrderId?: string;
-    razorpayPaymentId?: string;
+    upiId?: string;
+    customerUpiId?: string;
+    upiTransactionId?: string;
     gatewayRef?: string;
     paidAt?: string;
     verifiedOnServer?: boolean;
-    cardHolder?: string;
-    cardNumber?: string;
-    upiId?: string;
   };
 }
 
@@ -141,17 +139,13 @@ export interface MealPlanEntry {
   deliveryType?: 'Pickup' | 'Delivery';
   deliveryAddress?: string;
   gpsCoordinates?: string;
-  paymentMethod?: 'Razorpay' | 'COD' | 'Card' | 'UPI';
+  paymentMethod?: 'UPI' | 'COD';
   paymentStatus?: 'Unpaid' | 'Paid' | 'Pending' | 'Failed' | 'Refunded';
   transactionId?: string;
   paymentTimestamp?: string;
   paidAmount?: number;
   paymentDetails?: {
     gateway?: string;
-    razorpayOrderId?: string;
-    razorpayPaymentId?: string;
-    cardHolder?: string;
-    cardNumber?: string;
     upiId?: string;
     customerUpiId?: string;
     upiTransactionId?: string;

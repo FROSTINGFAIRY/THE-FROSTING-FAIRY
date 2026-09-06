@@ -44,7 +44,7 @@ export default function PrivacyPolicy() {
             <strong>Order Customizations & Piping Messages:</strong> Inscription text (e.g. &ldquo;Happy Birthday&rdquo;), dietary flavor choices, custom weight options, and box selections to bake your order accurately.
           </li>
           <li>
-            <strong>Payment Reference Metadata:</strong> When you complete checkout via Razorpay (UPI, debit/credit cards, netbanking), Razorpay transmits transaction verification references (e.g., payment ID, status) to confirm receipt. <em>We never store your raw credit/debit card numbers or UPI PINs on our servers.</em>
+            <strong>Payment Reference Metadata:</strong> When you complete checkout via Direct UPI, we record the customer-submitted UPI reference / UTR transaction number to verify and reconcile bank credit with your order. <em>We never ask for or store your secret UPI MPIN or banking login credentials.</em>
           </li>
         </ul>
       </section>
@@ -61,7 +61,7 @@ export default function PrivacyPolicy() {
           We rely on trusted, industry-standard third-party processors strictly for operational fulfillment:
         </p>
         <ul className="list-disc pl-6 space-y-2 text-brand-cocoa/85">
-          <li><strong>Razorpay Software Pvt. Ltd.:</strong> PCI-DSS Level 1 certified payment gateway handling online card, netbanking, and UPI processing.</li>
+          <li><strong>Direct Unified Payments Interface (UPI):</strong> National Payments Corporation of India (NPCI) interoperable bank-to-bank direct settlements.</li>
           <li><strong>Google Cloud Platform / Firebase:</strong> Infrastructure host for database management and secure hosting.</li>
           <li><strong>Google Maps Platform:</strong> To help you pinpoint delivery coordinates and locate our storefront on an interactive map.</li>
         </ul>

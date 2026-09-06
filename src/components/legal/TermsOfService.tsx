@@ -31,7 +31,7 @@ export default function TermsOfService() {
           An order is officially accepted and queued into our kitchen schedule only upon either:
         </p>
         <ul className="list-disc pl-6 space-y-2 text-brand-cocoa/85">
-          <li><strong>Successful Digital Payment:</strong> Receipt of instant payment verification via Razorpay (UPI, Credit/Debit Card, Netbanking).</li>
+          <li><strong>Direct UPI Payment Verification:</strong> Receipt and verification of UPI payment via merchant UPI ID or QR code.</li>
           <li><strong>Cash on Delivery (COD) Confirmation:</strong> Successful placement of a valid Cash on Delivery order where COD service is active for your area.</li>
         </ul>
         <p>

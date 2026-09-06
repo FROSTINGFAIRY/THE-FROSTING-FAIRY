@@ -140,7 +140,7 @@ export function GmailHub({
         pickupTime: preselectedOrder.pickupTime,
         deliveryType: preselectedOrder.deliveryType,
         deliveryAddress: preselectedOrder.deliveryAddress,
-        paymentMethod: preselectedOrder.paymentMethod || 'UPI / Card',
+        paymentMethod: preselectedOrder.paymentMethod === 'COD' ? 'Cash on Delivery' : 'Direct UPI',
         boxContents: preselectedOrder.boxContents,
       });
       setComposeBody(receiptHtml);
@@ -280,7 +280,7 @@ export function GmailHub({
         pickupTime: targetOrder.pickupTime,
         deliveryType: targetOrder.deliveryType,
         deliveryAddress: targetOrder.deliveryAddress,
-        paymentMethod: targetOrder.paymentMethod || 'UPI / Card',
+        paymentMethod: targetOrder.paymentMethod === 'COD' ? 'Cash on Delivery' : 'Direct UPI',
         boxContents: targetOrder.boxContents,
       }));
     } else if (tplKey === 'baking') {

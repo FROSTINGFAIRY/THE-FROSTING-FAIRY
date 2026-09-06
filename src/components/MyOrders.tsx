@@ -519,11 +519,9 @@ export default function MyOrders(props: MyOrdersProps) {
                             Payment
                           </span>
                           <span className="font-sans font-bold text-brand-cocoa text-xs flex items-center gap-1 mt-0.5">
-                            {order.paymentMethod === 'Card'
-                              ? '💳 Card'
-                              : order.paymentMethod === 'UPI'
-                              ? '📱 UPI QR'
-                              : '💵 Cash'}
+                            {order.paymentMethod === 'COD'
+                              ? '💵 Cash'
+                              : '📱 Direct UPI'}
                           </span>
                           <span className="text-[10px] font-mono text-emerald-700 font-bold mt-0.5 block truncate">
                             {order.paymentStatus === 'Paid'

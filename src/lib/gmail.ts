@@ -458,7 +458,7 @@ export function generateBakeryOrderReceiptHtml(params: {
     pickupTime,
     deliveryType = 'Store Pickup',
     deliveryAddress,
-    paymentMethod = 'UPI / Online',
+    paymentMethod = 'Direct UPI',
     contactPhone,
     boxContents,
   } = params;

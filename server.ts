@@ -5,7 +5,6 @@ import compression from "compression";
 import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
 import rateLimit from "express-rate-limit";
-import Razorpay from "razorpay";
 import firebaseConfig from "./firebase-applet-config.json";
 import {
   getFirestoreDoc,
@@ -16,26 +15,6 @@ import {
 dotenv.config();
 
 const DEFAULT_ADMINS = ['kiddepressed03@gmail.com', 'hellofrostingfairy@gmail.com'];
-
-// In-memory pending order cache for Razorpay checkout sessions
-const pendingRazorpayOrdersMemory = new Map<string, any>();
-
-// Lazily initialize Razorpay client to avoid startup crashes if keys are not set yet
-let razorpayClient: Razorpay | null = null;
-function getRazorpayInstance(): Razorpay {
-  const key_id = process.env.RAZORPAY_KEY_ID || process.env.VITE_RAZORPAY_KEY_ID;
-  const key_secret = process.env.RAZORPAY_KEY_SECRET;
-  if (!key_id || !key_secret) {
-    throw new Error("Razorpay API credentials (RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET) are required on the server.");
-  }
-  if (!razorpayClient) {
-    razorpayClient = new Razorpay({
-      key_id,
-      key_secret,
-    });
-  }
-  return razorpayClient;
-}
 
 /**
  * Server-side Admin Token Verification helper using Firebase Identity Toolkit lookup
@@ -488,127 +467,7 @@ BODY_HTML:
     return { totalItemsPrice, deliveryFee, totalPrice, items };
   }
 
-  /**
-   * Shared helper for fulfilling a verified Razorpay payment into real Firestore orders
-   * Fully idempotent: will not double-create orders if called by both client verify & webhook
-   */
-  async function fulfillRazorpayOrder({
-    razorpayOrderId,
-    razorpayPaymentId,
-    gatewayRef,
-  }: {
-    razorpayOrderId: string;
-    razorpayPaymentId: string;
-    gatewayRef?: string;
-  }) {
-    let pendingData = pendingRazorpayOrdersMemory.get(razorpayOrderId);
-    if (!pendingData) {
-      pendingData = await getFirestoreDoc("pending_razorpay_orders", razorpayOrderId);
-      if (pendingData) {
-        pendingRazorpayOrdersMemory.set(razorpayOrderId, pendingData);
-      }
-    }
-
-    if (!pendingData) {
-      throw new Error(`Pending order snapshot for Razorpay Order ${razorpayOrderId} not found.`);
-    }
-
-    // Idempotency: if already paid, return existing created order metadata
-    if (pendingData.status === "PAID" && Array.isArray(pendingData.orderIds) && pendingData.orderIds.length > 0) {
-      return {
-        success: true,
-        status: "PAID",
-        orderIds: pendingData.orderIds,
-        orderNumber: pendingData.orderNumber || pendingData.orderIds[0],
-        paidAmount: pendingData.totalPrice,
-        transactionId: razorpayPaymentId,
-        paidAt: pendingData.paidAt,
-        gatewayRef: pendingData.gatewayRef || razorpayPaymentId,
-      };
-    }
-
-    const { items, checkoutData, totalPrice, deliveryFee } = pendingData;
-    const paidTimestamp = new Date().toISOString();
-    const orderNumber = `TFF-${Math.floor(100000 + Math.random() * 900000)}`;
-
-    const singleOrderDoc = {
-      cakeType: items.length === 1 ? items[0].cakeType : items.map((i: any) => i.cakeType).join(", "),
-      flavor: items.length === 1 ? items[0].flavor : (items[0]?.flavor || "Assorted Flavors"),
-      weight: items.length === 1 ? items[0].weight : `${items.length} Items`,
-      message: items.map((i: any) => i.message).filter(Boolean).join("; ") || "",
-      instructions: items.map((i: any) => i.instructions).filter(Boolean).join("; ") || "",
-      pickupDate: checkoutData.pickupDate || "",
-      pickupTime: checkoutData.pickupTime || "",
-      contactName: checkoutData.customerName,
-      contactPhone: checkoutData.customerPhone,
-      estimatedPrice: totalPrice,
-      totalPrice: totalPrice,
-      deliveryFee: deliveryFee,
-      items: items,
-      status: "Confirmed",
-      paymentStatus: "Paid",
-      recipe: items[0]?.recipe || null,
-      customerName: checkoutData.customerName,
-      customerPhone: checkoutData.customerPhone,
-      specialInstructions: checkoutData.specialInstructions || "",
-      deliveryType: checkoutData.deliveryType || "Pickup",
-      deliveryAddress: checkoutData.deliveryAddress || "",
-      gpsCoordinates: checkoutData.gpsCoordinates || "",
-      paymentMethod: "Razorpay",
-      paymentDetails: {
-        gateway: "Razorpay",
-        razorpayOrderId: razorpayOrderId,
-        razorpayPaymentId: razorpayPaymentId,
-        gatewayRef: gatewayRef || razorpayPaymentId,
-        verifiedOnServer: true,
-        paidAt: paidTimestamp,
-      },
-      adminNotes: [],
-      boxContents: items.find((i: any) => i.boxContents)?.boxContents || null,
-      createdAt: paidTimestamp,
-    };
-
-    const createdDocId = await addFirestoreDoc("orders", singleOrderDoc);
-    const orderId = createdDocId || `ORD-${Date.now()}`;
-    const createdOrderIds = [orderId];
-
-    // Update pending order snapshot state to PAID
-    pendingData.status = "PAID";
-    pendingData.paidAt = paidTimestamp;
-    pendingData.gatewayRef = gatewayRef || razorpayPaymentId;
-    pendingData.orderNumber = orderNumber;
-    pendingData.orderIds = createdOrderIds;
-    pendingRazorpayOrdersMemory.set(razorpayOrderId, pendingData);
-
-    setFirestoreDoc("pending_razorpay_orders", razorpayOrderId, {
-      status: "PAID",
-      paidAt: paidTimestamp,
-      gatewayRef: gatewayRef || razorpayPaymentId,
-      orderNumber,
-      orderIds: createdOrderIds,
-    }).catch((err) => console.warn("Async firestore pending order write notice:", err));
-
-    // Dispatch real-time bakery notification for confirmed & paid order
-    dispatchServerNotification({
-      orderId: orderNumber,
-      customerName: singleOrderDoc.customerName,
-      cakeType: `${singleOrderDoc.cakeType} (Paid ₹${totalPrice} via Razorpay)`,
-      status: "PAID_AND_CONFIRMED",
-    }).catch((err) => console.warn("Payment notification error:", err));
-
-    return {
-      success: true,
-      status: "PAID",
-      orderIds: createdOrderIds,
-      orderNumber: orderNumber,
-      paidAmount: totalPrice,
-      transactionId: razorpayPaymentId,
-      paidAt: paidTimestamp,
-      gatewayRef: gatewayRef || razorpayPaymentId,
-    };
-  }
-
-  // 3) VALIDATE ORDER PRICING SERVER-SIDE /api/create-order (Cash on Delivery)
+  // 3) ORDER CREATION: /api/create-order (Direct UPI & Cash on Delivery)
   app.post("/api/create-order", createOrderLimiter, async (req, res) => {
     try {
       const { cartItems, checkoutData } = req.body || {};
@@ -620,23 +479,28 @@ BODY_HTML:
         return res.status(400).json({ error: "Customer details (name & phone) are required." });
       }
 
-      // Fetch branding settings to check if Cash on Delivery is enabled
+      // Fetch branding settings to check if Cash on Delivery is enabled and get merchant UPI ID
       let isCodEnabled = true;
+      let merchantUpiId = "justforme680@oksbi";
       try {
         const bData = await getFirestoreDoc("settings", "branding");
         if (bData && bData.cashOnDeliveryEnabled === false) {
           isCodEnabled = false;
         }
+        if (bData && bData.upiId) {
+          merchantUpiId = bData.upiId;
+        }
       } catch (err) {
         console.warn("Could not check branding settings in server:", err);
       }
 
-      const requestedPaymentMethod = checkoutData.paymentMethod || "COD";
+      const requestedPaymentMethod = checkoutData.paymentMethod || "UPI";
       if (!isCodEnabled && requestedPaymentMethod === "COD") {
-        return res.status(400).json({ error: "Cash on Delivery is currently disabled by store management. Please select Pay Online." });
+        return res.status(400).json({ error: "Cash on Delivery is currently disabled by store management. Please select Pay via UPI." });
       }
 
-      const resolvedPaymentMethod = (!isCodEnabled && requestedPaymentMethod === "COD") ? "Razorpay" : requestedPaymentMethod;
+      const resolvedPaymentMethod = (!isCodEnabled && requestedPaymentMethod === "COD") ? "UPI" : requestedPaymentMethod;
+      const isUpi = resolvedPaymentMethod === "UPI";
 
       const { totalItemsPrice, deliveryFee, totalPrice, items } = await deriveOrderItemsAndTotals(cartItems, checkoutData);
 
@@ -655,6 +519,7 @@ BODY_HTML:
         deliveryFee: deliveryFee,
         items: items,
         status: "Pending",
+        paymentStatus: isUpi ? "Pending" : "Unpaid",
         recipe: items[0]?.recipe || null,
         customerName: checkoutData.customerName,
         customerPhone: checkoutData.customerPhone,
@@ -663,7 +528,15 @@ BODY_HTML:
         deliveryAddress: checkoutData.deliveryAddress || "",
         gpsCoordinates: checkoutData.gpsCoordinates || "",
         paymentMethod: resolvedPaymentMethod,
-        paymentDetails: checkoutData.paymentDetails || {},
+        paymentDetails: isUpi ? {
+          gateway: "UPI",
+          upiId: merchantUpiId,
+          status: "pending",
+          ...(checkoutData.paymentDetails || {})
+        } : {
+          gateway: "COD",
+          ...(checkoutData.paymentDetails || {})
+        },
         adminNotes: [],
         boxContents: items.find((i: any) => i.boxContents)?.boxContents || null,
         createdAt: new Date().toISOString()
@@ -672,19 +545,26 @@ BODY_HTML:
       const createdDocId = await addFirestoreDoc("orders", singleOrderDoc);
       const orderId = createdDocId || `ORD-${Date.now()}`;
 
-      // Dispatch alert notification
-      dispatchServerNotification({
-        orderId,
-        customerName: singleOrderDoc.customerName,
-        cakeType: singleOrderDoc.cakeType,
-        status: singleOrderDoc.status,
-      }).catch(err => console.warn("Order notification dispatch error:", err));
+      // Dispatch alert notification for COD or new orders
+      if (!isUpi) {
+        dispatchServerNotification({
+          orderId,
+          customerName: singleOrderDoc.customerName,
+          cakeType: singleOrderDoc.cakeType,
+          status: singleOrderDoc.status,
+        }).catch(err => console.warn("Order notification dispatch error:", err));
+      }
 
       return res.json({
         success: true,
         orderId: orderId,
         orderIds: [orderId],
-        totalPrice: totalPrice
+        orderNumber: orderId,
+        totalPrice: totalPrice,
+        deliveryFee: deliveryFee,
+        customerName: singleOrderDoc.customerName,
+        paymentMethod: resolvedPaymentMethod,
+        paymentStatus: singleOrderDoc.paymentStatus,
       });
     } catch (error: any) {
       console.error("Create order handler error:", error);
@@ -692,194 +572,147 @@ BODY_HTML:
     }
   });
 
-  // ==========================================
-  // 4) REAL RAZORPAY PAYMENT GATEWAY ENDPOINTS
-  // ==========================================
-
-  // Handler for creating Razorpay order with server-verified total pricing
-  const handleCreatePaymentOrder = async (req: express.Request, res: express.Response) => {
+  // 4) GET ORDER DETAILS: /api/order/:orderId
+  app.get("/api/order/:orderId", async (req, res) => {
     try {
-      const cartItems = req.body.cartItems || req.body.items || [];
-      const checkoutData = req.body.checkoutData || req.body || {};
-
-      if (!Array.isArray(cartItems) || cartItems.length === 0) {
-        return res.status(400).json({ error: "Cart items are required to initiate payment." });
-      }
-      if (!checkoutData || !checkoutData.customerName || !checkoutData.customerPhone) {
-        return res.status(400).json({ error: "Customer details (name & phone) are required." });
+      const { orderId } = req.params;
+      if (!orderId) {
+        return res.status(400).json({ error: "Order ID is required." });
       }
 
-      // Re-derive price server-side strictly from product catalog and price options
-      const { totalItemsPrice, deliveryFee, totalPrice, items } = await deriveOrderItemsAndTotals(cartItems, checkoutData);
-
-      if (totalPrice <= 0) {
-        return res.status(400).json({ error: "Total order amount must be greater than 0." });
+      const order = await getFirestoreDoc("orders", orderId);
+      if (!order) {
+        return res.status(404).json({ error: "Order not found." });
       }
 
-      const amountInPaise = Math.round(totalPrice * 100);
-      const rzp = getRazorpayInstance();
-      const internalOrderId = `rcpt_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
-
-      const razorpayOrder = await rzp.orders.create({
-        amount: amountInPaise,
-        currency: "INR",
-        receipt: internalOrderId,
-        notes: {
-          customerName: String(checkoutData.customerName).trim(),
-          customerPhone: String(checkoutData.customerPhone).trim(),
-          deliveryType: checkoutData.deliveryType || "Pickup",
-          internalOrderId,
-        },
+      return res.json({
+        id: orderId,
+        orderId: orderId,
+        orderNumber: orderId,
+        customerName: order.customerName || order.contactName,
+        customerPhone: order.customerPhone || order.contactPhone,
+        cakeType: order.cakeType,
+        flavor: order.flavor,
+        weight: order.weight,
+        totalPrice: order.totalPrice || order.estimatedPrice,
+        deliveryFee: order.deliveryFee || 0,
+        deliveryType: order.deliveryType,
+        deliveryAddress: order.deliveryAddress,
+        pickupDate: order.pickupDate,
+        pickupTime: order.pickupTime,
+        paymentMethod: order.paymentMethod,
+        paymentStatus: order.paymentStatus,
+        transactionId: order.transactionId,
+        paymentDetails: order.paymentDetails,
+        status: order.status,
+        createdAt: order.createdAt,
+        items: order.items || [],
       });
+    } catch (error: any) {
+      console.error("Get order details error:", error);
+      res.status(500).json({ error: "Failed to retrieve order details." });
+    }
+  });
 
-      const pendingSnapshot = {
-        orderId: internalOrderId,
-        razorpayOrderId: razorpayOrder.id,
-        amountInPaise,
-        totalPrice,
-        deliveryFee,
-        totalItemsPrice,
-        items,
-        cartItems,
-        checkoutData,
-        status: "PENDING",
-        paymentStatus: "pending",
-        createdAt: new Date().toISOString(),
+  // 5) DIRECT UPI PAYMENT VERIFICATION & RECORDING: /api/upi/verify-payment
+  app.post("/api/upi/verify-payment", async (req, res) => {
+    try {
+      const { orderId, utrNumber, customerUpiId } = req.body || {};
+
+      if (!orderId) {
+        return res.status(400).json({ error: "Order ID is required." });
+      }
+
+      const trimmedUtr = typeof utrNumber === "string" ? utrNumber.trim() : "";
+      if (!trimmedUtr || trimmedUtr.length < 6) {
+        return res.status(400).json({
+          error: "Please enter a valid 12-digit UPI Reference Number / Bank UTR ID."
+        });
+      }
+
+      // Fetch the order from Firestore
+      const order = await getFirestoreDoc("orders", orderId);
+      if (!order) {
+        return res.status(404).json({ error: "Order not found. Please check your order reference." });
+      }
+
+      // Idempotency: if order is already marked as paid
+      if (order.paymentStatus === "Paid") {
+        return res.json({
+          success: true,
+          status: "Paid",
+          orderId,
+          orderNumber: orderId,
+          paidAmount: order.totalPrice || order.estimatedPrice,
+          transactionId: order.transactionId || trimmedUtr,
+          paidAt: order.paymentTimestamp || new Date().toISOString(),
+          alreadyPaid: true,
+        });
+      }
+
+      // Fetch store's merchant UPI configuration
+      let merchantUpiId = "justforme680@oksbi";
+      try {
+        const bData = await getFirestoreDoc("settings", "branding");
+        if (bData && bData.upiId) {
+          merchantUpiId = bData.upiId;
+        }
+      } catch (err) {
+        console.warn("Could not check branding settings:", err);
+      }
+
+      const paidTimestamp = new Date().toISOString();
+
+      const updatedFields = {
+        paymentStatus: "Paid",
+        paymentTimestamp: paidTimestamp,
+        transactionId: trimmedUtr,
+        paymentDetails: {
+          gateway: "UPI",
+          upiId: merchantUpiId,
+          customerUpiId: typeof customerUpiId === "string" ? customerUpiId.trim() : "",
+          upiTransactionId: trimmedUtr,
+          gatewayRef: trimmedUtr,
+          paidAt: paidTimestamp,
+          verifiedOnServer: true,
+        },
+        status: "Pending", // ready for baking queue
       };
 
-      // Store in memory cache and non-public Firestore payment_sessions collections
-      pendingRazorpayOrdersMemory.set(razorpayOrder.id, pendingSnapshot);
-      setFirestoreDoc("payment_sessions", razorpayOrder.id, pendingSnapshot).catch((err) => {
-        console.warn("Async firestore payment session write notice:", err);
-      });
-      setFirestoreDoc("pending_razorpay_orders", razorpayOrder.id, pendingSnapshot).catch((err) => {
-        console.warn("Async firestore pending order write notice:", err);
-      });
+      await setFirestoreDoc("orders", orderId, updatedFields);
 
-      const keyId = process.env.RAZORPAY_KEY_ID || process.env.VITE_RAZORPAY_KEY_ID || "";
+      // Record in payment_sessions for auditing
+      setFirestoreDoc("payment_sessions", orderId, {
+        orderId,
+        totalPrice: order.totalPrice || order.estimatedPrice,
+        status: "Paid",
+        transactionId: trimmedUtr,
+        customerUpiId: customerUpiId || "",
+        merchantUpiId,
+        verifiedAt: paidTimestamp,
+      }).catch((err) => console.warn("Payment session write notice:", err));
+
+      // Dispatch alert notification to bakery management
+      dispatchServerNotification({
+        orderId,
+        customerName: order.customerName || order.contactName,
+        cakeType: `${order.cakeType} (Paid ₹${order.totalPrice || order.estimatedPrice} via UPI UTR: ${trimmedUtr})`,
+        status: "Paid (UPI)",
+      }).catch((err) => console.warn("Order notification dispatch error:", err));
 
       return res.json({
         success: true,
-        order_id: razorpayOrder.id,
-        razorpayOrderId: razorpayOrder.id,
-        amount: razorpayOrder.amount,
-        currency: razorpayOrder.currency,
-        key_id: keyId,
-        RAZORPAY_KEY_ID: keyId,
-        keyId,
-        receipt: internalOrderId,
+        status: "Paid",
+        orderId,
+        orderNumber: orderId,
+        paidAmount: order.totalPrice || order.estimatedPrice,
+        transactionId: trimmedUtr,
+        paidAt: paidTimestamp,
+        gatewayRef: trimmedUtr,
       });
     } catch (error: any) {
-      console.error("Razorpay create-order error:", error);
-      res.status(500).json({ error: error.message || "Failed to create Razorpay payment order." });
-    }
-  };
-
-  app.post("/api/payment/create-order", createOrderLimiter, handleCreatePaymentOrder);
-  app.post("/api/razorpay/create-order", createOrderLimiter, handleCreatePaymentOrder);
-
-  // Handler for verifying Razorpay payment signature server-side and fulfilling orders
-  const handleVerifyPayment = async (req: express.Request, res: express.Response) => {
-    try {
-      const {
-        razorpay_order_id,
-        razorpay_payment_id,
-        razorpay_signature,
-        order_id,
-        payment_id,
-        signature,
-      } = req.body || {};
-
-      const rzpOrderId = razorpay_order_id || order_id;
-      const rzpPaymentId = razorpay_payment_id || payment_id;
-      const rzpSignature = razorpay_signature || signature;
-
-      if (!rzpOrderId || !rzpPaymentId || !rzpSignature) {
-        return res.status(400).json({
-          error: "Missing required payment verification parameters (razorpay_order_id, razorpay_payment_id, and razorpay_signature are required).",
-        });
-      }
-
-      const key_secret = process.env.RAZORPAY_KEY_SECRET;
-      if (!key_secret) {
-        return res.status(500).json({ error: "RAZORPAY_KEY_SECRET is not configured on the server." });
-      }
-
-      // Verify signature server-side with HMAC SHA-256
-      const expectedSignature = crypto
-        .createHmac("sha256", key_secret)
-        .update(`${rzpOrderId}|${rzpPaymentId}`)
-        .digest("hex");
-
-      if (expectedSignature !== rzpSignature) {
-        // Mark payment session as failed in Firestore & memory
-        const failedSnapshot = { status: "FAILED", paymentStatus: "failed", failedAt: new Date().toISOString() };
-        setFirestoreDoc("payment_sessions", rzpOrderId, failedSnapshot).catch(() => {});
-        setFirestoreDoc("pending_razorpay_orders", rzpOrderId, failedSnapshot).catch(() => {});
-        return res.status(400).json({
-          success: false,
-          error: "Invalid Razorpay payment signature. Verification failed.",
-          paymentStatus: "failed",
-        });
-      }
-
-      // Fulfill and record the order into Firestore orders with paymentStatus: "paid"
-      const fulfillment = await fulfillRazorpayOrder({
-        razorpayOrderId: rzpOrderId,
-        razorpayPaymentId: rzpPaymentId,
-        gatewayRef: rzpPaymentId,
-      });
-
-      return res.json({
-        ...fulfillment,
-        paymentStatus: "paid",
-      });
-    } catch (error: any) {
-      console.error("Razorpay verify-payment error:", error);
-      res.status(500).json({ error: error.message || "Failed to verify Razorpay payment." });
-    }
-  };
-
-  app.post("/api/payment/verify", handleVerifyPayment);
-  app.post("/api/razorpay/verify-payment", handleVerifyPayment);
-
-  // 4c. Razorpay Webhook for server-to-server payment notifications
-  app.post("/api/razorpay/webhook", async (req, res) => {
-    try {
-      const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
-      const webhookSignature = (req.headers["x-razorpay-signature"] as string) || "";
-
-      if (webhookSecret) {
-        if (!webhookSignature) {
-          return res.status(400).json({ error: "Missing X-Razorpay-Signature header." });
-        }
-        const rawBody = (req as any).rawBody || JSON.stringify(req.body);
-        const expectedSig = crypto.createHmac("sha256", webhookSecret).update(rawBody).digest("hex");
-        if (expectedSig !== webhookSignature) {
-          return res.status(400).json({ error: "Invalid Razorpay webhook signature." });
-        }
-      }
-
-      const event = req.body?.event;
-      if (event === "payment.captured" || event === "order.paid") {
-        const paymentEntity = req.body?.payload?.payment?.entity;
-        const orderEntity = req.body?.payload?.order?.entity;
-        const razorpay_order_id = paymentEntity?.order_id || orderEntity?.id;
-        const razorpay_payment_id = paymentEntity?.id || `WEBHOOK_${Date.now()}`;
-
-        if (razorpay_order_id) {
-          await fulfillRazorpayOrder({
-            razorpayOrderId: razorpay_order_id,
-            razorpayPaymentId: razorpay_payment_id,
-            gatewayRef: razorpay_payment_id,
-          });
-        }
-      }
-
-      return res.json({ status: "ok", received: true });
-    } catch (error: any) {
-      console.error("Razorpay webhook error:", error);
-      res.status(500).json({ error: error.message || "Webhook processing failed." });
+      console.error("UPI verify-payment error:", error);
+      res.status(500).json({ error: error.message || "Failed to record and verify UPI payment." });
     }
   });
 

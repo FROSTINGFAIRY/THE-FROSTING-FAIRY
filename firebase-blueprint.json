@@ -44,16 +44,15 @@
     },
     "payment_sessions": {
       "title": "payment_sessions",
-      "description": "Secure payment gateway sessions",
+      "description": "Direct UPI payment sessions and verification records",
       "type": "object",
       "properties": {
-        "razorpayOrderId": { "type": "string" },
-        "amountInPaise": { "type": "number" },
+        "orderId": { "type": "string" },
         "totalPrice": { "type": "number" },
         "status": { "type": "string" },
         "createdAt": { "type": "string" }
       },
-      "required": ["razorpayOrderId", "amountInPaise", "status"]
+      "required": ["orderId", "totalPrice", "status"]
     },
     "reviews": {
       "title": "reviews",

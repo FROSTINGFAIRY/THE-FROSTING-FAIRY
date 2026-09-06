@@ -144,7 +144,7 @@ export default function Layout() {
           deliveryType: data.deliveryType || 'Pickup',
           deliveryAddress: data.deliveryAddress || '',
           gpsCoordinates: data.gpsCoordinates || '',
-          paymentMethod: (!cashOnDeliveryEnabled && data.paymentMethod === 'COD') ? 'Card' : (data.paymentMethod || 'Card'),
+          paymentMethod: (!cashOnDeliveryEnabled && data.paymentMethod === 'COD') ? 'UPI' : (data.paymentMethod === 'COD' ? 'COD' : 'UPI'),
           paymentDetails: data.paymentDetails || {},
           adminNotes: data.adminNotes || [],
           boxContents: data.boxContents || undefined,
@@ -735,7 +735,7 @@ export default function Layout() {
             </p>
             <div className="pt-1 flex items-center gap-2 text-[11px] text-brand-pink font-semibold">
               <ShieldCheck className="w-4 h-4" />
-              <span>100% Guest Checkout • Secure Razorpay & COD</span>
+              <span>100% Guest Checkout • Direct UPI & COD</span>
             </div>
           </div>
 

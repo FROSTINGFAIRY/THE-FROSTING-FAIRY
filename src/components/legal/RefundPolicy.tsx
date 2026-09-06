@@ -70,7 +70,7 @@ export default function RefundPolicy() {
         </p>
         <ul className="list-disc pl-6 space-y-2 text-brand-cocoa/85">
           <li>
-            <strong>Prepaid Orders (Razorpay / UPI / Cards):</strong> The refund will be credited directly back to the original source bank account or UPI VPA used during checkout. Standard banking settlement takes <strong>5 to 7 business days</strong>.
+            <strong>Prepaid Orders (Direct UPI):</strong> The refund will be credited directly back to the original source bank account or UPI VPA used during payment. Standard banking settlement takes <strong>3 to 5 business days</strong>.
           </li>
           <li>
             <strong>Cash on Delivery (COD) Orders:</strong> If an issue arises with an accepted COD order, refunds are processed via direct NEFT/IMPS bank transfer or instant UPI payment upon verification of your payment receipt.

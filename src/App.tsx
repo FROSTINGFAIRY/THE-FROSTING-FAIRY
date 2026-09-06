@@ -11,6 +11,7 @@ import Dashboard from './components/Dashboard';
 import ProductDetail from './components/ProductDetail';
 import MyOrders from './components/MyOrders';
 import CartCheckout from './components/CartCheckout';
+import UpiPaymentPage from './components/UpiPaymentPage';
 import AdminDashboard from './components/AdminDashboard';
 
 // Legal & Compliance Pages
@@ -64,6 +65,8 @@ export default function App() {
           <Route path="my-orders" element={<MyOrders />} />
           <Route path="cart" element={<CartCheckout />} />
           <Route path="checkout" element={<Navigate to="/cart" replace />} />
+          <Route path="upi-payment" element={<UpiPaymentPage />} />
+          <Route path="payment" element={<UpiPaymentPage />} />
           <Route path="admin" element={<AdminDashboard />} />
 
           {/* Legal & Compliance Routes */}
