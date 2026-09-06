@@ -93,9 +93,24 @@ export interface CategoryInfo {
 
 export type MealType = 'Breakfast' | 'Lunch' | 'Dinner';
 
+export interface CustomerProfile {
+  id: string; // e.g. "+966501234567"
+  phoneNumber: string; // e.g. "501234567"
+  countryCode: string; // e.g. "+966"
+  fullPhoneNumber: string; // e.g. "+966501234567"
+  fullName?: string;
+  deliveryAddress?: string;
+  gpsCoordinates?: string;
+  preferredDeliveryType?: 'Pickup' | 'Delivery';
+  createdAt?: string;
+  lastLoginAt?: string;
+}
+
 export interface CheckoutData {
   customerName: string;
   customerPhone: string;
+  customerId?: string;
+  customerToken?: string;
   pickupDate: string;
   pickupTime: string;
   specialInstructions: string;
@@ -220,5 +235,11 @@ export interface LayoutContextType {
   handleClearAllShopping: () => void;
   handleAddIngredientsToShoppingList: (recipe: Recipe, scaledServings?: number) => void;
   setIsBakeryMapOpen: (open: boolean) => void;
+  customer: CustomerProfile | null;
+  customerToken: string | null;
+  isCustomerLoggedIn: boolean;
+  handleCustomerLogin: (customer: CustomerProfile, token: string) => void;
+  handleCustomerLogout: () => void;
+  handleUpdateCustomerProfile: (data: Partial<CustomerProfile>) => Promise<void>;
 }
 

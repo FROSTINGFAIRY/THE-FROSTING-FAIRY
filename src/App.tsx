@@ -63,7 +63,9 @@ export default function App() {
           <Route path="product/:id" element={<ProductDetail />} />
           <Route path="recipe/:recipeId" element={<RecipeRouteRedirect />} />
           <Route path="my-orders" element={<MyOrders />} />
+          <Route path="orders" element={<MyOrders />} />
           <Route path="cart" element={<CartCheckout />} />
+          <Route path="my-order" element={<Navigate to="/cart" replace />} />
           <Route path="checkout" element={<Navigate to="/cart" replace />} />
           <Route path="upi-payment" element={<UpiPaymentPage />} />
           <Route path="payment" element={<UpiPaymentPage />} />

@@ -6,11 +6,19 @@ import OrderSuccessModal, { OrderSuccessDetails } from './OrderSuccessModal';
 import { BakeryStoreMapModal } from './BakeryMapModal';
 import { triggerOrderSuccessConfetti } from '../lib/confetti';
 import { INITIAL_RECIPES, INITIAL_CATEGORY_INFOS } from '../data';
-import { Recipe, ShoppingItem, MealPlanEntry, CategoryInfo, CheckoutData, LayoutContextType } from '../types';
+import { Recipe, ShoppingItem, MealPlanEntry, CategoryInfo, CheckoutData, LayoutContextType, CustomerProfile } from '../types';
 import { AnimatePresence, motion } from 'motion/react';
 import { X, Instagram, ArrowLeft, Loader2, ShieldCheck, Mail } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { collection, onSnapshot, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import {
+  getStoredCustomer,
+  getStoredCustomerToken,
+  storeCustomerSession,
+  clearCustomerSession,
+  fetchCurrentSession,
+  updateCustomerProfileOnServer,
+} from '../lib/customerAuth';
 
 const SHOPPING_STORAGE_KEY = 'tff_shopping_list';
 
@@ -559,6 +567,51 @@ export default function Layout() {
     });
   };
 
+  // Customer Mobile Authentication state
+  const [customer, setCustomer] = useState<CustomerProfile | null>(getStoredCustomer);
+  const [customerToken, setCustomerToken] = useState<string | null>(getStoredCustomerToken);
+
+  useEffect(() => {
+    if (customerToken) {
+      fetchCurrentSession(customerToken).then((profile) => {
+        if (profile) {
+          setCustomer(profile);
+        } else {
+          setCustomer(null);
+          setCustomerToken(null);
+        }
+      });
+    }
+  }, [customerToken]);
+
+  const handleCustomerLogin = (newCustomer: CustomerProfile, token: string) => {
+    setCustomer(newCustomer);
+    setCustomerToken(token);
+    storeCustomerSession(token, newCustomer);
+    addToast(
+      '👋 Logged In Successfully',
+      `Welcome ${newCustomer.fullName || newCustomer.fullPhoneNumber}! You can now proceed with your order.`,
+      'success'
+    );
+  };
+
+  const handleCustomerLogout = () => {
+    setCustomer(null);
+    setCustomerToken(null);
+    clearCustomerSession();
+    addToast('Logged Out', 'You have been logged out. Please verify your number when you are ready to checkout.', 'info');
+  };
+
+  const handleUpdateCustomerProfile = async (data: Partial<CustomerProfile>) => {
+    if (!customerToken) return;
+    try {
+      const updated = await updateCustomerProfileOnServer(customerToken, data);
+      setCustomer(updated);
+    } catch (e) {
+      console.warn('Profile update error:', e);
+    }
+  };
+
   const layoutContextValue: LayoutContextType = {
     recipes,
     setRecipes,
@@ -602,6 +655,12 @@ export default function Layout() {
     handleClearAllShopping,
     handleAddIngredientsToShoppingList,
     setIsBakeryMapOpen,
+    customer,
+    customerToken,
+    isCustomerLoggedIn: !!customer,
+    handleCustomerLogin,
+    handleCustomerLogout,
+    handleUpdateCustomerProfile,
   };
 
   return (
@@ -616,6 +675,8 @@ export default function Layout() {
         theme={theme}
         toggleTheme={() => setTheme((t) => (t === 'light' ? 'dark' : 'light'))}
         onOpenMap={() => setIsBakeryMapOpen(true)}
+        customer={customer}
+        onLogout={handleCustomerLogout}
       />
 
       {/* Main Screen Outlet Layout */}

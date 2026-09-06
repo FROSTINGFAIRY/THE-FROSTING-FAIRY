@@ -80,6 +80,12 @@ service cloud.firestore {
       allow delete: if isRoleAdmin();
     }
 
+    // Customers collection: mobile phone authenticated profiles and returning customer records
+    match /customers/{customerId} {
+      allow read, create, update: if true;
+      allow delete: if isRoleAdmin();
+    }
+
     // Payment sessions: admin-only reads or authenticated user's own session read, server-only writes
     match /payment_sessions/{sessionId} {
       allow read: if (request.auth != null && resource.data.userId == request.auth.uid) || isAdmin();

@@ -275,14 +275,14 @@ export default function UpiPaymentPage() {
           </div>
           <h2 className="font-display font-bold text-xl text-brand-cocoa">No Active Order Found</h2>
           <p className="text-xs text-brand-cocoa-light mt-2 leading-relaxed font-sans">
-            It looks like you arrived here without an active checkout order. Please check your shopping cart or explore our menu.
+            It looks like you arrived here without an active checkout order. Please check My Order or explore our menu.
           </p>
           <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
             <Link
               to="/cart"
               className="px-4 py-2.5 bg-brand-pink hover:bg-brand-pink-dark text-white rounded-md text-xs font-bold font-sans transition-colors"
             >
-              Go to Shopping Cart
+              Go to My Order
             </Link>
             <Link
               to="/shop"

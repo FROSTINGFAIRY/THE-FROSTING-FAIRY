@@ -467,7 +467,326 @@ BODY_HTML:
     return { totalItemsPrice, deliveryFee, totalPrice, items };
   }
 
-  // 3) ORDER CREATION: /api/create-order (Direct UPI & Cash on Delivery)
+  // --- CUSTOMER MOBILE NUMBER OTP AUTHENTICATION ---
+  interface OtpRecord {
+    otp: string;
+    phoneNumber: string;
+    countryCode: string;
+    fullPhoneNumber: string;
+    expiresAt: number;
+    attempts: number;
+    createdAt: number;
+    lastRequestedAt: number;
+  }
+
+  const otpStore = new Map<string, OtpRecord>();
+
+  interface CustomerSessionRecord {
+    customerId: string;
+    fullPhoneNumber: string;
+    createdAt: number;
+    expiresAt: number;
+  }
+
+  const customerSessions = new Map<string, CustomerSessionRecord>();
+
+  // Cleanup expired OTPs and sessions periodically
+  setInterval(() => {
+    const now = Date.now();
+    for (const [key, record] of otpStore.entries()) {
+      if (record.expiresAt < now) {
+        otpStore.delete(key);
+      }
+    }
+    for (const [token, session] of customerSessions.entries()) {
+      if (session.expiresAt < now) {
+        customerSessions.delete(token);
+      }
+    }
+  }, 5 * 60 * 1000);
+
+  // Helper to normalize phone number
+  function normalizePhoneNumber(rawNumber: string, countryCode: string = "+966") {
+    let cleanCode = countryCode.trim();
+    if (!cleanCode.startsWith("+")) {
+      cleanCode = "+" + cleanCode;
+    }
+    let digits = rawNumber.replace(/\D/g, "");
+    // If Saudi (+966) and user typed leading 0 (e.g. 0501234567), remove leading 0
+    if (cleanCode === "+966" && digits.startsWith("0")) {
+      digits = digits.slice(1);
+    }
+    // If Indian (+91) and user typed leading 0, remove it
+    if (cleanCode === "+91" && digits.startsWith("0")) {
+      digits = digits.slice(1);
+    }
+    const fullNumber = `${cleanCode}${digits}`;
+    return { cleanCode, digits, fullNumber };
+  }
+
+  // 1) SEND OTP: /api/auth/send-otp
+  app.post("/api/auth/send-otp", async (req, res) => {
+    try {
+      const { phoneNumber, countryCode } = req.body || {};
+      if (!phoneNumber || typeof phoneNumber !== "string") {
+        return res.status(400).json({ error: "Please enter a valid mobile number." });
+      }
+
+      const { cleanCode, digits, fullNumber } = normalizePhoneNumber(phoneNumber, countryCode || "+966");
+
+      if (digits.length < 7 || digits.length > 14) {
+        return res.status(400).json({
+          error: "Mobile number should be between 7 and 14 digits.",
+        });
+      }
+
+      // Check throttle (minimum 10 seconds between requests for the same number)
+      const existing = otpStore.get(fullNumber);
+      const now = Date.now();
+      if (existing && now - existing.lastRequestedAt < 10000) {
+        return res.status(429).json({
+          error: "Please wait a moment before requesting another verification code.",
+        });
+      }
+
+      // Generate a secure 6-digit OTP
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+      otpStore.set(fullNumber, {
+        otp,
+        phoneNumber: digits,
+        countryCode: cleanCode,
+        fullPhoneNumber: fullNumber,
+        expiresAt: now + 10 * 60 * 1000, // 10 minutes
+        attempts: 0,
+        createdAt: now,
+        lastRequestedAt: now,
+      });
+
+      console.log(`[MOBILE AUTH] 📱 Verification OTP for ${fullNumber}: ${otp}`);
+
+      // Dispatch SMS via Twilio if configured in notifications settings
+      try {
+        const settings = (await getFirestoreDoc("settings", "notifications")) || {};
+        const twilioSid = process.env.TWILIO_SID || settings.twilioSid;
+        const twilioToken = process.env.TWILIO_TOKEN || settings.twilioToken;
+        const twilioFrom = process.env.TWILIO_PHONE || settings.twilioPhone;
+
+        if (twilioSid && twilioToken && twilioFrom) {
+          const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/Messages.json`;
+          const authString = Buffer.from(`${twilioSid}:${twilioToken}`).toString("base64");
+          const params = new URLSearchParams();
+          params.append("To", fullNumber);
+          params.append("From", twilioFrom);
+          params.append("Body", `Your The Frosting Fairy verification code is ${otp}. Valid for 10 minutes.`);
+
+          fetch(twilioUrl, {
+            method: "POST",
+            headers: {
+              Authorization: `Basic ${authString}`,
+              "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: params.toString(),
+          }).catch((err) => console.warn("Twilio SMS send error:", err));
+        }
+      } catch (smsErr) {
+        console.warn("SMS provider check error:", smsErr);
+      }
+
+      return res.json({
+        success: true,
+        message: `Verification code sent to ${fullNumber}`,
+        fullPhoneNumber: fullNumber,
+        expiresInSeconds: 60,
+        // In local/preview sandbox, provide devHint so users can test immediately without waiting for SMS carriers
+        devHint: otp,
+      });
+    } catch (error: any) {
+      console.error("send-otp error:", error);
+      res.status(500).json({ error: "Failed to send verification code. Please try again." });
+    }
+  });
+
+  // 2) VERIFY OTP: /api/auth/verify-otp
+  app.post("/api/auth/verify-otp", async (req, res) => {
+    try {
+      const { fullPhoneNumber, otp } = req.body || {};
+      if (!fullPhoneNumber || !otp) {
+        return res.status(400).json({ error: "Mobile number and verification code are required." });
+      }
+
+      const normalizedPhone = fullPhoneNumber.trim();
+      const record = otpStore.get(normalizedPhone);
+
+      if (!record || record.expiresAt < Date.now()) {
+        return res.status(400).json({
+          error: "Verification code expired or not found. Please request a new code.",
+        });
+      }
+
+      record.attempts += 1;
+      if (record.attempts > 5) {
+        otpStore.delete(normalizedPhone);
+        return res.status(400).json({
+          error: "Too many incorrect attempts. Please request a new code.",
+        });
+      }
+
+      if (record.otp !== otp.trim()) {
+        return res.status(400).json({
+          error: "Incorrect verification code. Please check and try again.",
+        });
+      }
+
+      // OTP is valid! Clear it
+      otpStore.delete(normalizedPhone);
+
+      // Generate secure session token
+      const sessionToken = crypto.randomBytes(32).toString("hex");
+      customerSessions.set(sessionToken, {
+        customerId: normalizedPhone,
+        fullPhoneNumber: normalizedPhone,
+        createdAt: Date.now(),
+        expiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000, // 30 days
+      });
+
+      // Check or create customer in Firestore
+      let customerDoc: any = null;
+      let isNewCustomer = false;
+
+      try {
+        customerDoc = await getFirestoreDoc("customers", normalizedPhone);
+      } catch (err) {
+        console.warn("Error fetching customer doc:", err);
+      }
+
+      const nowIso = new Date().toISOString();
+
+      if (!customerDoc) {
+        isNewCustomer = true;
+        customerDoc = {
+          id: normalizedPhone,
+          phoneNumber: record.phoneNumber,
+          countryCode: record.countryCode,
+          fullPhoneNumber: normalizedPhone,
+          fullName: "",
+          deliveryAddress: "",
+          gpsCoordinates: "",
+          preferredDeliveryType: "Delivery",
+          createdAt: nowIso,
+          lastLoginAt: nowIso,
+        };
+        try {
+          await setFirestoreDoc("customers", normalizedPhone, customerDoc);
+        } catch (err) {
+          console.warn("Error saving new customer doc to Firestore:", err);
+        }
+      } else {
+        customerDoc = {
+          ...customerDoc,
+          id: normalizedPhone,
+          fullPhoneNumber: normalizedPhone,
+          lastLoginAt: nowIso,
+        };
+        try {
+          await setFirestoreDoc("customers", normalizedPhone, { lastLoginAt: nowIso });
+        } catch (err) {
+          console.warn("Error updating customer lastLoginAt:", err);
+        }
+      }
+
+      console.log(`[MOBILE AUTH] ✅ User logged in successfully: ${normalizedPhone} (isNew: ${isNewCustomer})`);
+
+      return res.json({
+        success: true,
+        token: sessionToken,
+        customer: customerDoc,
+        isNewCustomer,
+      });
+    } catch (error: any) {
+      console.error("verify-otp error:", error);
+      res.status(500).json({ error: "Failed to verify code. Please try again." });
+    }
+  });
+
+  // 3) GET CUSTOMER SESSION: /api/auth/session
+  app.get("/api/auth/session", async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return res.status(401).json({ authenticated: false, error: "Missing session token." });
+      }
+
+      const token = authHeader.split("Bearer ")[1].trim();
+      const session = customerSessions.get(token);
+
+      if (!session || session.expiresAt < Date.now()) {
+        if (session) customerSessions.delete(token);
+        return res.status(401).json({ authenticated: false, error: "Session expired." });
+      }
+
+      let customerDoc: any = null;
+      try {
+        customerDoc = await getFirestoreDoc("customers", session.fullPhoneNumber);
+      } catch (err) {
+        console.warn("Error getting customer session doc:", err);
+      }
+
+      if (!customerDoc) {
+        customerDoc = {
+          id: session.fullPhoneNumber,
+          fullPhoneNumber: session.fullPhoneNumber,
+          phoneNumber: session.fullPhoneNumber.replace(/^\+\d{1,4}/, ""),
+          countryCode: session.fullPhoneNumber.match(/^\+\d{1,4}/)?.[0] || "+966",
+        };
+      }
+
+      return res.json({
+        authenticated: true,
+        customer: customerDoc,
+      });
+    } catch (error: any) {
+      console.error("customer session error:", error);
+      res.status(500).json({ error: "Failed to retrieve session." });
+    }
+  });
+
+  // 4) UPDATE CUSTOMER PROFILE: /api/auth/profile
+  app.put("/api/auth/profile", async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return res.status(401).json({ error: "Missing session token." });
+      }
+
+      const token = authHeader.split("Bearer ")[1].trim();
+      const session = customerSessions.get(token);
+      if (!session || session.expiresAt < Date.now()) {
+        return res.status(401).json({ error: "Session expired. Please log in again." });
+      }
+
+      const { fullName, deliveryAddress, gpsCoordinates, preferredDeliveryType } = req.body || {};
+      const updates: any = {};
+      if (fullName !== undefined) updates.fullName = String(fullName).trim();
+      if (deliveryAddress !== undefined) updates.deliveryAddress = String(deliveryAddress).trim();
+      if (gpsCoordinates !== undefined) updates.gpsCoordinates = String(gpsCoordinates).trim();
+      if (preferredDeliveryType !== undefined) updates.preferredDeliveryType = preferredDeliveryType;
+      updates.updatedAt = new Date().toISOString();
+
+      await setFirestoreDoc("customers", session.fullPhoneNumber, updates);
+      const updatedDoc = await getFirestoreDoc("customers", session.fullPhoneNumber);
+
+      return res.json({
+        success: true,
+        customer: updatedDoc,
+      });
+    } catch (error: any) {
+      console.error("update profile error:", error);
+      res.status(500).json({ error: "Failed to update profile." });
+    }
+  });
+
+  // 5) ORDER CREATION: /api/create-order (Direct UPI & Cash on Delivery)
   app.post("/api/create-order", createOrderLimiter, async (req, res) => {
     try {
       const { cartItems, checkoutData } = req.body || {};
@@ -539,11 +858,35 @@ BODY_HTML:
         },
         adminNotes: [],
         boxContents: items.find((i: any) => i.boxContents)?.boxContents || null,
+        customerId: checkoutData.customerId || checkoutData.customerPhone,
         createdAt: new Date().toISOString()
       };
 
       const createdDocId = await addFirestoreDoc("orders", singleOrderDoc);
       const orderId = createdDocId || `ORD-${Date.now()}`;
+
+      // Update customer record in Firestore with latest name/address/gps if customerId is provided
+      const effectiveCustomerId = checkoutData.customerId || checkoutData.customerPhone;
+      if (effectiveCustomerId) {
+        try {
+          const profileUpdate: any = {
+            fullName: checkoutData.customerName,
+            lastOrderDate: new Date().toISOString(),
+          };
+          if (checkoutData.deliveryType === "Delivery" && checkoutData.deliveryAddress) {
+            profileUpdate.deliveryAddress = checkoutData.deliveryAddress;
+          }
+          if (checkoutData.gpsCoordinates) {
+            profileUpdate.gpsCoordinates = checkoutData.gpsCoordinates;
+          }
+          if (checkoutData.deliveryType) {
+            profileUpdate.preferredDeliveryType = checkoutData.deliveryType;
+          }
+          await setFirestoreDoc("customers", effectiveCustomerId, profileUpdate);
+        } catch (profileErr) {
+          console.warn("Failed to update customer doc on order create:", profileErr);
+        }
+      }
 
       // Dispatch alert notification for COD or new orders
       if (!isUpi) {

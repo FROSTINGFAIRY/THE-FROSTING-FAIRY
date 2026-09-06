@@ -1144,7 +1144,7 @@ function ProductDetailView({
                     ? totalBoxItemsSelected < boxMinItems
                       ? `Add ${boxMinItems - totalBoxItemsSelected} more to start your box (${totalBoxItemsSelected}/${boxMinItems})`
                       : `Add Assorted Box to Cart (₹${totalPrice}) 🛒`
-                    : 'Add to Shopping Cart 🛒'}
+                    : 'Add to My Order 🛒'}
                 </span>
               </button>
 

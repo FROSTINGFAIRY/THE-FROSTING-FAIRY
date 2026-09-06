@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { Cake, ShoppingBag, Calendar, Heart, Menu, X, Sparkles, Settings, Mail, Instagram, Sun, Moon, MapPin } from 'lucide-react';
+import { Cake, ShoppingBag, Calendar, Heart, Menu, X, Sparkles, Settings, Mail, Instagram, Sun, Moon, MapPin, User, LogOut, Smartphone } from 'lucide-react';
+import { CustomerProfile } from '../types';
 
 interface NavbarProps {
   shoppingItemsCount: number;
@@ -11,6 +12,8 @@ interface NavbarProps {
   theme: 'light' | 'dark';
   toggleTheme: () => void;
   onOpenMap?: () => void;
+  customer?: CustomerProfile | null;
+  onLogout?: () => void;
 }
 
 export default function Navbar({
@@ -22,9 +25,12 @@ export default function Navbar({
   theme,
   toggleTheme,
   onOpenMap,
+  customer,
+  onLogout,
 }: NavbarProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   const [showContactDropdown, setShowContactDropdown] = React.useState(false);
+  const [showUserMenu, setShowUserMenu] = React.useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -97,24 +103,6 @@ export default function Navbar({
               </button>
             )}
             <NavLink
-              to="/orders"
-              className={() =>
-                `px-4 py-2 rounded-xl text-sm font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
-                  isOrdersActive
-                    ? 'text-brand-pink bg-brand-pink-light/30'
-                    : 'text-brand-cocoa-light hover:text-brand-cocoa hover:bg-brand-cream-light/40'
-                }`
-              }
-            >
-              <Calendar className="w-4 h-4" />
-              <span>My Orders</span>
-              {ordersCount > 0 && (
-                <span className="bg-brand-cocoa text-white text-[10px] font-bold font-mono px-1.5 py-0.5 rounded-full animate-bounce">
-                  {ordersCount}
-                </span>
-              )}
-            </NavLink>
-            <NavLink
               to="/admin"
               className={() =>
                 `px-4 py-2 rounded-xl text-sm font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
@@ -178,6 +166,158 @@ export default function Navbar({
 
           {/* Right Action Icons */}
           <div className="hidden md:flex items-center space-x-3">
+            {/* Customer Account Indicator */}
+            {customer ? (
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowUserMenu(!showUserMenu)}
+                  className="px-3 py-2 rounded-full border border-emerald-300 bg-emerald-50/80 hover:bg-emerald-100 text-emerald-900 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs"
+                >
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <User className="w-3.5 h-3.5 text-emerald-700" />
+                  <span className="font-mono max-w-[130px] truncate">
+                    {customer.fullName || customer.fullPhoneNumber}
+                  </span>
+                  <span className={`text-[8px] transition-transform ${showUserMenu ? 'rotate-180' : ''}`}>▼</span>
+                </button>
+
+                {showUserMenu && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setShowUserMenu(false)} />
+                    <div className="absolute right-0 mt-2 w-56 bg-white border border-brand-cocoa-border rounded-xl shadow-lg py-2 z-20 text-left animate-in fade-in slide-in-from-top-2">
+                      <div className="px-4 py-2 border-b border-brand-cocoa-border/20">
+                        <span className="text-[10px] uppercase font-mono tracking-wider font-extrabold text-brand-pink-dark block">
+                          Verified Customer
+                        </span>
+                        <p className="text-xs font-bold text-brand-cocoa mt-0.5 truncate">
+                          {customer.fullPhoneNumber}
+                        </p>
+                        {customer.fullName && (
+                          <p className="text-[11px] text-brand-cocoa-light truncate">{customer.fullName}</p>
+                        )}
+                      </div>
+
+                      <NavLink
+                        to="/cart"
+                        id="dashboard-opt-my-order"
+                        onClick={() => setShowUserMenu(false)}
+                        className="px-4 py-2 text-xs font-semibold text-brand-cocoa-light hover:text-brand-pink hover:bg-brand-pink-light/20 transition-all flex items-center justify-between"
+                      >
+                        <div className="flex items-center gap-2">
+                          <ShoppingBag className="w-3.5 h-3.5 text-brand-pink" />
+                          <span className="font-bold">My Order</span>
+                        </div>
+                        {shoppingItemsCount > 0 && (
+                          <span className="bg-brand-pink text-white text-[10px] font-bold font-mono px-1.5 py-0.2 rounded-full">
+                            {shoppingItemsCount}
+                          </span>
+                        )}
+                      </NavLink>
+
+                      <NavLink
+                        to="/orders"
+                        id="dashboard-opt-my-orders"
+                        onClick={() => setShowUserMenu(false)}
+                        className="px-4 py-2 text-xs font-semibold text-brand-cocoa-light hover:text-brand-pink hover:bg-brand-pink-light/20 transition-all flex items-center justify-between"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Calendar className="w-3.5 h-3.5 text-brand-pink" />
+                          <span className="font-bold">My Orders</span>
+                        </div>
+                        {ordersCount > 0 && (
+                          <span className="bg-brand-cocoa text-white text-[10px] font-bold font-mono px-1.5 py-0.2 rounded-full">
+                            {ordersCount}
+                          </span>
+                        )}
+                      </NavLink>
+
+                      <div className="border-t border-brand-cocoa-border/20 mt-1 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowUserMenu(false);
+                            if (onLogout) onLogout();
+                          }}
+                          className="w-full text-left px-4 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 transition-all flex items-center gap-2 cursor-pointer"
+                        >
+                          <LogOut className="w-3.5 h-3.5" />
+                          <span>Log Out</span>
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            ) : (
+              <div className="relative">
+                <button
+                  type="button"
+                  id="nav-guest-dashboard-btn"
+                  onClick={() => setShowUserMenu(!showUserMenu)}
+                  className="px-3.5 py-1.5 rounded-full border border-brand-cocoa-border bg-white text-brand-cocoa hover:text-brand-pink hover:border-brand-pink/30 hover:bg-brand-pink/5 text-xs font-bold transition-all flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                >
+                  <Smartphone className="w-3.5 h-3.5 text-brand-pink" />
+                  <span>Login / Dashboard</span>
+                  <span className={`text-[8px] transition-transform ${showUserMenu ? 'rotate-180' : ''}`}>▼</span>
+                </button>
+
+                {showUserMenu && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setShowUserMenu(false)} />
+                    <div className="absolute right-0 mt-2 w-56 bg-white border border-brand-cocoa-border rounded-xl shadow-lg py-2 z-20 text-left animate-in fade-in slide-in-from-top-2">
+                      <div className="px-4 py-2 border-b border-brand-cocoa-border/20">
+                        <span className="text-[10px] uppercase font-mono tracking-wider font-extrabold text-brand-pink-dark block">
+                          Customer Dashboard
+                        </span>
+                        <NavLink
+                          to="/cart"
+                          onClick={() => setShowUserMenu(false)}
+                          className="text-xs font-bold text-brand-pink hover:underline mt-0.5 inline-block"
+                        >
+                          Login with Mobile Number →
+                        </NavLink>
+                      </div>
+
+                      <NavLink
+                        to="/cart"
+                        id="guest-dashboard-opt-my-order"
+                        onClick={() => setShowUserMenu(false)}
+                        className="px-4 py-2 text-xs font-semibold text-brand-cocoa-light hover:text-brand-pink hover:bg-brand-pink-light/20 transition-all flex items-center justify-between"
+                      >
+                        <div className="flex items-center gap-2">
+                          <ShoppingBag className="w-3.5 h-3.5 text-brand-pink" />
+                          <span className="font-bold">My Order</span>
+                        </div>
+                        {shoppingItemsCount > 0 && (
+                          <span className="bg-brand-pink text-white text-[10px] font-bold font-mono px-1.5 py-0.2 rounded-full">
+                            {shoppingItemsCount}
+                          </span>
+                        )}
+                      </NavLink>
+
+                      <NavLink
+                        to="/orders"
+                        id="guest-dashboard-opt-my-orders"
+                        onClick={() => setShowUserMenu(false)}
+                        className="px-4 py-2 text-xs font-semibold text-brand-cocoa-light hover:text-brand-pink hover:bg-brand-pink-light/20 transition-all flex items-center justify-between"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Calendar className="w-3.5 h-3.5 text-brand-pink" />
+                          <span className="font-bold">My Orders</span>
+                        </div>
+                        {ordersCount > 0 && (
+                          <span className="bg-brand-cocoa text-white text-[10px] font-bold font-mono px-1.5 py-0.2 rounded-full">
+                            {ordersCount}
+                          </span>
+                        )}
+                      </NavLink>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
             {/* Theme Toggle Button */}
             <button
               onClick={toggleTheme}
@@ -193,6 +333,9 @@ export default function Navbar({
 
             <NavLink
               to="/cart"
+              id="nav-cart-my-order"
+              title="My Order"
+              aria-label="My Order"
               className={() =>
                 `relative p-3 rounded-full border border-brand-cocoa-border transition-all cursor-pointer ${
                   isCartActive
@@ -227,6 +370,9 @@ export default function Navbar({
 
             <NavLink
               to="/cart"
+              id="mobile-nav-cart-my-order"
+              title="My Order"
+              aria-label="My Order"
               className="relative p-2 rounded-full border border-brand-cocoa-border text-brand-cocoa mr-1 cursor-pointer"
             >
               <ShoppingBag className="w-5 h-5" />
@@ -288,27 +434,6 @@ export default function Navbar({
             </button>
           )}
           <NavLink
-            to="/orders"
-            onClick={() => setIsOpen(false)}
-            className={() =>
-              `w-full text-left px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center justify-between ${
-                isOrdersActive
-                  ? 'text-brand-pink bg-brand-pink-light/30'
-                  : 'text-brand-cocoa-light hover:text-brand-cocoa'
-              }`
-            }
-          >
-            <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4" />
-              <span>My Orders</span>
-            </div>
-            {ordersCount > 0 && (
-              <span className="bg-brand-cocoa text-white text-[10px] font-bold font-mono px-2 py-0.5 rounded-full">
-                {ordersCount}
-              </span>
-            )}
-          </NavLink>
-          <NavLink
             to="/admin"
             onClick={() => setIsOpen(false)}
             className={() =>
@@ -366,6 +491,104 @@ export default function Navbar({
                   <span>Instagram Profile</span>
                 </a>
               </div>
+            )}
+          </div>
+
+          {/* Customer Dashboard for Mobile */}
+          <div className="border-t border-brand-cocoa-border/30 pt-3 px-1 space-y-2">
+            <span className="text-[10px] font-mono uppercase font-bold text-brand-cocoa-light px-2 tracking-wider">
+              Customer Dashboard
+            </span>
+
+            {customer && (
+              <div className="p-2.5 rounded-xl bg-emerald-50/80 border border-emerald-200 text-xs">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 font-bold text-emerald-950 font-mono">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <span>{customer.fullPhoneNumber}</span>
+                  </div>
+                  <span className="text-[10px] uppercase font-bold text-emerald-700 font-mono bg-emerald-100 px-1.5 py-0.5 rounded">
+                    Verified
+                  </span>
+                </div>
+                {customer.fullName && (
+                  <p className="text-[11px] text-emerald-800 font-medium truncate mt-0.5">{customer.fullName}</p>
+                )}
+              </div>
+            )}
+
+            {/* Dashboard Order Options */}
+            <div className="space-y-1 bg-white rounded-xl border border-brand-cocoa-border/40 p-1.5 shadow-2xs">
+              <NavLink
+                to="/cart"
+                id="mobile-dashboard-opt-my-order"
+                onClick={() => setIsOpen(false)}
+                className={() =>
+                  `w-full text-left px-3.5 py-2.5 rounded-lg text-sm font-semibold flex items-center justify-between transition-colors ${
+                    isCartActive
+                      ? 'text-brand-pink bg-brand-pink-light/30'
+                      : 'text-brand-cocoa hover:bg-brand-pink-light/15 hover:text-brand-pink'
+                  }`
+                }
+              >
+                <div className="flex items-center gap-2.5">
+                  <ShoppingBag className="w-4 h-4 text-brand-pink" />
+                  <span className="font-bold">My Order</span>
+                </div>
+                {shoppingItemsCount > 0 && (
+                  <span className="bg-brand-pink text-white text-[10px] font-bold font-mono px-2 py-0.5 rounded-full">
+                    {shoppingItemsCount}
+                  </span>
+                )}
+              </NavLink>
+
+              <NavLink
+                to="/orders"
+                id="mobile-dashboard-opt-my-orders"
+                onClick={() => setIsOpen(false)}
+                className={() =>
+                  `w-full text-left px-3.5 py-2.5 rounded-lg text-sm font-semibold flex items-center justify-between transition-colors ${
+                    isOrdersActive
+                      ? 'text-brand-pink bg-brand-pink-light/30'
+                      : 'text-brand-cocoa hover:bg-brand-pink-light/15 hover:text-brand-pink'
+                  }`
+                }
+              >
+                <div className="flex items-center gap-2.5">
+                  <Calendar className="w-4 h-4 text-brand-pink" />
+                  <span className="font-bold">My Orders</span>
+                </div>
+                {ordersCount > 0 && (
+                  <span className="bg-brand-cocoa text-white text-[10px] font-bold font-mono px-2 py-0.5 rounded-full">
+                    {ordersCount}
+                  </span>
+                )}
+              </NavLink>
+            </div>
+
+            {customer ? (
+              <div className="pt-1 px-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsOpen(false);
+                    if (onLogout) onLogout();
+                  }}
+                  className="w-full text-left py-2 px-3 text-xs font-semibold text-red-600 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-2 cursor-pointer"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span>Log Out ({customer.fullPhoneNumber})</span>
+                </button>
+              </div>
+            ) : (
+              <NavLink
+                to="/cart"
+                onClick={() => setIsOpen(false)}
+                className="w-full text-center py-2.5 px-4 rounded-xl bg-brand-pink text-white text-xs font-bold flex items-center justify-center gap-2 shadow-xs cursor-pointer"
+              >
+                <Smartphone className="w-3.5 h-3.5" />
+                <span>Login with Mobile Number</span>
+              </NavLink>
             )}
           </div>
 

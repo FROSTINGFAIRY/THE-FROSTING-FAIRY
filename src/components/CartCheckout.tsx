@@ -10,14 +10,15 @@ import {
   Phone, 
   User, 
   CheckCircle2, 
-  ChevronRight, 
+  ChevronDown,
+  ChevronUp,
   X, 
   Sparkles, 
   ArrowRight, 
+  ArrowLeft,
   ShieldCheck, 
   MapPin, 
   CreditCard, 
-  Wallet, 
   DollarSign, 
   Loader2,
   Lock,
@@ -25,58 +26,95 @@ import {
   Check,
   Cake,
   Truck,
-  Store
+  Store,
+  Gift,
+  Tag,
+  Share2,
+  ExternalLink
 } from 'lucide-react';
-import { ShoppingItem, CheckoutData, LayoutContextType } from '../types';
+import { ShoppingItem, CheckoutData, LayoutContextType, CustomerProfile } from '../types';
+import CustomerMobileLogin from './CustomerMobileLogin';
 
-// Badges & Logos for recognizable UPI & card network icons
+// ==========================================
+// AUTHENTIC HIGH-QUALITY UPI BRAND ICONS
+// ==========================================
+
+const UpiBrandIcon = () => (
+  <span className="inline-flex items-center justify-center w-7 h-7 rounded-md bg-emerald-700 text-white shrink-0 p-1 shadow-3xs">
+    <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current" xmlns="http://www.w3.org/2000/svg">
+      <path d="M13.5 3L6 14h6l-1.5 7L18 10h-6l1.5-7z" />
+    </svg>
+  </span>
+);
+
 const GPayLogo = () => (
-  <span className="inline-flex items-center justify-center w-8 h-8 rounded-md bg-white border border-slate-200 shrink-0 p-1.5 transition-transform hover:scale-105" title="Google Pay">
-    <svg className="w-5 h-5 object-contain" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <div className="w-12 h-12 rounded-xl bg-white border border-slate-200 flex items-center justify-center p-2 shadow-3xs shrink-0 transition-transform hover:scale-105">
+    <svg className="w-8 h-8 object-contain" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M15.42 6.85a3.71 3.71 0 0 0-5.25 0l-5.6 5.6a3.71 3.71 0 0 0 0 5.25l.88.88a3.71 3.71 0 0 0 5.25 0l5.6-5.6a3.71 3.71 0 0 0 0-5.25l-.88-.88z" fill="#4285F4"/>
       <path d="M10.17 18.58a3.71 3.71 0 0 1-5.25 0l-.88-.88a3.71 3.71 0 0 1 0-5.25l2.8-2.8 2.8 2.8a3.71 3.71 0 0 1 0 5.25l.53.88z" fill="#34A853"/>
       <path d="M19.45 6.85a3.71 3.71 0 0 0-5.25 0l-1.4 1.4 2.8 2.8 1.4-1.4a3.71 3.71 0 0 0 0-5.25l2.45 2.45z" fill="#EA4335"/>
       <path d="M19.45 12.1a3.71 3.71 0 0 1 0 5.25l-.88.88a3.71 3.71 0 0 1-5.25 0l-5.6-5.6a3.71 3.71 0 0 1 0-5.25l.88-.88a3.71 3.71 0 0 1 5.25 0l5.6 5.6z" fill="#FBBC04"/>
     </svg>
-  </span>
+  </div>
 );
 
 const PhonePeLogo = () => (
-  <span className="inline-flex items-center justify-center w-8 h-8 rounded-md bg-[#5f259f] border border-[#5f259f] shrink-0 p-1.5 transition-transform hover:scale-105" title="PhonePe">
-    <svg className="w-5 h-5 object-contain" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <div className="w-12 h-12 rounded-xl bg-[#5f259f] border border-[#5f259f] flex items-center justify-center p-2 shadow-3xs shrink-0 transition-transform hover:scale-105">
+    <svg className="w-8 h-8 object-contain" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M17.5 11.8C16.8 11.2 15.6 10.7 14.1 10.7H11.2V7.5H13.6C14.3 7.5 14.8 7 14.8 6.3C14.8 5.6 14.3 5.1 13.6 5.1H9.2C8.5 5.1 8 5.6 8 6.3C8 7 8.5 7.5 9.2 7.5H9.7V17.7C9.7 18.4 10.2 18.9 10.9 18.9C11.6 18.9 12.1 18.4 12.1 17.7V14.1H14.1C16 14.1 17.6 13.4 18.1 12.6C18.4 12.2 18 11.7 17.5 11.8Z" fill="#FFFFFF" />
       <path d="M13.8 13.8L17.2 18.3C17.6 18.8 18.3 18.9 18.8 18.5C19.3 18.1 19.4 17.4 19 16.9L15.6 12.4C15.1 12.9 14.5 13.4 13.8 13.8Z" fill="#FFFFFF" />
     </svg>
-  </span>
+  </div>
 );
 
 const PaytmLogo = () => (
-  <span className="inline-flex items-center justify-center w-8 h-8 rounded-md bg-white border border-slate-200 shrink-0 p-1 transition-transform hover:scale-105" title="Paytm">
-    <svg className="w-6 h-3 object-contain" viewBox="0 0 46 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <div className="w-12 h-12 rounded-xl bg-white border border-slate-200 flex flex-col items-center justify-center p-1.5 shadow-3xs shrink-0 transition-transform hover:scale-105">
+    <svg className="w-9 h-4 object-contain" viewBox="0 0 46 16" fill="none" xmlns="http://www.w3.org/2000/svg">
       <text x="0" y="12" fill="#002970" fontFamily="system-ui, -apple-system, sans-serif" fontWeight="900" fontSize="13" letterSpacing="-0.5">Pay</text>
       <text x="24" y="12" fill="#00BAF2" fontFamily="system-ui, -apple-system, sans-serif" fontWeight="900" fontSize="13" letterSpacing="-0.5">tm</text>
     </svg>
-  </span>
+    <span className="text-[8px] font-bold text-slate-500 font-mono tracking-tighter">UPI</span>
+  </div>
+);
+
+const AmazonPayLogo = () => (
+  <div className="w-12 h-12 rounded-xl bg-[#232f3e] border border-slate-700 flex flex-col items-center justify-center p-1.5 shadow-3xs shrink-0 transition-transform hover:scale-105">
+    <span className="text-[11px] font-bold text-white tracking-tighter leading-none">pay</span>
+    <svg className="w-7 h-2 object-contain mt-0.5" viewBox="0 0 28 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M1 5.5C7 8 20 8 27 2" stroke="#FF9900" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M25 1L27.5 2.5L25.5 4" stroke="#FF9900" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  </div>
+);
+
+const BhimUpiLogo = () => (
+  <div className="w-12 h-12 rounded-xl bg-white border border-slate-200 flex flex-col items-center justify-center p-1 shadow-3xs shrink-0 transition-transform hover:scale-105">
+    <div className="flex items-center gap-0.5">
+      <span className="w-1.5 h-3 bg-[#007934] rounded-xs" />
+      <span className="w-1.5 h-3 bg-[#F26522] rounded-xs" />
+    </div>
+    <span className="text-[9px] font-black text-slate-800 tracking-tighter mt-0.5">BHIM</span>
+  </div>
+);
+
+const CredLogo = () => (
+  <div className="w-12 h-12 rounded-xl bg-[#0f0f0f] border border-slate-800 flex flex-col items-center justify-center p-1.5 shadow-3xs shrink-0 transition-transform hover:scale-105">
+    <div className="w-5 h-6 border-2 border-white rounded-xs flex items-center justify-center">
+      <span className="text-[8px] font-bold text-white">C</span>
+    </div>
+  </div>
 );
 
 interface CartCheckoutProps {
   shoppingList?: ShoppingItem[];
   onToggleBought?: (id: string) => void;
-  onAddItem?: (name: string, category: string, amount: number, unit: string) => void; // kept for legacy compat
+  onAddItem?: (name: string, category: string, amount: number, unit: string) => void;
   onUpdateQuantity?: (id: string, newAmount: number) => void;
   onRemoveItem?: (id: string) => void;
   onClearCompleted?: () => void;
   onClearAll?: () => void;
   onCheckout?: (checkoutData: CheckoutData) => void;
-  onUpiPaymentSuccess?: (verifiedData: {
-    orderIds: string[];
-    orderNumber: string;
-    paidAmount: number;
-    transactionId: string;
-    paidAt: string;
-    gatewayRef: string;
-    checkoutData: any;
-  }) => void;
+  onUpiPaymentSuccess?: (verifiedData: any) => void;
   upiId?: string;
   upiQrCode?: string;
   cashOnDeliveryEnabled?: boolean;
@@ -90,21 +128,114 @@ export default function CartCheckout(props: CartCheckoutProps) {
   const onRemoveItem = props.onRemoveItem || ((id: string) => context?.handleRemoveShoppingItem(id));
   const onClearAll = props.onClearAll || (() => context?.handleClearAllShopping());
   const onCheckout = props.onCheckout || ((data: CheckoutData) => context?.handleCheckout(data));
-  const onUpiPaymentSuccess = props.onUpiPaymentSuccess || ((data: any) => context?.handleUpiPaymentSuccess(data));
   const cashOnDeliveryEnabled = props.cashOnDeliveryEnabled ?? context?.cashOnDeliveryEnabled ?? true;
 
-  // Mobile Viewport detection for UPI app deep-links
-  const [isMobileView, setIsMobileView] = useState<boolean>(() => 
-    typeof window !== 'undefined' ? window.innerWidth < 768 : false
-  );
-
+  // Title update
   useEffect(() => {
-    const handleResize = () => {
-      setIsMobileView(window.innerWidth < 768);
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    document.title = 'My Order & Checkout | The Frosting Fairy';
   }, []);
+
+  // Customer Profile & Authentication State
+  const customer = context?.customer || null;
+  const customerToken = context?.customerToken || null;
+  const isCustomerLoggedIn = context?.isCustomerLoggedIn ?? false;
+
+  // Checkout Form Details
+  const [customerName, setCustomerName] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [customerEmail, setCustomerEmail] = useState('orders@frostingfairy.com');
+  const [deliveryType, setDeliveryType] = useState<'Pickup' | 'Delivery'>('Delivery');
+  const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [gpsCoordinates, setGpsCoordinates] = useState('');
+  const [isLocating, setIsLocating] = useState(false);
+  const [locationFeedback, setLocationFeedback] = useState('');
+
+  // Date & Time
+  const [pickupDate, setPickupDate] = useState(() => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return tomorrow.toISOString().split('T')[0];
+  });
+  const [pickupTime, setPickupTime] = useState('14:00');
+  const [specialInstructions, setSpecialInstructions] = useState('');
+
+  // Collapsible cards state
+  const [isOrderSummaryOpen, setIsOrderSummaryOpen] = useState(false);
+  const [isEditingAddress, setIsEditingAddress] = useState(false);
+
+  // Offers & Rewards State
+  const [couponCode, setCouponCode] = useState('BOND60');
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discountRate: number; name: string } | null>({
+    code: 'BOND60',
+    discountRate: 0.05,
+    name: '"BOND60" applied',
+  });
+  const [showCouponInput, setShowCouponInput] = useState(false);
+  const [customCouponInput, setCustomCouponInput] = useState('');
+  const [giftCardRedeemed, setGiftCardRedeemed] = useState(false);
+  const [showGiftCardInput, setShowGiftCardInput] = useState(false);
+  const [giftCardInput, setGiftCardInput] = useState('');
+  const [giftCardDiscount, setGiftCardDiscount] = useState(0);
+  const [partnerOfferCollected, setPartnerOfferCollected] = useState(false);
+
+  // Payment Method Selection
+  const [paymentMethod, setPaymentMethod] = useState<'UPI' | 'COD'>('UPI');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  // Fallback modal for UPI app launch issues (matching reference screenshot)
+  const [fallbackModal, setFallbackModal] = useState<{
+    isOpen: boolean;
+    appName: string;
+    phone: string;
+    smsSent: boolean;
+  }>({
+    isOpen: false,
+    appName: 'G Pay',
+    phone: '',
+    smsSent: false,
+  });
+
+  // Sync authenticated customer data
+  useEffect(() => {
+    if (customer) {
+      if (customer.fullPhoneNumber) {
+        setCustomerPhone(customer.fullPhoneNumber);
+      }
+      if (customer.fullName && !customerName) {
+        setCustomerName(customer.fullName);
+      }
+      if (customer.deliveryAddress && !deliveryAddress) {
+        setDeliveryAddress(customer.deliveryAddress);
+      }
+      if (customer.gpsCoordinates && !gpsCoordinates) {
+        setGpsCoordinates(customer.gpsCoordinates);
+      }
+      if (customer.preferredDeliveryType) {
+        setDeliveryType(customer.preferredDeliveryType);
+      }
+    }
+  }, [customer]);
+
+  const handleLoginSuccess = (verifiedCustomer: CustomerProfile, token: string) => {
+    if (context?.handleCustomerLogin) {
+      context.handleCustomerLogin(verifiedCustomer, token);
+    }
+    setCustomerPhone(verifiedCustomer.fullPhoneNumber);
+    if (verifiedCustomer.fullName) {
+      setCustomerName(verifiedCustomer.fullName);
+    }
+    if (verifiedCustomer.deliveryAddress) {
+      setDeliveryAddress(verifiedCustomer.deliveryAddress);
+    }
+    if (verifiedCustomer.gpsCoordinates) {
+      setGpsCoordinates(verifiedCustomer.gpsCoordinates);
+    }
+    if (verifiedCustomer.preferredDeliveryType) {
+      setDeliveryType(verifiedCustomer.preferredDeliveryType);
+    }
+    setErrorMessage('');
+  };
 
   const getItemUnitPrice = (item: ShoppingItem): number => {
     if (context?.recipes) {
@@ -160,51 +291,27 @@ export default function CartCheckout(props: CartCheckoutProps) {
     }
   };
 
-  useEffect(() => {
-    document.title = 'Shopping Cart & Checkout | The Frosting Fairy';
-  }, []);
-
-  // --- FORM STATE ---
-  const [customerName, setCustomerName] = useState('');
-  const [customerPhone, setCustomerPhone] = useState('');
-  
-  // Set default pickup date to tomorrow
-  const [pickupDate, setPickupDate] = useState(() => {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    return tomorrow.toISOString().split('T')[0];
-  });
-  
-  const [pickupTime, setPickupTime] = useState('14:00');
-  const [specialInstructions, setSpecialInstructions] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Delivery & location state - Home Delivery is default primary option
-  const [deliveryType, setDeliveryType] = useState<'Pickup' | 'Delivery'>('Delivery');
-  const [deliveryAddress, setDeliveryAddress] = useState('');
-  const [gpsCoordinates, setGpsCoordinates] = useState('');
-  const [isLocating, setIsLocating] = useState(false);
-  const [locationFeedback, setLocationFeedback] = useState('');
-
-  // Payment Method: 'UPI' (Direct UPI payment via QR code or app) or 'COD'
-  const [paymentMethod, setPaymentMethod] = useState<'UPI' | 'COD'>('UPI');
-
-  useEffect(() => {
-    if (!cashOnDeliveryEnabled && paymentMethod === 'COD') {
-      setPaymentMethod('UPI');
-    }
-  }, [cashOnDeliveryEnabled, paymentMethod]);
-
-  // Cart totals calculation
+  // Calculations
   const totalItemsCount = shoppingList.reduce((sum, item) => sum + item.amount, 0);
   const cartSubtotal = shoppingList.reduce((sum, item) => sum + getItemUnitPrice(item) * item.amount, 0);
 
-  // Delivery Charge logic: flat ₹50, but FREE above ₹600 or if Pickup
-  const deliveryCharge = deliveryType === 'Delivery' ? (cartSubtotal >= 600 ? 0 : 50) : 0;
-  const grandTotal = cartSubtotal + deliveryCharge;
+  // Original list MRP estimate (shows striking crossed out price like reference ₹10,398 vs ₹1,799)
+  const estimatedOriginalMrp = Math.round(cartSubtotal * 1.35);
 
-  // Geolocation trigger
+  // Delivery charge
+  const deliveryCharge = deliveryType === 'Delivery' ? (cartSubtotal >= 600 ? 0 : 50) : 0;
+  const freeDeliverySavings = deliveryType === 'Delivery' && cartSubtotal >= 600 ? 50 : 0;
+
+  // Coupon discount
+  const couponDiscount = appliedCoupon ? Math.round(cartSubtotal * appliedCoupon.discountRate) : 0;
+
+  // Total savings
+  const totalSavings = (estimatedOriginalMrp - cartSubtotal) + couponDiscount + giftCardDiscount + freeDeliverySavings;
+
+  // Final Payable
+  const grandTotal = Math.max(0, cartSubtotal - couponDiscount - giftCardDiscount + deliveryCharge);
+
+  // GPS Location Pin
   const handlePinLocation = () => {
     if (!navigator.geolocation) {
       setLocationFeedback('Geolocation is not supported by your browser.');
@@ -250,7 +357,7 @@ export default function CartCheckout(props: CartCheckoutProps) {
           console.error(error);
           switch (error.code) {
             case error.PERMISSION_DENIED:
-              setLocationFeedback('Location permission denied. Please write address manually, or open the website in a new tab.');
+              setLocationFeedback('Location permission denied. Please write address manually.');
               break;
             case error.POSITION_UNAVAILABLE:
               setLocationFeedback('GPS signal unavailable. Please write address manually.');
@@ -267,59 +374,87 @@ export default function CartCheckout(props: CartCheckoutProps) {
       );
     } catch (err) {
       setIsLocating(false);
-      setLocationFeedback('Location blocked by browser or iframe policy. Open the app in a new tab to pin!');
+      setLocationFeedback('Location blocked by browser. Enter address manually.');
     }
   };
 
-  // --- REUSABLE FORM VALIDATION ---
-  const validateCheckoutForm = (): boolean => {
+  // Coupons
+  const handleApplyCustomCoupon = (e: React.FormEvent) => {
+    e.preventDefault();
+    const code = customCouponInput.trim().toUpperCase();
+    if (!code) return;
+    if (code === 'FAIRY5' || code === 'BOND60' || code === 'SWEET10') {
+      const rate = code === 'SWEET10' ? 0.10 : 0.05;
+      setAppliedCoupon({
+        code,
+        discountRate: rate,
+        name: `"${code}" applied`,
+      });
+      setShowCouponInput(false);
+      setCustomCouponInput('');
+      setErrorMessage('');
+    } else {
+      setErrorMessage('Invalid coupon code. Try "BOND60" or "FAIRY5" for 5% off!');
+    }
+  };
+
+  const handleRedeemGiftCard = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (giftCardInput.trim().length >= 4) {
+      setGiftCardRedeemed(true);
+      setGiftCardDiscount(100);
+      setShowGiftCardInput(false);
+      setErrorMessage('');
+    } else {
+      setErrorMessage('Please enter a valid gift card code.');
+    }
+  };
+
+  // Validation
+  const validateCheckout = (): boolean => {
     setErrorMessage('');
 
     if (shoppingList.length === 0) {
-      setErrorMessage('Your shopping cart is empty! Add a treat from our menu first.');
+      setErrorMessage('My order is empty! Add a treat from our menu first.');
       return false;
     }
+
+    if (!isCustomerLoggedIn || !customer) {
+      setErrorMessage('Please login and verify your mobile number with OTP before continuing.');
+      return false;
+    }
+
     if (!customerName.trim()) {
       setErrorMessage('Please provide your name for the order.');
-      return false;
-    }
-    if (!customerPhone.trim()) {
-      setErrorMessage('Please enter a phone number so we can contact you.');
-      return false;
-    }
-    if (!pickupDate) {
-      setErrorMessage('Please pick an order collection/delivery date.');
+      setIsEditingAddress(true);
       return false;
     }
 
     if (deliveryType === 'Delivery' && !deliveryAddress.trim()) {
-      setErrorMessage('Please enter a delivery address or pin your current location.');
-      return false;
-    }
-
-    if (paymentMethod === 'COD' && !cashOnDeliveryEnabled) {
-      setErrorMessage('Cash on Delivery is currently disabled by store management. Please select UPI Payment.');
+      setErrorMessage('Please provide your delivery address or pin your location.');
+      setIsEditingAddress(true);
       return false;
     }
 
     return true;
   };
 
-  // --- MAIN FORM SUBMISSION (Direct UPI or COD) ---
-  const handlePlaceOrder = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validateCheckoutForm()) {
+  // Submission Flow (Direct UPI / COD)
+  const handleProceedToPayment = async (selectedApp?: string) => {
+    if (!validateCheckout()) {
       return;
     }
 
-    const checkoutPayload = {
+    const checkoutPayload: CheckoutData = {
       customerName: customerName.trim(),
-      customerPhone: customerPhone.trim(),
+      customerPhone: (customer?.fullPhoneNumber || customerPhone).trim(),
+      customerId: customer?.fullPhoneNumber || customerPhone.trim(),
+      customerToken: customerToken || undefined,
       pickupDate,
       pickupTime,
       specialInstructions: specialInstructions.trim(),
       deliveryType,
-      deliveryAddress: deliveryType === 'Delivery' ? deliveryAddress.trim() : 'Store Pick-up',
+      deliveryAddress: deliveryType === 'Delivery' ? deliveryAddress.trim() : 'Store Collection',
       gpsCoordinates,
       paymentMethod,
     };
@@ -356,7 +491,7 @@ export default function CartCheckout(props: CartCheckoutProps) {
         const resolvedOrderId = orderData.orderId;
         const resolvedTotal = orderData.totalPrice || grandTotal;
 
-        // Automatically open/redirect to dedicated UPI Payment Page
+        // Automatically open/redirect to dedicated direct UPI Payment Page
         navigate(`/upi-payment?orderId=${encodeURIComponent(resolvedOrderId)}`, {
           state: {
             orderId: resolvedOrderId,
@@ -366,15 +501,16 @@ export default function CartCheckout(props: CartCheckoutProps) {
             customerName: customerName.trim(),
             customerPhone: customerPhone.trim(),
             deliveryType,
-            deliveryAddress: deliveryType === 'Delivery' ? deliveryAddress.trim() : 'Store Pick-up',
+            deliveryAddress: deliveryType === 'Delivery' ? deliveryAddress.trim() : 'Store Collection',
             pickupDate,
             pickupTime,
+            preferredApp: selectedApp || undefined,
             orderDetails: {
               id: resolvedOrderId,
               customerName: customerName.trim(),
               customerPhone: customerPhone.trim(),
               deliveryType,
-              deliveryAddress: deliveryType === 'Delivery' ? deliveryAddress.trim() : 'Store Pick-up',
+              deliveryAddress: deliveryType === 'Delivery' ? deliveryAddress.trim() : 'Store Collection',
               pickupDate,
               pickupTime,
               totalPrice: resolvedTotal,
@@ -385,14 +521,14 @@ export default function CartCheckout(props: CartCheckoutProps) {
         });
       } catch (err: any) {
         console.error('UPI Order initialization error:', err);
-        setErrorMessage(err.message || 'Unable to connect to order service. Please check your connection.');
+        setErrorMessage(err.message || 'Unable to initialize UPI payment. Please try again.');
       } finally {
         setIsSubmitting(false);
       }
       return;
     }
 
-    // 2) CASH ON DELIVERY (COD) ORDER FLOW
+    // 2) CASH ON DELIVERY FLOW
     setIsSubmitting(true);
     setErrorMessage('');
     try {
@@ -410,670 +546,954 @@ export default function CartCheckout(props: CartCheckoutProps) {
   };
 
   return (
-    <div id="shopping-root" className="flex-1 px-4 sm:px-6 lg:px-8 py-8 bg-brand-cream flex flex-col">
-      {/* Top Header */}
-      <header id="shopping-header" className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-brand-cocoa-border pb-5 shrink-0">
-        <div>
-          <h2 id="shopping-title" className="font-display font-bold text-2xl sm:text-3xl text-brand-cocoa tracking-tight">
-            Your Shopping Cart
-          </h2>
-          <p id="shopping-subtitle" className="text-xs sm:text-sm text-brand-cocoa-light mt-1 font-sans">
-            Review your items, choose home delivery or pickup, select your payment option, and confirm your order.
-          </p>
-        </div>
-
-        {shoppingList.length > 0 && (
-          <div className="flex items-center gap-3">
+    <div id="checkout-root" className="min-h-screen bg-slate-50/60 pb-20 font-sans">
+      {/* 1. TOP HEADER (Matching reference style: < STORE NAME on left, 100% Secured Payment on right) */}
+      <header className="sticky top-0 z-30 bg-white border-b border-slate-200/80 px-4 py-3 sm:px-6 transition-all">
+        <div className="max-w-xl mx-auto flex items-center justify-between gap-3">
+          {/* Left: Back arrow + Brand Name */}
+          <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={onClearAll}
-              className="text-xs font-semibold text-brand-cocoa-light hover:text-brand-pink flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-brand-cocoa-border hover:border-slate-400 transition-colors bg-white cursor-pointer"
+              onClick={() => navigate(-1)}
+              className="p-1 -ml-1 text-slate-800 hover:text-brand-pink transition-colors cursor-pointer"
+              title="Back"
+              aria-label="Back"
             >
-              <Trash2 className="w-3.5 h-3.5" />
-              <span>Clear Cart</span>
+              <ArrowLeft className="w-5 h-5 stroke-[2.5]" />
             </button>
+            <Link to="/shop" className="flex items-center gap-1.5 text-slate-900 group">
+              <span className="font-display font-black text-sm sm:text-base tracking-wider uppercase group-hover:text-brand-pink transition-colors">
+                THE FROSTING FAIRY
+              </span>
+            </Link>
           </div>
-        )}
+
+          {/* Right: 100% Secured Payment with Lock */}
+          <div className="flex items-center gap-1 text-slate-600 text-xs sm:text-sm font-semibold">
+            <span>100% Secured Payment</span>
+            <Lock className="w-3.5 h-3.5 text-slate-700 stroke-[2.2]" />
+          </div>
+        </div>
       </header>
 
-      {/* Main Content Area */}
-      {shoppingList.length > 0 ? (
-        <div id="shopping-layout" className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Left Column: Cart Items List */}
-          <div id="cart-items-container" className="lg:col-span-7 space-y-3.5">
-            <div className="flex items-center justify-between px-1">
-              <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-brand-cocoa-light">
-                Order Items ({totalItemsCount})
-              </span>
-              <span className="text-xs font-bold text-brand-pink">
-                Subtotal: ₹{cartSubtotal}
-              </span>
+      {/* 2. PROMOTIONAL BANNER (Directly below header, full width, using website's theme color) */}
+      <div className="bg-brand-pink text-white text-xs font-semibold py-2 px-4 text-center tracking-wide shadow-2xs">
+        <div className="max-w-xl mx-auto flex items-center justify-center gap-1.5">
+          <Sparkles className="w-3.5 h-3.5 shrink-0" />
+          <span>Get Flat 5% off on Prepaid Orders • Free Delivery &gt; ₹600</span>
+        </div>
+      </div>
+
+      {/* Main Single-Column Checkout Container */}
+      <main className="max-w-xl mx-auto px-3.5 sm:px-4 py-4 space-y-3.5">
+        {shoppingList.length === 0 ? (
+          /* Empty Order State */
+          <div className="text-center py-16 bg-white rounded-2xl border border-slate-200 p-6 shadow-2xs mt-4">
+            <div className="w-16 h-16 bg-pink-50 text-brand-pink rounded-full flex items-center justify-center mx-auto mb-4">
+              <ShoppingBag className="w-8 h-8" />
             </div>
-
-            <div className="space-y-2.5">
-              {shoppingList.map((item) => {
-                const unitPrice = getItemUnitPrice(item);
-                const lineTotal = unitPrice * item.amount;
-                const stockLimit = getItemStockLimit(item);
-
-                return (
-                  <div
-                    key={item.id}
-                    className="bg-white border border-brand-cocoa-border rounded-lg p-3.5 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3.5 transition-colors hover:border-brand-pink-accent/50"
-                  >
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                      {item.image ? (
-                        <img
-                          src={item.image}
-                          alt={item.name}
-                          width="60"
-                          height="60"
-                          loading="lazy"
-                          decoding="async"
-                          className="w-14 h-14 sm:w-16 sm:h-16 rounded-md object-cover border border-brand-cocoa-border shrink-0"
-                        />
-                      ) : (
-                        <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-md bg-brand-pink-light/30 border border-brand-pink-accent/30 flex items-center justify-center text-brand-pink shrink-0">
-                          <ShoppingBag className="w-5 h-5" />
-                        </div>
-                      )}
-
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h4 className="font-display font-bold text-sm sm:text-base text-brand-cocoa truncate">
-                            {item.name}
-                          </h4>
-
-                          {/* Interactive Quantity Stepper */}
-                          <div className="inline-flex items-center bg-brand-cream border border-brand-cocoa-border rounded-md p-0.5 shrink-0">
-                            <button
-                              type="button"
-                              onClick={() => handleUpdateQty(item.id, item.amount - 1)}
-                              disabled={item.amount <= 1}
-                              className={`w-5 h-5 flex items-center justify-center rounded text-xs font-bold transition-colors ${
-                                item.amount <= 1
-                                  ? 'text-brand-cocoa-light/40 cursor-not-allowed opacity-50'
-                                  : 'text-brand-cocoa hover:bg-white hover:text-brand-pink cursor-pointer'
-                              }`}
-                              title={item.amount <= 1 ? 'Minimum quantity is 1 (use trash to remove)' : 'Decrease quantity'}
-                              aria-label="Decrease quantity"
-                            >
-                              <Minus className="w-3 h-3" />
-                            </button>
-
-                            <span className="w-6 text-center font-mono font-bold text-xs text-brand-cocoa select-none">
-                              {item.amount}
-                            </span>
-
-                            <button
-                              type="button"
-                              onClick={() => handleUpdateQty(item.id, item.amount + 1)}
-                              disabled={stockLimit !== undefined && item.amount >= stockLimit}
-                              className={`w-5 h-5 flex items-center justify-center rounded text-xs font-bold transition-colors ${
-                                stockLimit !== undefined && item.amount >= stockLimit
-                                  ? 'text-brand-cocoa-light/40 cursor-not-allowed opacity-50'
-                                  : 'text-brand-cocoa hover:bg-white hover:text-brand-pink cursor-pointer'
-                              }`}
-                              title={stockLimit !== undefined && item.amount >= stockLimit ? `Max stock (${stockLimit}) reached` : 'Increase quantity'}
-                              aria-label="Increase quantity"
-                            >
-                              <Plus className="w-3 h-3" />
-                            </button>
-                          </div>
-                        </div>
-
-                        <p className="text-[11px] sm:text-xs text-brand-cocoa-light mt-0.5 truncate">
-                          {item.selectedOption || 'Standard'} {item.recipeName ? `· ${item.recipeName}` : ''}
-                        </p>
-
-                        {item.customMessage && (
-                          <p className="text-[10px] sm:text-[11px] font-mono text-brand-pink mt-0.5 italic truncate">
-                            Message: &ldquo;{item.customMessage}&rdquo;
-                          </p>
-                        )}
-
-                        {Array.isArray(item.boxContents) && item.boxContents.length > 0 && (
-                          <div className="mt-1 text-[10px] font-mono text-brand-cocoa-light bg-brand-cream-light/60 p-1.5 rounded-md border border-brand-cocoa-border/40">
-                            <span className="font-bold text-brand-cocoa block mb-0.5">Box Contents:</span>
-                            <div className="flex flex-wrap gap-1">
-                              {item.boxContents.map((c, i) => (
-                                <span key={i} className="bg-white px-1.5 py-0.5 rounded border border-brand-cocoa-border/60 text-[9px]">
-                                  {c.name} × {c.quantity}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-brand-cocoa-border/40 gap-2 shrink-0">
-                      <div className="text-left sm:text-right">
-                        <span className="font-display font-bold text-sm sm:text-base text-brand-pink block">
-                          ₹{lineTotal}
-                        </span>
-                        {item.amount > 1 && (
-                          <span className="text-[9px] sm:text-[10px] text-brand-cocoa-light font-mono block">
-                            ₹{unitPrice} each
-                          </span>
-                        )}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => onRemoveItem(item.id)}
-                        className="text-xs text-brand-cocoa-light hover:text-red-500 flex items-center gap-1 p-1 rounded hover:bg-red-50 transition-colors cursor-pointer"
-                        title="Remove from cart"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        <span className="sm:hidden text-[10px]">Remove</span>
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Delivery Info Banner */}
-            <div className="bg-emerald-50/80 border border-emerald-200 rounded-lg p-3 text-xs text-emerald-800 flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span className="leading-tight">
-                <strong>Free Home Delivery</strong> on all orders above ₹600! Freshly baked to order with organic ingredients.
-              </span>
+            <h3 className="font-display font-bold text-xl text-slate-900">My Order is Empty</h3>
+            <p className="text-xs sm:text-sm text-slate-500 mt-1.5 max-w-sm mx-auto">
+              Explore our boutique bakery menu to add delightful artisan treats, custom bento cakes, and dessert boxes!
+            </p>
+            <div className="mt-6">
+              <Link
+                to="/shop"
+                className="inline-flex items-center gap-2 px-6 py-2.5 bg-brand-pink hover:bg-brand-pink-dark text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-colors shadow-sm"
+              >
+                <Cake className="w-4 h-4" />
+                <span>Explore Boutique Menu</span>
+              </Link>
             </div>
           </div>
-
-          {/* Right Column: Checkout Form & Direct UPI Payment */}
-          <div id="checkout-form-container" className="lg:col-span-5 bg-white border border-brand-cocoa-border rounded-lg p-5 sm:p-6 space-y-4">
-            <div className="border-b border-brand-cocoa-border/60 pb-3">
-              <h3 className="font-display font-bold text-base sm:text-lg text-brand-cocoa">
-                Complete Your Order
-              </h3>
-              <p className="text-xs text-brand-cocoa-light mt-0.5">
-                Fast, secure checkout with encrypted processing.
-              </p>
-            </div>
-
+        ) : (
+          <>
+            {/* Global Error Banner if any */}
             {errorMessage && (
-              <div className="bg-red-50 border border-red-200 text-red-700 text-xs p-3 rounded-md flex items-start gap-2">
-                <span className="font-bold">Notice:</span>
-                <span className="flex-1">{errorMessage}</span>
+              <div className="bg-red-50 border border-red-200 text-red-700 text-xs p-3 rounded-xl flex items-start justify-between gap-2 animate-in fade-in">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold">Notice:</span>
+                  <span>{errorMessage}</span>
+                </div>
                 <button
                   type="button"
                   onClick={() => setErrorMessage('')}
-                  className="text-red-400 hover:text-red-700 font-bold cursor-pointer"
+                  className="text-red-400 hover:text-red-700 cursor-pointer"
                 >
-                  <X className="w-3.5 h-3.5" />
+                  <X className="w-4 h-4" />
                 </button>
               </div>
             )}
 
-            <form onSubmit={handlePlaceOrder} className="space-y-3.5">
-              {/* Customer Contact Details */}
-              <div className="space-y-2.5">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold font-mono uppercase tracking-widest text-brand-cocoa-light flex items-center gap-1">
-                    <User className="w-3 h-3 text-brand-pink" />
-                    <span>Your Full Name</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Eleanor Vance"
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    className="w-full bg-white border border-brand-cocoa-border rounded-md px-3 py-2 text-sm text-brand-cocoa focus:outline-none focus:border-brand-pink placeholder-brand-cocoa-light/40"
-                  />
+            {/* Mobile Authentication Step (If not logged in) */}
+            {!isCustomerLoggedIn && (
+              <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-2xs space-y-3">
+                <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
+                  <Smartphone className="w-4 h-4 text-brand-pink" />
+                  <h3 className="font-display font-bold text-sm text-slate-900">
+                    Login / Continue using Mobile Number
+                  </h3>
                 </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold font-mono uppercase tracking-widest text-brand-cocoa-light flex items-center gap-1">
-                    <Phone className="w-3 h-3 text-brand-pink" />
-                    <span>Contact Phone Number</span>
-                  </label>
-                  <input
-                    type="tel"
-                    required
-                    placeholder="e.g. +91 98765 43210"
-                    value={customerPhone}
-                    onChange={(e) => setCustomerPhone(e.target.value)}
-                    className="w-full bg-white border border-brand-cocoa-border rounded-md px-3 py-2 text-sm text-brand-cocoa focus:outline-none focus:border-brand-pink placeholder-brand-cocoa-light/40"
-                  />
-                </div>
+                <CustomerMobileLogin
+                  embedded={true}
+                  title="Verify Mobile Number"
+                  subtitle="Enter your mobile number to receive a one-time OTP before confirming checkout."
+                  onSuccess={handleLoginSuccess}
+                />
               </div>
+            )}
 
-              {/* Fulfillment Method Selection */}
-              <div id="fulfillment-method-section" className="space-y-2 pt-2 border-t border-brand-cocoa-border/40">
-                <div className="flex items-center justify-between">
-                  <label className="text-[10px] font-bold font-mono uppercase tracking-widest text-brand-cocoa-light flex items-center gap-1.5">
-                    <Truck className="w-3.5 h-3.5 text-brand-pink" />
-                    <span>Fulfillment Method</span>
-                  </label>
-                  <span className="text-[9px] font-mono font-semibold text-brand-cocoa-light">
-                    {deliveryType === 'Delivery' ? 'Direct to Doorstep' : 'Boutique Collection'}
-                  </span>
-                </div>
-
-                {/* Side-by-side on desktop, stacked on mobile: Home Delivery first (left), Store Collection second (right) */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  {/* Option 1: Home Delivery (Primary & Default on Left / Top) */}
-                  <button
-                    id="btn-fulfillment-home-delivery"
-                    type="button"
-                    onClick={() => setDeliveryType('Delivery')}
-                    className={`relative p-3 rounded-lg border text-left transition-all cursor-pointer flex flex-col justify-between gap-2.5 ${
-                      deliveryType === 'Delivery'
-                        ? 'border-brand-pink bg-pink-50/50 ring-2 ring-brand-pink/20 shadow-3xs'
-                        : 'border-brand-cocoa-border bg-white text-brand-cocoa hover:border-brand-cocoa/40'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-2 w-full">
-                      <div className="flex items-center gap-2">
-                        <div
-                          className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 transition-colors ${
-                            deliveryType === 'Delivery'
-                              ? 'bg-brand-pink text-white shadow-3xs'
-                              : 'bg-brand-cream text-brand-cocoa-light'
-                          }`}
-                        >
-                          <Truck className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-display font-bold text-xs sm:text-sm text-brand-cocoa">
-                              Home Delivery
-                            </span>
-                            <span className="text-[8px] font-mono font-bold uppercase tracking-wider text-brand-pink bg-brand-pink-light/30 border border-brand-pink/30 px-1.5 py-0.2 rounded">
-                              Primary
-                            </span>
-                          </div>
-                          <p className="text-[10px] text-brand-cocoa-light font-sans mt-0.5 leading-tight">
-                            Delivered fresh to your doorstep
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Selection Radio Circle */}
-                      <div
-                        className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 mt-0.5 transition-colors ${
-                          deliveryType === 'Delivery'
-                            ? 'border-brand-pink bg-brand-pink text-white'
-                            : 'border-slate-300 bg-white'
-                        }`}
-                      >
-                        {deliveryType === 'Delivery' && (
-                          <span className="w-1.5 h-1.5 rounded-full bg-white" />
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Price tag */}
-                    <div className="flex items-center justify-between pt-1 border-t border-brand-cocoa-border/30 w-full text-[10px] font-mono">
-                      <span className="text-brand-cocoa-light text-[9px] uppercase tracking-wide">
-                        Delivery Fee:
-                      </span>
-                      {cartSubtotal >= 600 ? (
-                        <span className="font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.2 rounded flex items-center gap-1">
-                          <Sparkles className="w-2.5 h-2.5" /> FREE (&gt;₹600)
-                        </span>
-                      ) : (
-                        <span className="font-semibold text-brand-cocoa bg-brand-cream border border-brand-cocoa-border px-1.5 py-0.2 rounded">
-                          ₹50 (Free &gt; ₹600)
-                        </span>
-                      )}
-                    </div>
-                  </button>
-
-                  {/* Option 2: Store Collection (Alternative on Right / Bottom) */}
-                  <button
-                    id="btn-fulfillment-store-collection"
-                    type="button"
-                    onClick={() => setDeliveryType('Pickup')}
-                    className={`relative p-3 rounded-lg border text-left transition-all cursor-pointer flex flex-col justify-between gap-2.5 ${
-                      deliveryType === 'Pickup'
-                        ? 'border-brand-pink bg-pink-50/50 ring-2 ring-brand-pink/20 shadow-3xs'
-                        : 'border-brand-cocoa-border bg-white text-brand-cocoa hover:border-brand-cocoa/40'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-2 w-full">
-                      <div className="flex items-center gap-2">
-                        <div
-                          className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 transition-colors ${
-                            deliveryType === 'Pickup'
-                              ? 'bg-brand-pink text-white shadow-3xs'
-                              : 'bg-brand-cream text-brand-cocoa-light'
-                          }`}
-                        >
-                          <Store className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-display font-bold text-xs sm:text-sm text-brand-cocoa">
-                              Store Collection
-                            </span>
-                          </div>
-                          <p className="text-[10px] text-brand-cocoa-light font-sans mt-0.5 leading-tight">
-                            Pick up in person from boutique
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Selection Radio Circle */}
-                      <div
-                        className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 mt-0.5 transition-colors ${
-                          deliveryType === 'Pickup'
-                            ? 'border-brand-pink bg-brand-pink text-white'
-                            : 'border-slate-300 bg-white'
-                        }`}
-                      >
-                        {deliveryType === 'Pickup' && (
-                          <span className="w-1.5 h-1.5 rounded-full bg-white" />
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Price tag */}
-                    <div className="flex items-center justify-between pt-1 border-t border-brand-cocoa-border/30 w-full text-[10px] font-mono">
-                      <span className="text-brand-cocoa-light text-[9px] uppercase tracking-wide">
-                        Collection Fee:
-                      </span>
-                      <span className="font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.2 rounded flex items-center gap-1">
-                        <Check className="w-2.5 h-2.5" /> FREE Pickup
-                      </span>
-                    </div>
-                  </button>
-                </div>
-              </div>
-
-              {/* Informative Note for Store Collection */}
-              {deliveryType === 'Pickup' && (
-                <div className="p-3 bg-amber-50/80 border border-amber-200/80 rounded-md text-xs text-amber-900 space-y-1">
-                  <div className="flex items-center gap-1.5 font-bold font-sans">
-                    <Store className="w-3.5 h-3.5 text-amber-700 shrink-0" />
-                    <span>Boutique Store Collection</span>
+            {/* 3. ORDER SUMMARY CARD (Rounded, clean, collapsible without leaving checkout) */}
+            <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden transition-all">
+              {/* Header Row */}
+              <div
+                onClick={() => setIsOrderSummaryOpen(!isOrderSummaryOpen)}
+                className="p-4 flex items-center justify-between gap-3 cursor-pointer hover:bg-slate-50/50 select-none transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-pink-50 border border-pink-100 flex items-center justify-center text-brand-pink shrink-0">
+                    <ShoppingBag className="w-5 h-5" />
                   </div>
-                  <p className="text-[11px] text-amber-800 leading-relaxed">
-                    Your confections will be freshly baked and packaged for pick-up at our boutique kitchen on your selected date and time.
-                  </p>
+                  <div>
+                    <h3 className="font-display font-bold text-base text-slate-900 leading-tight">
+                      Order Summary
+                    </h3>
+                    <div className="mt-1">
+                      <span className="bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11px] font-semibold px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                        ₹{totalSavings.toFixed(2)} saved so far
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              )}
 
-              {/* Address / GPS Section (Show only if Delivery is selected) */}
-              {deliveryType === 'Delivery' && (
-                <div className="space-y-2 p-3 bg-slate-50 border border-slate-200 rounded-md">
-                  <div className="flex justify-between items-center">
-                    <label className="text-[10px] font-bold font-mono uppercase tracking-widest text-brand-cocoa flex items-center gap-1">
-                      <MapPin className="w-3 h-3 text-brand-pink" />
-                      <span>Delivery Address</span>
-                    </label>
+                <div className="flex items-center gap-2 text-right">
+                  <div>
+                    <span className="text-xs text-slate-500 font-sans block">
+                      {totalItemsCount} {totalItemsCount === 1 ? 'item' : 'items'}
+                    </span>
+                    <div className="flex items-baseline gap-1.5 justify-end">
+                      <span className="text-xs text-slate-400 line-through font-mono">
+                        ₹{estimatedOriginalMrp}
+                      </span>
+                      <span className="font-display font-bold text-base sm:text-lg text-slate-900">
+                        ₹{grandTotal.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-slate-400 pl-1">
+                    {isOrderSummaryOpen ? (
+                      <ChevronUp className="w-4 h-4 stroke-[2.5]" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 stroke-[2.5]" />
+                    )}
+                  </div>
+                </div>
+              </div>
 
+              {/* Collapsible Items List & Details */}
+              {isOrderSummaryOpen && (
+                <div className="border-t border-slate-100 p-4 space-y-3 bg-slate-50/30 animate-in fade-in slide-in-from-top-2">
+                  <div className="flex items-center justify-between pb-1">
+                    <span className="text-[10px] uppercase font-mono font-bold text-slate-400 tracking-wider">
+                      Cart Items ({totalItemsCount})
+                    </span>
                     <button
                       type="button"
-                      onClick={handlePinLocation}
-                      disabled={isLocating}
-                      className="text-[10px] font-semibold text-brand-cocoa hover:text-brand-pink bg-white border border-slate-300 hover:border-brand-pink px-2 py-0.5 rounded flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-50"
+                      onClick={onClearAll}
+                      className="text-xs text-slate-500 hover:text-red-600 flex items-center gap-1 cursor-pointer font-medium"
                     >
-                      {isLocating ? (
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                      ) : (
-                        <MapPin className="w-3 h-3 text-brand-pink" />
-                      )}
-                      <span>Pin GPS</span>
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Clear Order</span>
                     </button>
                   </div>
 
-                  {locationFeedback && (
-                    <p className={`text-[10px] font-medium font-sans leading-tight ${
-                      locationFeedback.includes('successfully') ? 'text-green-600' : 'text-brand-pink'
-                    }`}>
-                      {locationFeedback}
-                    </p>
-                  )}
+                  {/* List of Cart Items */}
+                  <div className="space-y-2.5">
+                    {shoppingList.map((item) => {
+                      const unitPrice = getItemUnitPrice(item);
+                      const lineTotal = unitPrice * item.amount;
+                      const stockLimit = getItemStockLimit(item);
 
-                  <textarea
-                    rows={2}
-                    value={deliveryAddress}
-                    onChange={(e) => setDeliveryAddress(e.target.value)}
-                    placeholder="Enter street name, house/flat number, block, and landmarks..."
-                    className="w-full bg-white border border-brand-cocoa-border rounded-md px-3 py-1.5 text-xs sm:text-sm text-brand-cocoa focus:outline-none focus:border-brand-pink placeholder-brand-cocoa-light/40"
-                    required={deliveryType === 'Delivery'}
-                  />
+                      return (
+                        <div
+                          key={item.id}
+                          className="bg-white border border-slate-200/80 rounded-xl p-3 flex items-center justify-between gap-3 shadow-3xs"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                            {item.image ? (
+                              <img
+                                src={item.image}
+                                alt={item.name}
+                                width="48"
+                                height="48"
+                                loading="lazy"
+                                className="w-12 h-12 rounded-lg object-cover border border-slate-100 shrink-0"
+                              />
+                            ) : (
+                              <div className="w-12 h-12 rounded-lg bg-pink-50 border border-pink-100 flex items-center justify-center text-brand-pink shrink-0">
+                                <Cake className="w-5 h-5" />
+                              </div>
+                            )}
 
-                  {gpsCoordinates && (
-                    <div className="flex items-center gap-1 text-[9px] text-brand-cocoa-light font-mono">
-                      <span className="font-semibold text-brand-cocoa">🛰️ GPS:</span>
-                      <span>{gpsCoordinates}</span>
+                            <div className="min-w-0 flex-1">
+                              <h4 className="font-display font-bold text-xs sm:text-sm text-slate-900 truncate">
+                                {item.name}
+                              </h4>
+                              <p className="text-[11px] text-slate-500 truncate">
+                                {item.selectedOption || 'Standard'}
+                              </p>
+                              {item.customMessage && (
+                                <p className="text-[10px] text-brand-pink font-mono italic truncate">
+                                  &ldquo;{item.customMessage}&rdquo;
+                                </p>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Stepper and Price */}
+                          <div className="flex items-center gap-3 shrink-0">
+                            <div className="inline-flex items-center bg-slate-100 border border-slate-200 rounded-lg p-0.5">
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateQty(item.id, item.amount - 1)}
+                                className="w-6 h-6 flex items-center justify-center text-slate-700 hover:text-brand-pink rounded cursor-pointer"
+                              >
+                                <Minus className="w-3 h-3" />
+                              </button>
+                              <span className="w-6 text-center font-mono font-bold text-xs text-slate-900">
+                                {item.amount}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateQty(item.id, item.amount + 1)}
+                                disabled={stockLimit !== undefined && item.amount >= stockLimit}
+                                className="w-6 h-6 flex items-center justify-center text-slate-700 hover:text-brand-pink rounded cursor-pointer disabled:opacity-40"
+                              >
+                                <Plus className="w-3 h-3" />
+                              </button>
+                            </div>
+
+                            <div className="text-right w-16">
+                              <span className="font-display font-bold text-xs sm:text-sm text-slate-900 block">
+                                ₹{lineTotal}
+                              </span>
+                              {item.amount > 1 && (
+                                <span className="text-[9px] text-slate-400 font-mono block">
+                                  ₹{unitPrice} ea
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Pricing Breakdown inside expanded view */}
+                  <div className="border-t border-slate-200/60 pt-3 space-y-1.5 text-xs text-slate-600">
+                    <div className="flex justify-between">
+                      <span>Items Subtotal</span>
+                      <span className="font-semibold text-slate-900">₹{cartSubtotal}</span>
                     </div>
-                  )}
+                    {couponDiscount > 0 && (
+                      <div className="flex justify-between text-emerald-700 font-semibold">
+                        <span>Prepaid / Coupon Discount</span>
+                        <span>-₹{couponDiscount}</span>
+                      </div>
+                    )}
+                    {giftCardDiscount > 0 && (
+                      <div className="flex justify-between text-emerald-700 font-semibold">
+                        <span>Gift Card Credit</span>
+                        <span>-₹{giftCardDiscount}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                      <span>Delivery Fee</span>
+                      {deliveryType === 'Pickup' ? (
+                        <span className="text-emerald-700 font-bold uppercase text-[10px]">Free Pickup</span>
+                      ) : deliveryCharge === 0 ? (
+                        <span className="text-emerald-700 font-bold uppercase text-[10px]">Free (&gt; ₹600)</span>
+                      ) : (
+                        <span className="font-semibold text-slate-900">₹{deliveryCharge}</span>
+                      )}
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Artisanal Gift Box & Piping</span>
+                      <span className="text-emerald-700 font-bold uppercase text-[10px]">Free Included</span>
+                    </div>
+                  </div>
                 </div>
               )}
+            </div>
 
-              {/* Date & Time Grid */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold font-mono uppercase tracking-widest text-brand-cocoa-light flex items-center gap-1">
-                    <Calendar className="w-3 h-3 text-brand-pink" />
-                    <span>Requested Date</span>
-                  </label>
-                  <input
-                    type="date"
-                    value={pickupDate}
-                    onChange={(e) => setPickupDate(e.target.value)}
-                    className="w-full bg-white border border-brand-cocoa-border rounded-md px-2.5 py-1.5 text-xs sm:text-sm text-brand-cocoa focus:outline-none focus:border-brand-pink"
-                    required
-                  />
+            {/* 4. DELIVERY ADDRESS CARD (Matching reference structure) */}
+            <div className="bg-white rounded-2xl border border-slate-200/90 p-4 sm:p-5 shadow-2xs space-y-3">
+              {/* Header with Deliver To + Edit pill */}
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-700 shrink-0">
+                    <MapPin className="w-4 h-4 text-brand-pink" />
+                  </div>
+                  <div>
+                    <h3 className="font-display font-bold text-sm sm:text-base text-slate-900">
+                      Deliver To {customerName ? customerName.toUpperCase() : (customer?.fullName?.toUpperCase() || 'CUSTOMER')}
+                    </h3>
+                  </div>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold font-mono uppercase tracking-widest text-brand-cocoa-light flex items-center gap-1">
-                    <Clock className="w-3 h-3 text-brand-pink" />
-                    <span>Preferred Time</span>
-                  </label>
-                  <select
-                    value={pickupTime}
-                    onChange={(e) => setPickupTime(e.target.value)}
-                    className="w-full bg-white border border-brand-cocoa-border rounded-md px-2 py-1.5 text-xs sm:text-sm text-brand-cocoa focus:outline-none focus:border-brand-pink"
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingAddress(!isEditingAddress)}
+                    className="bg-slate-900 hover:bg-slate-800 text-white text-[10px] sm:text-xs font-bold px-3 py-1 rounded-full transition-colors cursor-pointer hidden sm:inline-block"
                   >
-                    <option value="10:00">10:00 AM</option>
-                    <option value="11:30">11:30 AM</option>
-                    <option value="13:00">01:00 PM</option>
-                    <option value="14:30">02:30 PM</option>
-                    <option value="16:00">04:00 PM</option>
-                    <option value="17:30">05:30 PM</option>
-                    <option value="19:00">07:00 PM</option>
-                  </select>
+                    Tap To Edit Address
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingAddress(!isEditingAddress)}
+                    className="px-3 py-1 text-xs font-bold text-slate-700 hover:text-brand-pink border border-slate-300 rounded-lg hover:border-brand-pink transition-colors cursor-pointer"
+                  >
+                    Change
+                  </button>
                 </div>
               </div>
 
-              {/* Payment Method Options */}
-              <div className="space-y-2 border-t border-brand-cocoa-border/40 pt-3">
-                <div className="flex items-center justify-between">
-                  <label className="text-[10px] font-bold font-mono uppercase tracking-widest text-brand-cocoa-light">
-                    Payment Method
-                  </label>
-                  <span className="text-[9px] text-emerald-700 font-mono font-bold flex items-center gap-1">
-                    <ShieldCheck className="w-3 h-3 text-emerald-600" />
-                    <span>SSL 256-Bit</span>
-                  </span>
+              {/* Display Address, Phone, Email details */}
+              <div className="pl-10 text-xs sm:text-sm text-slate-700 space-y-1">
+                <p className="font-medium leading-snug">
+                  {deliveryType === 'Pickup'
+                    ? 'Boutique Store Collection • The Frosting Fairy Boutique Kitchen'
+                    : deliveryAddress || 'Please enter street, door number, and delivery landmarks'}
+                </p>
+                <div className="flex items-center gap-2 text-slate-500 text-xs flex-wrap">
+                  <span>{customer?.fullPhoneNumber || customerPhone || '+91 98765 43210'}</span>
+                  <span>|</span>
+                  <span className="truncate">{customerEmail}</span>
                 </div>
+              </div>
 
-                <div className={`grid ${cashOnDeliveryEnabled ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'} gap-2.5`}>
-                  {/* Direct UPI Payment Option */}
+              {/* 5. DELIVERY METHOD (Home Delivery as primary / first option, Store Collection as second option) */}
+              <div className="pt-2">
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  {/* Home Delivery (Primary / First) */}
                   <button
                     type="button"
-                    onClick={() => setPaymentMethod('UPI')}
-                    className={`p-3.5 border rounded-md flex flex-col justify-between gap-2.5 transition-colors cursor-pointer relative text-left w-full ${
-                      paymentMethod === 'UPI'
-                        ? 'border-brand-cocoa bg-slate-50 text-brand-cocoa'
-                        : 'border-brand-cocoa-border bg-white text-brand-cocoa hover:border-slate-400'
+                    onClick={() => setDeliveryType('Delivery')}
+                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                      deliveryType === 'Delivery'
+                        ? 'border-brand-pink bg-pink-50/50 text-slate-900 ring-1 ring-brand-pink'
+                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
                     }`}
                   >
-                    <div className="flex items-center justify-between w-full">
-                      <div className="flex items-center gap-1.5">
-                        <Smartphone className="w-3.5 h-3.5 text-brand-pink shrink-0" />
-                        <span className="text-xs font-bold font-sans text-brand-cocoa">
-                          Direct UPI Payment
-                        </span>
-                      </div>
-                      <span className="text-[9px] font-mono font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.2 rounded shrink-0">
-                        Zero Fees • Instant
-                      </span>
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold font-display text-xs text-slate-900">Home Delivery</span>
+                      {deliveryType === 'Delivery' && <Check className="w-3.5 h-3.5 text-brand-pink" />}
                     </div>
-
-                    {/* Logos and payment text container */}
-                    <div className="w-full bg-white border border-slate-200 rounded-md p-2.5 space-y-1.5">
-                      <div className="flex items-center gap-2">
-                        <GPayLogo />
-                        <PhonePeLogo />
-                        <PaytmLogo />
-                      </div>
-
-                      <p className="text-[11px] text-slate-600 font-normal leading-tight">
-                        Google Pay, PhonePe, Paytm, BHIM &amp; QR scan
-                      </p>
-                    </div>
-
-                    <span className="text-[9px] font-mono text-emerald-700 font-medium">
-                      Direct bank-to-bank UPI payment
+                    <span className="text-[10px] text-slate-500 mt-1">Direct to Doorstep</span>
+                    <span className="text-[10px] font-mono font-bold text-emerald-700 mt-1">
+                      {cartSubtotal >= 600 ? 'Free Shipping • Free' : '₹50 (Free > ₹600)'}
                     </span>
                   </button>
 
-                  {/* Cash on Delivery Button */}
-                  {cashOnDeliveryEnabled && (
+                  {/* Store Collection (Second Option) */}
+                  <button
+                    type="button"
+                    onClick={() => setDeliveryType('Pickup')}
+                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                      deliveryType === 'Pickup'
+                        ? 'border-brand-pink bg-pink-50/50 text-slate-900 ring-1 ring-brand-pink'
+                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold font-display text-xs text-slate-900">Store Collection</span>
+                      {deliveryType === 'Pickup' && <Check className="w-3.5 h-3.5 text-brand-pink" />}
+                    </div>
+                    <span className="text-[10px] text-slate-500 mt-1">Boutique Kitchen</span>
+                    <span className="text-[10px] font-mono font-bold text-emerald-700 mt-1">
+                      Free Pickup
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Inline Address Editor (Expanded when clicking Change / Tap To Edit Address) */}
+              {isEditingAddress && (
+                <div className="pt-3 border-t border-slate-100 space-y-3 animate-in fade-in">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-800">Edit Delivery & Contact Details</span>
                     <button
                       type="button"
-                      onClick={() => setPaymentMethod('COD')}
-                      className={`p-3.5 border rounded-md flex flex-col justify-between gap-2.5 transition-colors cursor-pointer relative text-left w-full ${
-                        paymentMethod === 'COD'
-                          ? 'border-brand-cocoa bg-slate-50 text-brand-cocoa'
-                          : 'border-brand-cocoa-border bg-white text-brand-cocoa hover:border-slate-400'
-                      }`}
+                      onClick={() => setIsEditingAddress(false)}
+                      className="text-xs text-slate-400 hover:text-slate-700 cursor-pointer"
                     >
-                      <div className="flex items-center justify-between w-full">
-                        <div className="flex items-center gap-1.5">
-                          <DollarSign className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                          <span className="text-xs font-bold font-sans text-brand-cocoa">
-                            Cash on Delivery
-                          </span>
-                        </div>
-                        <span className="text-[9px] font-mono font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.2 rounded shrink-0">
-                          COD
-                        </span>
-                      </div>
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
 
-                      <div className="w-full bg-white border border-slate-200 rounded-md p-2.5 flex flex-col items-center justify-center min-h-[64px] space-y-0.5">
-                        <span className="text-base">💵</span>
-                        <span className="text-[11px] font-bold font-mono text-emerald-800 text-center">
-                          Pay Upon Arrival / Pickup
-                        </span>
-                        <span className="text-[9px] font-mono text-slate-400 text-center">
-                          Exact cash change appreciated
-                        </span>
-                      </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="text-[10px] font-bold uppercase font-mono text-slate-500">Your Name</label>
+                      <input
+                        type="text"
+                        value={customerName}
+                        onChange={(e) => setCustomerName(e.target.value)}
+                        placeholder="e.g. Akram J"
+                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-brand-pink mt-1"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold uppercase font-mono text-slate-500">Email Address</label>
+                      <input
+                        type="email"
+                        value={customerEmail}
+                        onChange={(e) => setCustomerEmail(e.target.value)}
+                        placeholder="e.g. customer@gmail.com"
+                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-brand-pink mt-1"
+                      />
+                    </div>
+                  </div>
 
-                      <span className="text-[9px] font-mono text-slate-500">
-                        Pay cash upon order handover
-                      </span>
+                  {deliveryType === 'Delivery' && (
+                    <div className="space-y-1">
+                      <div className="flex justify-between items-center">
+                        <label className="text-[10px] font-bold uppercase font-mono text-slate-500">Delivery Address</label>
+                        <button
+                          type="button"
+                          onClick={handlePinLocation}
+                          disabled={isLocating}
+                          className="text-[10px] text-brand-pink font-semibold flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                        >
+                          {isLocating ? <Loader2 className="w-3 h-3 animate-spin" /> : <MapPin className="w-3 h-3" />}
+                          <span>Pin GPS Location</span>
+                        </button>
+                      </div>
+                      {locationFeedback && (
+                        <p className="text-[10px] text-brand-pink font-sans">{locationFeedback}</p>
+                      )}
+                      <textarea
+                        rows={2}
+                        value={deliveryAddress}
+                        onChange={(e) => setDeliveryAddress(e.target.value)}
+                        placeholder="House/flat number, building name, street, landmarks..."
+                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-brand-pink"
+                      />
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="text-[10px] font-bold uppercase font-mono text-slate-500">Requested Date</label>
+                      <input
+                        type="date"
+                        value={pickupDate}
+                        onChange={(e) => setPickupDate(e.target.value)}
+                        className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-brand-pink mt-1"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold uppercase font-mono text-slate-500">Time Slot</label>
+                      <select
+                        value={pickupTime}
+                        onChange={(e) => setPickupTime(e.target.value)}
+                        className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-brand-pink mt-1"
+                      >
+                        <option value="10:00">10:00 AM</option>
+                        <option value="12:00">12:00 PM</option>
+                        <option value="14:00">02:00 PM</option>
+                        <option value="16:00">04:00 PM</option>
+                        <option value="18:00">06:00 PM</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingAddress(false)}
+                      className="px-4 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                    >
+                      Save & Close
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 6. OFFERS & REWARDS SECTION (Matching reference structure with rows for applied coupon, gift card, partner offers) */}
+            <div className="space-y-2">
+              <span className="text-[11px] font-bold font-mono tracking-wider text-slate-500 uppercase px-1 block">
+                OFFERS &amp; REWARDS
+              </span>
+
+              {/* 7. SAVINGS HIGHLIGHT (Show total savings prominently in a small highlighted area) */}
+              <div className="bg-emerald-50/80 border border-emerald-200/80 text-emerald-800 text-xs font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-1.5 shadow-3xs">
+                <span>You saved ₹{totalSavings.toFixed(2)}</span>
+              </div>
+
+              {/* Offers Card with Separate Rows */}
+              <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden divide-y divide-slate-100">
+                {/* Row 1: Applied Coupon */}
+                <div className="p-3.5 sm:p-4 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 fill-emerald-100" />
+                    <div>
+                      {appliedCoupon ? (
+                        <span className="text-xs sm:text-sm font-bold text-slate-900">
+                          {appliedCoupon.name}
+                        </span>
+                      ) : (
+                        <span className="text-xs sm:text-sm font-semibold text-slate-700">
+                          Apply Discount Coupon
+                        </span>
+                      )}
+                      <p className="text-[10px] text-slate-400">
+                        {appliedCoupon ? 'Flat 5% instant discount applied' : 'Enter code for savings'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {appliedCoupon ? (
+                    <button
+                      type="button"
+                      onClick={() => setAppliedCoupon(null)}
+                      className="text-xs font-bold text-slate-700 hover:text-red-600 transition-colors cursor-pointer px-2 py-1"
+                    >
+                      Remove
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setShowCouponInput(!showCouponInput)}
+                      className="text-xs font-bold text-brand-pink hover:text-brand-pink-dark transition-colors cursor-pointer px-2 py-1"
+                    >
+                      Apply
                     </button>
                   )}
                 </div>
-              </div>
 
-              {/* Special Instructions */}
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold font-mono uppercase tracking-widest text-brand-cocoa-light">
-                  Special Notes or Custom Requests
-                </label>
-                <textarea
-                  rows={2}
-                  placeholder="e.g. Please make it eggless, add chocolate sprinkles, write birthday card, etc."
-                  value={specialInstructions}
-                  onChange={(e) => setSpecialInstructions(e.target.value)}
-                  className="w-full bg-white border border-brand-cocoa-border rounded-md px-3 py-1.5 text-xs sm:text-sm text-brand-cocoa focus:outline-none focus:border-brand-pink placeholder-brand-cocoa-light/40"
-                />
-              </div>
+                {/* Inline Coupon Input */}
+                {showCouponInput && !appliedCoupon && (
+                  <form onSubmit={handleApplyCustomCoupon} className="p-3 bg-slate-50 flex items-center gap-2">
+                    <input
+                      type="text"
+                      placeholder="Enter BOND60 or FAIRY5"
+                      value={customCouponInput}
+                      onChange={(e) => setCustomCouponInput(e.target.value)}
+                      className="flex-1 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-900 uppercase font-mono font-bold focus:outline-none focus:border-brand-pink"
+                    />
+                    <button
+                      type="submit"
+                      className="px-4 py-1.5 bg-brand-pink hover:bg-brand-pink-dark text-white rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                    >
+                      Apply
+                    </button>
+                  </form>
+                )}
 
-              {/* Pricing breakdown section - clean flat rows with top divider */}
-              <div className="border-t border-brand-cocoa-border/60 pt-3 space-y-1.5 text-xs">
-                <div className="flex justify-between font-sans text-slate-600">
-                  <span>Cart Items Subtotal:</span>
-                  <span className="font-semibold text-slate-900">₹{cartSubtotal}</span>
-                </div>
+                {/* Row 2: Gift Card */}
+                <div className="p-3.5 sm:p-4 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <CreditCard className="w-5 h-5 text-slate-600 shrink-0" />
+                    <div>
+                      <span className="text-xs sm:text-sm font-bold text-slate-900">
+                        {giftCardRedeemed ? 'Gift Card Applied (₹100 Credit)' : 'Have Gift Card?'}
+                      </span>
+                      <p className="text-[10px] text-slate-400">
+                        {giftCardRedeemed ? 'Credit applied to total' : 'Redeem bakery voucher'}
+                      </p>
+                    </div>
+                  </div>
 
-                <div className="flex justify-between font-sans text-slate-600">
-                  <span>Delivery Charges:</span>
-                  {deliveryType === 'Pickup' ? (
-                    <span className="font-bold text-green-700 uppercase text-[9px] tracking-wider">FREE STORE COLLECTION</span>
-                  ) : deliveryCharge === 0 ? (
-                    <span className="font-bold text-green-700 uppercase text-[9px] tracking-wider">FREE (Orders &gt; ₹600)</span>
+                  {giftCardRedeemed ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setGiftCardRedeemed(false);
+                        setGiftCardDiscount(0);
+                      }}
+                      className="text-xs font-bold text-slate-700 hover:text-red-600 cursor-pointer px-2 py-1"
+                    >
+                      Remove
+                    </button>
                   ) : (
-                    <span className="font-semibold text-slate-900">₹{deliveryCharge}</span>
+                    <button
+                      type="button"
+                      onClick={() => setShowGiftCardInput(!showGiftCardInput)}
+                      className="text-xs font-bold text-slate-700 hover:text-brand-pink cursor-pointer px-2 py-1"
+                    >
+                      Redeem
+                    </button>
                   )}
                 </div>
 
-                <div className="flex justify-between font-sans text-slate-600">
-                  <span>Custom Piping & Luxury Box:</span>
-                  <span className="font-bold text-green-700 uppercase text-[9px] tracking-wider">FREE</span>
+                {/* Inline Gift Card Input */}
+                {showGiftCardInput && !giftCardRedeemed && (
+                  <form onSubmit={handleRedeemGiftCard} className="p-3 bg-slate-50 flex items-center gap-2">
+                    <input
+                      type="text"
+                      placeholder="Enter 16-digit Gift Card or code"
+                      value={giftCardInput}
+                      onChange={(e) => setGiftCardInput(e.target.value)}
+                      className="flex-1 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-900 font-mono focus:outline-none focus:border-brand-pink"
+                    />
+                    <button
+                      type="submit"
+                      className="px-4 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                    >
+                      Redeem
+                    </button>
+                  </form>
+                )}
+
+                {/* Row 3: Collect Exclusive Partner Offers */}
+                <div className="p-3.5 sm:p-4 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <Gift className="w-5 h-5 text-emerald-600 shrink-0" />
+                    <div>
+                      <span className="text-xs sm:text-sm font-bold text-slate-900">
+                        {partnerOfferCollected
+                          ? 'Exclusive Offers Collected worth ₹1150'
+                          : 'Collect Exclusive Partner Offers worth ₹1150'}
+                      </span>
+                      <p className="text-[10px] text-slate-400">
+                        {partnerOfferCollected ? 'Vouchers unlocked for your order' : 'Complimentary partner perks'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setPartnerOfferCollected(!partnerOfferCollected)}
+                    className={`text-xs font-bold px-2 py-1 transition-colors cursor-pointer ${
+                      partnerOfferCollected ? 'text-emerald-700 font-bold' : 'text-slate-700 hover:text-brand-pink'
+                    }`}
+                  >
+                    {partnerOfferCollected ? 'Collected ✓' : 'Collect'}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* 8. PAYMENT OPTIONS (Clean separated section with UPI card & horizontal scrollable UPI apps) */}
+            <div className="space-y-2 pt-2">
+              <span className="text-[11px] font-bold font-mono tracking-wider text-slate-500 uppercase px-1 block">
+                PAYMENT OPTIONS
+              </span>
+
+              {/* Additional 5% discount banner */}
+              <div>
+                <span className="bg-pink-50 text-brand-pink border border-pink-200 text-[11px] font-bold px-2.5 py-0.5 rounded-md inline-block">
+                  Additional 5% discount
+                </span>
+              </div>
+
+              {/* UPI Card (Clean, large card with UPI heading, amount on right, horizontal scroll of real apps) */}
+              <div
+                onClick={() => setPaymentMethod('UPI')}
+                className={`bg-white rounded-2xl border-2 transition-all p-4 shadow-2xs cursor-pointer ${
+                  paymentMethod === 'UPI'
+                    ? 'border-slate-900 ring-2 ring-slate-900/5'
+                    : 'border-slate-200/90 hover:border-slate-300'
+                }`}
+              >
+                {/* Top Badge: Get 5% off + cashback */}
+                <div className="flex justify-center mb-3">
+                  <span className="bg-emerald-600 text-white text-[10px] font-bold px-3 py-0.5 rounded-full shadow-3xs">
+                    Get 5% off + cashback
+                  </span>
                 </div>
 
-                <div className="border-t border-brand-cocoa-border/60 pt-2.5 flex items-baseline justify-between">
-                  <span className="font-display text-brand-cocoa font-bold text-sm uppercase tracking-wide">Total Amount</span>
-                  <span className="text-xl sm:text-2xl font-display font-black text-brand-pink">
-                    ₹{grandTotal}
-                  </span>
+                {/* UPI Header Row: UPI on left, Final payable amount on right */}
+                <div className="flex items-center justify-between pb-3">
+                  <div className="flex items-center gap-2">
+                    <UpiBrandIcon />
+                    <span className="font-display font-black text-base sm:text-lg text-slate-900 tracking-tight">
+                      UPI
+                    </span>
+                  </div>
+
+                  <div className="text-right">
+                    <span className="font-display font-black text-lg sm:text-xl text-slate-900">
+                      ₹{grandTotal.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Horizontal Scrollable Area of Supported UPI Apps with Proper Icons */}
+                <div className="pt-2 border-t border-slate-100">
+                  <div className="flex items-center gap-3 overflow-x-auto pb-2 pt-1 no-scrollbar scroll-smooth">
+                    {/* Paytm */}
+                    <div
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPaymentMethod('UPI');
+                        handleProceedToPayment('paytm');
+                      }}
+                      className="flex flex-col items-center gap-1 shrink-0 cursor-pointer group"
+                    >
+                      <span className="text-[9px] font-bold text-slate-500 group-hover:text-brand-pink transition-colors">
+                        Win Cashback
+                      </span>
+                      <PaytmLogo />
+                    </div>
+
+                    {/* PhonePe */}
+                    <div
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPaymentMethod('UPI');
+                        handleProceedToPayment('phonepe');
+                      }}
+                      className="flex flex-col items-center gap-1 shrink-0 cursor-pointer group"
+                    >
+                      <span className="text-[9px] font-bold text-slate-500 group-hover:text-brand-pink transition-colors">
+                        Win Cashback
+                      </span>
+                      <PhonePeLogo />
+                    </div>
+
+                    {/* Google Pay */}
+                    <div
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPaymentMethod('UPI');
+                        handleProceedToPayment('gpay');
+                      }}
+                      className="flex flex-col items-center gap-1 shrink-0 cursor-pointer group"
+                    >
+                      <span className="text-[9px] font-bold text-slate-500 group-hover:text-brand-pink transition-colors">
+                        Win Cashback
+                      </span>
+                      <GPayLogo />
+                    </div>
+
+                    {/* Amazon Pay */}
+                    <div
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPaymentMethod('UPI');
+                        handleProceedToPayment('amazonpay');
+                      }}
+                      className="flex flex-col items-center gap-1 shrink-0 cursor-pointer group"
+                    >
+                      <span className="text-[9px] font-bold text-slate-500 group-hover:text-brand-pink transition-colors">
+                        Win Cashback
+                      </span>
+                      <AmazonPayLogo />
+                    </div>
+
+                    {/* BHIM */}
+                    <div
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPaymentMethod('UPI');
+                        handleProceedToPayment('bhim');
+                      }}
+                      className="flex flex-col items-center gap-1 shrink-0 cursor-pointer group"
+                    >
+                      <span className="text-[9px] font-bold text-slate-500 group-hover:text-brand-pink transition-colors">
+                        Fast UPI
+                      </span>
+                      <BhimUpiLogo />
+                    </div>
+
+                    {/* CRED */}
+                    <div
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPaymentMethod('UPI');
+                        handleProceedToPayment('cred');
+                      }}
+                      className="flex flex-col items-center gap-1 shrink-0 cursor-pointer group"
+                    >
+                      <span className="text-[9px] font-bold text-slate-500 group-hover:text-brand-pink transition-colors">
+                        Rewards
+                      </span>
+                      <CredLogo />
+                    </div>
+                  </div>
+                  <div className="mt-2 text-center">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setFallbackModal((prev) => ({ ...prev, isOpen: true, appName: 'G Pay / UPI' }));
+                      }}
+                      className="text-[11px] text-slate-500 hover:text-brand-pink font-semibold underline underline-offset-2 transition-colors cursor-pointer"
+                    >
+                      Can&apos;t open your UPI app? Get payment link via SMS
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              {/* Main Submit Button - solid flat button, no gradient, no drop-shadow */}
+              {/* Cash on Delivery Card (If enabled in admin settings) */}
+              {cashOnDeliveryEnabled && (
+                <div
+                  onClick={() => setPaymentMethod('COD')}
+                  className={`bg-white rounded-2xl border-2 transition-all p-4 shadow-2xs cursor-pointer ${
+                    paymentMethod === 'COD'
+                      ? 'border-slate-900 ring-2 ring-slate-900/5'
+                      : 'border-slate-200/90 hover:border-slate-300'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-800">
+                        <DollarSign className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <span className="font-display font-bold text-sm sm:text-base text-slate-900">
+                          Cash on Delivery (COD)
+                        </span>
+                        <p className="text-[11px] text-slate-400">
+                          {deliveryType === 'Pickup' ? 'Pay upon boutique collection' : 'Pay upon home delivery handover'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="text-right">
+                      <span className="font-display font-bold text-base sm:text-lg text-slate-900">
+                        ₹{(grandTotal + couponDiscount).toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Special Instructions Input */}
+            <div className="bg-white rounded-2xl border border-slate-200/90 p-3.5 shadow-2xs space-y-1">
+              <label className="text-[10px] font-bold uppercase font-mono text-slate-500">
+                Special Delivery Notes / Cake Customization
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Please ring doorbell twice, eggless packaging, happy birthday note..."
+                value={specialInstructions}
+                onChange={(e) => setSpecialInstructions(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-brand-pink"
+              />
+            </div>
+
+            {/* 9. MAIN CHECKOUT ACTION BUTTON */}
+            <div className="pt-2">
               <button
-                type="submit"
+                type="button"
+                onClick={() => handleProceedToPayment()}
                 disabled={isSubmitting}
-                className="w-full bg-brand-pink hover:bg-brand-pink-dark text-white font-sans font-bold py-3 px-4 rounded-md transition-colors flex items-center justify-center gap-2 group cursor-pointer mt-3 disabled:opacity-60 disabled:cursor-not-allowed"
+                className="w-full bg-slate-900 hover:bg-slate-800 text-white font-sans font-bold py-3.5 px-4 rounded-xl transition-all flex items-center justify-between shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed group"
               >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>{paymentMethod === 'UPI' ? 'Opening UPI Payment Page...' : 'Placing Order...'}</span>
-                  </>
-                ) : paymentMethod === 'UPI' ? (
-                  <>
-                    <Smartphone className="w-4 h-4 text-white" />
-                    <span>Proceed to UPI Payment (₹{grandTotal})</span>
-                    <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-                  </>
-                ) : (
-                  <>
-                    <span>Place Cash on Delivery Order (₹{grandTotal})</span>
-                    <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-                  </>
-                )}
+                <div className="flex items-center gap-2">
+                  {isSubmitting ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-white" />
+                  ) : (
+                    <Lock className="w-4 h-4 text-emerald-400" />
+                  )}
+                  <span className="text-sm sm:text-base">
+                    {isSubmitting
+                      ? 'Processing Order...'
+                      : paymentMethod === 'UPI'
+                      ? 'Proceed with UPI'
+                      : 'Place Cash on Delivery Order'}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="font-display font-black text-base sm:text-lg font-mono">
+                    ₹{grandTotal.toFixed(2)}
+                  </span>
+                  <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                </div>
               </button>
-            </form>
+
+              <p className="text-[11px] text-slate-400 text-center mt-2 flex items-center justify-center gap-1 font-mono">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                <span>100% Safe &amp; Direct Bank-to-Bank UPI Transfer</span>
+              </p>
+            </div>
+          </>
+        )}
+      </main>
+
+      {/* UPI App Fallback Bottom Sheet / Modal (Matching reference screenshot 2) */}
+      {fallbackModal.isOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in">
+          <div className="w-full max-w-md bg-white rounded-t-3xl sm:rounded-2xl p-5 sm:p-6 shadow-xl space-y-4 animate-in slide-in-from-bottom-4">
+            {/* Header with Close */}
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="font-display font-bold text-base sm:text-lg text-slate-900">
+                  Can&apos;t open your UPI app?
+                </h3>
+                <p className="text-xs text-slate-500">Please try again</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setFallbackModal((prev) => ({ ...prev, isOpen: false, smsSent: false }))}
+                className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Warning Box */}
+            <div className="bg-amber-50 border border-amber-200/80 rounded-xl p-3 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-white border border-amber-200 flex items-center justify-center shrink-0">
+                <Smartphone className="w-5 h-5 text-amber-600" />
+              </div>
+              <p className="text-xs text-amber-900 font-medium leading-snug">
+                {fallbackModal.appName} is not installed on your phone or failed to launch.
+              </p>
+            </div>
+
+            {/* SMS Payment Link Option */}
+            <div className="space-y-1.5">
+              <span className="text-xs font-bold text-slate-800 block">Get a payment Link</span>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 flex items-center bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs font-mono">
+                  <span className="text-slate-400 mr-1.5">+91 -</span>
+                  <input
+                    type="tel"
+                    value={fallbackModal.phone || (customerPhone ? customerPhone.replace('+91', '').trim() : '73975 28957')}
+                    onChange={(e) => setFallbackModal((prev) => ({ ...prev, phone: e.target.value }))}
+                    placeholder="73975 28957"
+                    className="w-full bg-transparent focus:outline-none text-slate-900 font-bold"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFallbackModal((prev) => ({ ...prev, smsSent: true }));
+                    setTimeout(() => {
+                      setFallbackModal((prev) => ({ ...prev, isOpen: false, smsSent: false }));
+                      handleProceedToPayment();
+                    }, 1000);
+                  }}
+                  className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer shrink-0"
+                >
+                  {fallbackModal.smsSent ? 'Sent! ✓' : 'Send SMS'}
+                </button>
+              </div>
+            </div>
+
+            {/* Direct UPI Page Action */}
+            <div className="pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => {
+                  setFallbackModal((prev) => ({ ...prev, isOpen: false }));
+                  handleProceedToPayment();
+                }}
+                className="w-full bg-brand-pink hover:bg-brand-pink-dark text-white text-xs font-bold py-2.5 px-4 rounded-xl transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+              >
+                <span>Pay with UPI QR Code or Other Apps</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
-        </div>
-      ) : (
-        <div id="no-shopping-fallback" className="text-center py-16 bg-white rounded-lg border border-brand-cocoa-border px-4 flex-1 flex flex-col justify-center items-center">
-          <div id="bag-illustration" className="w-14 h-14 bg-brand-pink-light text-brand-pink rounded-full flex items-center justify-center mb-4">
-            <ShoppingBag id="fallback-bag-icon" className="w-7 h-7" />
-          </div>
-          <h4 id="fallback-shop-title" className="font-display font-bold text-brand-cocoa text-xl">Your Shopping Cart is Empty</h4>
-          <p id="fallback-shop-desc" className="text-xs sm:text-sm text-brand-cocoa-light mt-1.5 max-w-sm leading-relaxed">
-            Head back to our Menu and pick any delicious confection, custom size, or flavour to add it here!
-          </p>
-          <div className="mt-5">
-            <Link
-              to="/shop"
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-brand-pink hover:bg-brand-pink-dark text-white text-xs font-bold uppercase tracking-wider rounded-md transition-colors cursor-pointer"
-            >
-              <Cake className="w-4 h-4" />
-              <span>Explore Boutique Menu</span>
-            </Link>
-          </div>
-          <p className="text-xs text-brand-cocoa-light/80 mt-5 font-medium">
-            For custom requests or bulk inquiries, contact us:{' '}
-            <a href="mailto:hellofrostingfairy@gmail.com" className="text-brand-pink hover:underline font-bold">
-              hellofrostingfairy@gmail.com
-            </a>
-          </p>
         </div>
       )}
     </div>
