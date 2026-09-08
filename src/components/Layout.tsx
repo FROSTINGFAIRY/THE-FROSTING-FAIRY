@@ -603,12 +603,23 @@ export default function Layout() {
   };
 
   const handleUpdateCustomerProfile = async (data: Partial<CustomerProfile>) => {
-    if (!customerToken) return;
-    try {
-      const updated = await updateCustomerProfileOnServer(customerToken, data);
-      setCustomer(updated);
-    } catch (e) {
-      console.warn('Profile update error:', e);
+    setCustomer((prev) => {
+      if (!prev) return null;
+      const updated = { ...prev, ...data };
+      try {
+        localStorage.setItem('tff_customer_profile', JSON.stringify(updated));
+      } catch (e) {
+        // ignore
+      }
+      return updated;
+    });
+    if (customerToken) {
+      try {
+        const updated = await updateCustomerProfileOnServer(customerToken, data);
+        setCustomer(updated);
+      } catch (e) {
+        console.warn('Profile update error:', e);
+      }
     }
   };
 
@@ -677,6 +688,8 @@ export default function Layout() {
         onOpenMap={() => setIsBakeryMapOpen(true)}
         customer={customer}
         onLogout={handleCustomerLogout}
+        onLogin={handleCustomerLogin}
+        onUpdateProfile={handleUpdateCustomerProfile}
       />
 
       {/* Main Screen Outlet Layout */}
@@ -868,9 +881,15 @@ export default function Layout() {
           </div>
         </div>
 
-        <div className="max-w-7xl mx-auto border-t border-white/10 mt-8 pt-6 flex flex-col md:flex-row justify-between items-center text-[10px] text-brand-cream-light/40 font-mono uppercase tracking-widest">
+        <div className="max-w-7xl mx-auto border-t border-white/10 mt-8 pt-6 flex flex-col md:flex-row justify-between items-center text-[10px] text-brand-cream-light/40 font-mono uppercase tracking-widest gap-2">
           <span>© 2026 The Frosting Fairy Confectionery Ltd.</span>
-          <span>Freshly Baked Every Day in India</span>
+          <div className="flex items-center gap-4">
+            <span>Freshly Baked Every Day in India</span>
+            <span>•</span>
+            <Link to="/admin" className="hover:text-brand-pink transition-colors opacity-60 hover:opacity-100">
+              Admin Portal
+            </Link>
+          </div>
         </div>
       </footer>
     </div>

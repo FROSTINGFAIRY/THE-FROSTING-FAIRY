@@ -10,7 +10,6 @@ import {
   ChevronDown, 
   Edit2, 
   Lock,
-  Sparkles,
   UserCheck
 } from 'lucide-react';
 import { CustomerProfile } from '../types';
@@ -60,10 +59,9 @@ export default function CustomerMobileLogin({
   const [fullPhone, setFullPhone] = useState<string>('');
 
   // OTP states
-  const [otpDigits, setOtpDigits] = useState<string[]>(['', '', '', '', '', '']);
+  const [otpDigits, setOtpDigits] = useState<string[]>(['', '', '', '']);
   const [timer, setTimer] = useState<number>(60);
   const [canResend, setCanResend] = useState<boolean>(false);
-  const [devOtpHint, setDevOtpHint] = useState<string | null>(null);
 
   // Status states
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -115,13 +113,10 @@ export default function CustomerMobileLogin({
     try {
       const res = await requestOtp(trimmed, countryCode);
       setFullPhone(res.fullPhoneNumber);
-      if (res.devHint) {
-        setDevOtpHint(res.devHint);
-      }
       setStep('otp');
       setTimer(60);
       setCanResend(false);
-      setOtpDigits(['', '', '', '', '', '']);
+      setOtpDigits(['', '', '', '']);
       setSuccessMessage(`One-Time Password (OTP) sent to ${res.fullPhoneNumber}`);
 
       // Auto focus first OTP input after state update
@@ -144,12 +139,9 @@ export default function CustomerMobileLogin({
 
     try {
       const res = await requestOtp(phoneNumber, countryCode);
-      if (res.devHint) {
-        setDevOtpHint(res.devHint);
-      }
       setTimer(60);
       setCanResend(false);
-      setOtpDigits(['', '', '', '', '', '']);
+      setOtpDigits(['', '', '', '']);
       setSuccessMessage(`A new verification code has been sent to ${fullPhone}`);
       setTimeout(() => {
         otpInputRefs.current[0]?.focus();
@@ -163,18 +155,18 @@ export default function CustomerMobileLogin({
 
   // Handle single OTP digit change
   const handleDigitChange = (index: number, value: string) => {
-    // If pasted full 6 digits
+    // If pasted full 4 digits
     const cleanVal = value.replace(/\D/g, '');
     if (cleanVal.length > 1) {
       const newDigits = [...otpDigits];
-      for (let i = 0; i < 6; i++) {
+      for (let i = 0; i < 4; i++) {
         newDigits[i] = cleanVal[i] || '';
       }
       setOtpDigits(newDigits);
-      const nextIndex = Math.min(cleanVal.length, 5);
+      const nextIndex = Math.min(cleanVal.length, 3);
       otpInputRefs.current[nextIndex]?.focus();
-      if (cleanVal.length >= 6) {
-        submitOtp(cleanVal.slice(0, 6));
+      if (cleanVal.length >= 4) {
+        submitOtp(cleanVal.slice(0, 4));
       }
       return;
     }
@@ -184,13 +176,13 @@ export default function CustomerMobileLogin({
     setOtpDigits(newDigits);
 
     // Auto advance
-    if (cleanVal && index < 5) {
+    if (cleanVal && index < 3) {
       otpInputRefs.current[index + 1]?.focus();
     }
 
-    // Auto submit if all 6 digits entered
+    // Auto submit if all 4 digits entered
     const combined = newDigits.join('');
-    if (combined.length === 6) {
+    if (combined.length === 4) {
       submitOtp(combined);
     }
   };
@@ -205,8 +197,8 @@ export default function CustomerMobileLogin({
   // 3. Submit OTP
   const submitOtp = async (codeToVerify?: string) => {
     const otp = codeToVerify || otpDigits.join('');
-    if (otp.length !== 6) {
-      setErrorMessage('Please enter the full 6-digit verification code.');
+    if (otp.length !== 4) {
+      setErrorMessage('Please enter the full 4-digit verification code.');
       return;
     }
 
@@ -382,31 +374,10 @@ export default function CustomerMobileLogin({
             </button>
           </div>
 
-          {/* Dev Test Code Banner (Ensures sandbox preview testing works smoothly!) */}
-          {devOtpHint && (
-            <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center justify-between gap-2">
-              <div className="flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                <span className="font-mono font-bold">Preview Test OTP: {devOtpHint}</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  const digits = devOtpHint.split('').slice(0, 6);
-                  setOtpDigits(digits);
-                  submitOtp(devOtpHint);
-                }}
-                className="text-[10px] font-bold text-amber-700 bg-amber-100 hover:bg-amber-200 px-2 py-1 rounded cursor-pointer transition-colors"
-              >
-                Auto Fill & Verify
-              </button>
-            </div>
-          )}
-
-          {/* 6-Digit OTP Boxes */}
+          {/* 4-Digit OTP Boxes */}
           <div>
             <label className="block text-[11px] font-bold font-mono uppercase tracking-wider text-brand-cocoa-light mb-2 text-center">
-              Enter 6-Digit Verification Code
+              Enter 4-Digit Verification Code
             </label>
 
             <div className="flex items-center justify-center gap-2 sm:gap-3">
@@ -418,7 +389,7 @@ export default function CustomerMobileLogin({
                   }}
                   type="text"
                   inputMode="numeric"
-                  maxLength={6}
+                  maxLength={4}
                   value={digit}
                   onChange={(e) => handleDigitChange(idx, e.target.value)}
                   onKeyDown={(e) => handleKeyDown(idx, e)}
@@ -459,7 +430,7 @@ export default function CustomerMobileLogin({
           {/* Submit Verification Button */}
           <button
             type="button"
-            disabled={isLoading || otpDigits.join('').length !== 6}
+            disabled={isLoading || otpDigits.join('').length !== 4}
             onClick={() => submitOtp()}
             className="w-full py-3.5 px-4 bg-brand-pink text-white rounded-xl font-bold text-sm tracking-wide transition-all shadow-sm hover:shadow-md hover:bg-brand-pink/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
           >

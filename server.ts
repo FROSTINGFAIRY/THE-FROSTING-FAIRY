@@ -9,6 +9,8 @@ import firebaseConfig from "./firebase-applet-config.json";
 import {
   getFirestoreDoc,
   setFirestoreDoc,
+  updateFirestoreDoc,
+  deleteFirestoreDoc,
   addFirestoreDoc,
 } from "./serverFirestore";
 
@@ -174,6 +176,16 @@ async function startServer() {
     windowMs: 10 * 60 * 1000,
     max: 30,
     message: { error: "Rate limit exceeded. Please wait a few moments before trying again." },
+    standardHeaders: true,
+    legacyHeaders: false,
+    validate: { xForwardedForHeader: false, default: false },
+  });
+
+  // Rate limiting for customer OTP auth (12 requests per 15 minutes per IP)
+  const otpAuthLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 12,
+    message: { error: "Too many verification attempts from this device. Please try again later." },
     standardHeaders: true,
     legacyHeaders: false,
     validate: { xForwardedForHeader: false, default: false },
@@ -479,31 +491,12 @@ BODY_HTML:
     lastRequestedAt: number;
   }
 
-  const otpStore = new Map<string, OtpRecord>();
-
   interface CustomerSessionRecord {
     customerId: string;
     fullPhoneNumber: string;
     createdAt: number;
     expiresAt: number;
   }
-
-  const customerSessions = new Map<string, CustomerSessionRecord>();
-
-  // Cleanup expired OTPs and sessions periodically
-  setInterval(() => {
-    const now = Date.now();
-    for (const [key, record] of otpStore.entries()) {
-      if (record.expiresAt < now) {
-        otpStore.delete(key);
-      }
-    }
-    for (const [token, session] of customerSessions.entries()) {
-      if (session.expiresAt < now) {
-        customerSessions.delete(token);
-      }
-    }
-  }, 5 * 60 * 1000);
 
   // Helper to normalize phone number
   function normalizePhoneNumber(rawNumber: string, countryCode: string = "+966") {
@@ -525,7 +518,7 @@ BODY_HTML:
   }
 
   // 1) SEND OTP: /api/auth/send-otp
-  app.post("/api/auth/send-otp", async (req, res) => {
+  app.post("/api/auth/send-otp", otpAuthLimiter, async (req, res) => {
     try {
       const { phoneNumber, countryCode } = req.body || {};
       if (!phoneNumber || typeof phoneNumber !== "string") {
@@ -541,7 +534,7 @@ BODY_HTML:
       }
 
       // Check throttle (minimum 10 seconds between requests for the same number)
-      const existing = otpStore.get(fullNumber);
+      const existing = await getFirestoreDoc("otp_codes", fullNumber);
       const now = Date.now();
       if (existing && now - existing.lastRequestedAt < 10000) {
         return res.status(429).json({
@@ -549,10 +542,48 @@ BODY_HTML:
         });
       }
 
-      // Generate a secure 6-digit OTP
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      // Confirm an SMS provider is actually configured before generating any code
+      const settings = (await getFirestoreDoc("settings", "notifications")) || {};
+      const twilioSid = process.env.TWILIO_SID || settings.twilioSid;
+      const twilioToken = process.env.TWILIO_TOKEN || settings.twilioToken;
+      const twilioFrom = process.env.TWILIO_PHONE || settings.twilioPhone;
 
-      otpStore.set(fullNumber, {
+      if (!twilioSid || !twilioToken || !twilioFrom) {
+        console.error("[MOBILE AUTH] Twilio is not configured — refusing to fabricate a successful OTP send.");
+        return res.status(500).json({
+          error: "SMS delivery is not configured yet. Please contact support.",
+        });
+      }
+
+      // Generate a secure 4-digit OTP
+      const otp = Math.floor(1000 + Math.random() * 9000).toString();
+
+      // Dispatch SMS via Twilio and confirm it was actually accepted before reporting success
+      const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/Messages.json`;
+      const authString = Buffer.from(`${twilioSid}:${twilioToken}`).toString("base64");
+      const params = new URLSearchParams();
+      params.append("To", fullNumber);
+      params.append("From", twilioFrom);
+      params.append("Body", `Your The Frosting Fairy verification code is ${otp}. Valid for 10 minutes.`);
+
+      const twilioRes = await fetch(twilioUrl, {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${authString}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: params.toString(),
+      });
+
+      if (!twilioRes.ok) {
+        const twilioErr = await twilioRes.text();
+        console.error("[MOBILE AUTH] Twilio rejected the SMS send:", twilioErr);
+        return res.status(502).json({
+          error: "Could not send the verification code. Please try again shortly.",
+        });
+      }
+
+      await setFirestoreDoc("otp_codes", fullNumber, {
         otp,
         phoneNumber: digits,
         countryCode: cleanCode,
@@ -563,43 +594,13 @@ BODY_HTML:
         lastRequestedAt: now,
       });
 
-      console.log(`[MOBILE AUTH] 📱 Verification OTP for ${fullNumber}: ${otp}`);
-
-      // Dispatch SMS via Twilio if configured in notifications settings
-      try {
-        const settings = (await getFirestoreDoc("settings", "notifications")) || {};
-        const twilioSid = process.env.TWILIO_SID || settings.twilioSid;
-        const twilioToken = process.env.TWILIO_TOKEN || settings.twilioToken;
-        const twilioFrom = process.env.TWILIO_PHONE || settings.twilioPhone;
-
-        if (twilioSid && twilioToken && twilioFrom) {
-          const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/Messages.json`;
-          const authString = Buffer.from(`${twilioSid}:${twilioToken}`).toString("base64");
-          const params = new URLSearchParams();
-          params.append("To", fullNumber);
-          params.append("From", twilioFrom);
-          params.append("Body", `Your The Frosting Fairy verification code is ${otp}. Valid for 10 minutes.`);
-
-          fetch(twilioUrl, {
-            method: "POST",
-            headers: {
-              Authorization: `Basic ${authString}`,
-              "Content-Type": "application/x-www-form-urlencoded",
-            },
-            body: params.toString(),
-          }).catch((err) => console.warn("Twilio SMS send error:", err));
-        }
-      } catch (smsErr) {
-        console.warn("SMS provider check error:", smsErr);
-      }
+      console.log(`[MOBILE AUTH] 📱 Verification OTP dispatched to ${fullNumber}`);
 
       return res.json({
         success: true,
         message: `Verification code sent to ${fullNumber}`,
         fullPhoneNumber: fullNumber,
         expiresInSeconds: 60,
-        // In local/preview sandbox, provide devHint so users can test immediately without waiting for SMS carriers
-        devHint: otp,
       });
     } catch (error: any) {
       console.error("send-otp error:", error);
@@ -608,7 +609,7 @@ BODY_HTML:
   });
 
   // 2) VERIFY OTP: /api/auth/verify-otp
-  app.post("/api/auth/verify-otp", async (req, res) => {
+  app.post("/api/auth/verify-otp", otpAuthLimiter, async (req, res) => {
     try {
       const { fullPhoneNumber, otp } = req.body || {};
       if (!fullPhoneNumber || !otp) {
@@ -616,7 +617,7 @@ BODY_HTML:
       }
 
       const normalizedPhone = fullPhoneNumber.trim();
-      const record = otpStore.get(normalizedPhone);
+      const record = await getFirestoreDoc("otp_codes", normalizedPhone);
 
       if (!record || record.expiresAt < Date.now()) {
         return res.status(400).json({
@@ -624,26 +625,28 @@ BODY_HTML:
         });
       }
 
-      record.attempts += 1;
-      if (record.attempts > 5) {
-        otpStore.delete(normalizedPhone);
+      const attempts = (record.attempts || 0) + 1;
+      if (attempts > 5) {
+        await deleteFirestoreDoc("otp_codes", normalizedPhone);
         return res.status(400).json({
           error: "Too many incorrect attempts. Please request a new code.",
         });
       }
 
       if (record.otp !== otp.trim()) {
+        await updateFirestoreDoc("otp_codes", normalizedPhone, { attempts });
         return res.status(400).json({
           error: "Incorrect verification code. Please check and try again.",
         });
       }
 
       // OTP is valid! Clear it
-      otpStore.delete(normalizedPhone);
+      await deleteFirestoreDoc("otp_codes", normalizedPhone);
 
-      // Generate secure session token
+      // Generate a secure session token; store only its hash so a Firestore read alone can't yield a usable session
       const sessionToken = crypto.randomBytes(32).toString("hex");
-      customerSessions.set(sessionToken, {
+      const sessionTokenHash = crypto.createHash("sha256").update(sessionToken).digest("hex");
+      await setFirestoreDoc("customer_sessions", sessionTokenHash, {
         customerId: normalizedPhone,
         fullPhoneNumber: normalizedPhone,
         createdAt: Date.now(),
@@ -689,7 +692,7 @@ BODY_HTML:
           lastLoginAt: nowIso,
         };
         try {
-          await setFirestoreDoc("customers", normalizedPhone, { lastLoginAt: nowIso });
+          await updateFirestoreDoc("customers", normalizedPhone, { lastLoginAt: nowIso });
         } catch (err) {
           console.warn("Error updating customer lastLoginAt:", err);
         }
@@ -718,10 +721,11 @@ BODY_HTML:
       }
 
       const token = authHeader.split("Bearer ")[1].trim();
-      const session = customerSessions.get(token);
+      const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+      const session = await getFirestoreDoc("customer_sessions", tokenHash);
 
       if (!session || session.expiresAt < Date.now()) {
-        if (session) customerSessions.delete(token);
+        if (session) await deleteFirestoreDoc("customer_sessions", tokenHash);
         return res.status(401).json({ authenticated: false, error: "Session expired." });
       }
 
@@ -760,7 +764,8 @@ BODY_HTML:
       }
 
       const token = authHeader.split("Bearer ")[1].trim();
-      const session = customerSessions.get(token);
+      const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+      const session = await getFirestoreDoc("customer_sessions", tokenHash);
       if (!session || session.expiresAt < Date.now()) {
         return res.status(401).json({ error: "Session expired. Please log in again." });
       }
@@ -773,7 +778,7 @@ BODY_HTML:
       if (preferredDeliveryType !== undefined) updates.preferredDeliveryType = preferredDeliveryType;
       updates.updatedAt = new Date().toISOString();
 
-      await setFirestoreDoc("customers", session.fullPhoneNumber, updates);
+      await updateFirestoreDoc("customers", session.fullPhoneNumber, updates);
       const updatedDoc = await getFirestoreDoc("customers", session.fullPhoneNumber);
 
       return res.json({

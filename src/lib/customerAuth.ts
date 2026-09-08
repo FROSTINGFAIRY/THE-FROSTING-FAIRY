@@ -44,7 +44,6 @@ export async function requestOtp(phoneNumber: string, countryCode: string = '+96
   message?: string;
   fullPhoneNumber: string;
   expiresInSeconds?: number;
-  devHint?: string;
   error?: string;
 }> {
   const response = await fetch('/api/auth/send-otp', {

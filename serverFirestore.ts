@@ -167,3 +167,17 @@ export async function addFirestoreDoc(collection: string, data: Record<string, a
     return null;
   }
 }
+
+/**
+ * Delete a document from Firestore via REST API
+ */
+export async function deleteFirestoreDoc(collection: string, docId: string): Promise<boolean> {
+  try {
+    const url = `${FIRESTORE_BASE_URL}/${collection}/${encodeURIComponent(docId)}?key=${firebaseConfig.apiKey}`;
+    const res = await fetch(url, { method: "DELETE" });
+    return res.ok;
+  } catch (err) {
+    console.warn(`[Firestore REST] Error deleting doc ${collection}/${docId}:`, err);
+    return false;
+  }
+}
