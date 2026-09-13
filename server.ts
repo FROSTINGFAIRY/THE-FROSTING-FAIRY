@@ -984,17 +984,17 @@ BODY_HTML:
         return res.status(404).json({ error: "Order not found. Please check your order reference." });
       }
 
-      // Idempotency: if order is already marked as paid
-      if (order.paymentStatus === "Paid") {
+      // Idempotency: if order is already marked as paid or verification pending
+      if (order.paymentStatus === "Paid" || order.paymentStatus === "Verification Pending") {
         return res.json({
           success: true,
-          status: "Paid",
+          status: order.paymentStatus,
           orderId,
           orderNumber: orderId,
-          paidAmount: order.totalPrice || order.estimatedPrice,
+          submittedAmount: order.totalPrice || order.estimatedPrice,
           transactionId: order.transactionId || trimmedUtr,
-          paidAt: order.paymentTimestamp || new Date().toISOString(),
-          alreadyPaid: true,
+          submittedAt: order.paymentTimestamp || new Date().toISOString(),
+          alreadySubmitted: true,
         });
       }
 
@@ -1012,7 +1012,7 @@ BODY_HTML:
       const paidTimestamp = new Date().toISOString();
 
       const updatedFields = {
-        paymentStatus: "Paid",
+        paymentStatus: "Verification Pending",
         paymentTimestamp: paidTimestamp,
         transactionId: trimmedUtr,
         paymentDetails: {
@@ -1022,45 +1022,103 @@ BODY_HTML:
           upiTransactionId: trimmedUtr,
           gatewayRef: trimmedUtr,
           paidAt: paidTimestamp,
-          verifiedOnServer: true,
+          verifiedOnServer: false,
         },
-        status: "Pending", // ready for baking queue
+        status: "Pending",
       };
 
-      await setFirestoreDoc("orders", orderId, updatedFields);
+      await updateFirestoreDoc("orders", orderId, updatedFields);
 
       // Record in payment_sessions for auditing
       setFirestoreDoc("payment_sessions", orderId, {
         orderId,
         totalPrice: order.totalPrice || order.estimatedPrice,
-        status: "Paid",
+        status: "Verification Pending",
         transactionId: trimmedUtr,
         customerUpiId: customerUpiId || "",
         merchantUpiId,
-        verifiedAt: paidTimestamp,
+        submittedAt: paidTimestamp,
       }).catch((err) => console.warn("Payment session write notice:", err));
 
       // Dispatch alert notification to bakery management
       dispatchServerNotification({
         orderId,
         customerName: order.customerName || order.contactName,
-        cakeType: `${order.cakeType} (Paid ₹${order.totalPrice || order.estimatedPrice} via UPI UTR: ${trimmedUtr})`,
-        status: "Paid (UPI)",
+        cakeType: `${order.cakeType} (Submitted ₹${order.totalPrice || order.estimatedPrice} via UPI UTR: ${trimmedUtr})`,
+        status: "Verification Pending",
       }).catch((err) => console.warn("Order notification dispatch error:", err));
 
       return res.json({
         success: true,
-        status: "Paid",
+        status: "Verification Pending",
         orderId,
         orderNumber: orderId,
-        paidAmount: order.totalPrice || order.estimatedPrice,
+        submittedAmount: order.totalPrice || order.estimatedPrice,
         transactionId: trimmedUtr,
-        paidAt: paidTimestamp,
+        submittedAt: paidTimestamp,
         gatewayRef: trimmedUtr,
       });
     } catch (error: any) {
       console.error("UPI verify-payment error:", error);
       res.status(500).json({ error: error.message || "Failed to record and verify UPI payment." });
+    }
+  });
+
+  // 6) ADMIN CONFIRM PAYMENT: /api/admin/confirm-payment
+  app.post("/api/admin/confirm-payment", async (req, res) => {
+    try {
+      const adminAuth = await verifyAdminToken(req);
+      const { orderId } = req.body || {};
+
+      if (!orderId) {
+        return res.status(400).json({ error: "Order ID is required." });
+      }
+
+      const order = await getFirestoreDoc("orders", orderId);
+      if (!order) {
+        return res.status(404).json({ error: "Order not found." });
+      }
+
+      if (order.paymentStatus !== "Verification Pending") {
+        return res.status(400).json({
+          error: `Cannot confirm payment for order with payment status '${order.paymentStatus}'. Order must be 'Verification Pending'.`,
+        });
+      }
+
+      const confirmedAt = new Date().toISOString();
+      const updatedFields = {
+        paymentStatus: "Paid",
+        status: "Pending",
+        paymentDetails: {
+          ...(order.paymentDetails || {}),
+          verifiedOnServer: true,
+          confirmedByAdmin: adminAuth.email,
+          confirmedAt,
+        },
+      };
+
+      await updateFirestoreDoc("orders", orderId, updatedFields);
+
+      // On success, call dispatchServerNotification
+      dispatchServerNotification({
+        orderId,
+        customerName: order.customerName || order.contactName,
+        cakeType: `${order.cakeType} (Confirmed ₹${order.totalPrice || order.estimatedPrice} via UPI UTR: ${order.paymentDetails?.upiTransactionId || order.transactionId || 'Confirmed'})`,
+        status: "Paid (UPI)",
+      }).catch((err) => console.warn("Order notification dispatch error:", err));
+
+      return res.json({
+        success: true,
+        orderId,
+        paymentStatus: "Paid",
+        status: "Pending",
+        confirmedBy: adminAuth.email,
+        confirmedAt,
+      });
+    } catch (error: any) {
+      console.error("Admin confirm payment handler error:", error);
+      const status = error.status || 500;
+      res.status(status).json({ error: error.message || "Failed to confirm payment." });
     }
   });
 

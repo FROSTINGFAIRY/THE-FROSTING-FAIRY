@@ -189,6 +189,7 @@ export default function Dashboard(props: DashboardProps) {
     : INITIAL_CATEGORY_INFOS;
   const [searchQuery, setSearchQuery] = useState('');
   const [recipeImageIndexes, setRecipeImageIndexes] = useState<Record<string, number>>({});
+  const [loadedImages, setLoadedImages] = useState<Record<string, boolean>>({});
 
   // Categories matching the image categories
   const categories = useMemo(() => [
@@ -633,6 +634,9 @@ export default function Dashboard(props: DashboardProps) {
                   >
                     {/* Interactive Image Carousel Area */}
                     <div id={`recipe-card-img-wrapper-${recipe.id}`} className="relative h-56 overflow-hidden bg-brand-cream-light shrink-0">
+                      {!loadedImages[recipe.id] && (
+                        <div className="absolute inset-0 animate-pulse bg-gradient-to-r from-brand-cream-light via-white/60 to-brand-cream-light bg-[length:200%_100%]" />
+                      )}
                       <img
                         id={`recipe-card-image-${recipe.id}`}
                         src={activeImage}
@@ -641,7 +645,8 @@ export default function Dashboard(props: DashboardProps) {
                         height="224"
                         loading="lazy"
                         decoding="async"
-                        className="w-full h-full object-cover transition-all duration-500 cursor-pointer"
+                        onLoad={() => setLoadedImages(prev => ({ ...prev, [recipe.id]: true }))}
+                        className={`w-full h-full object-cover transition-all duration-500 cursor-pointer ${loadedImages[recipe.id] ? 'opacity-100' : 'opacity-0'}`}
                         onClick={() => onSelectRecipe(recipe)}
                       />
 

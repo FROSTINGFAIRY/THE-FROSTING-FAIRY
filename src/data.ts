@@ -58,6 +58,10 @@ import imgTubStrawberryCream from './assets/images/tub_strawberry_cream_17872206
 import imgTubStrawSpoon from './assets/images/tub_straw_spoon_1787225061259.webp';
 import imgTubStrawAngle from './assets/images/tub_straw_angle_1787225074027.webp';
 
+import imgRollSugar from './assets/images/roll_sugar_glaze_1789296218443.webp';
+import imgRollMilk from './assets/images/roll_condensed_milk_1789296237142.webp';
+import imgRollCreamCheese from './assets/images/roll_cream_cheese_1789296250487.webp';
+
 export {
   imgCakeVanilla,
   imgCakeChocolate,
@@ -1535,7 +1539,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     id: 'add-roll-sugar',
     name: 'Classic Sugar Glaze Cinnamon Rolls',
     description: 'Warm, soft, pillowy rolls swirled with sweet cassia cinnamon butter and covered with a crackly, clear glaze drizzle. Pure comfort.',
-    image: 'https://pixabay.com/get/gf1c9e482eb6866e70aea401833d768b392188dc308291984700a9dd70138b1228fbbefa4d6b4b2259079563c862727385e73e0b38873d60b622a4045eedabfd3_1280.jpg',
+    image: imgRollSugar,
     prepTime: 30,
     cookTime: 20,
     difficulty: 'Medium',
@@ -1569,7 +1573,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     id: 'add-roll-milk',
     name: 'Condensed Milk Glaze Cinnamon Rolls',
     description: 'Gooey cinnamon-spiced rolls drizzled with a rich, silky sweet condensed milk glaze. Incredibly moist and rich flavor.',
-    image: 'https://pixabay.com/get/gaf6f35f54668047416e5ea7b866763341b3abcc70f902e8c5fa2618c324872f23bf8fedb92c4a0cf311ce2fd14b2b011b8ee54b8d1a2b89d441d9e8e027b215d_1280.jpg',
+    image: imgRollMilk,
     prepTime: 30,
     cookTime: 20,
     difficulty: 'Medium',
@@ -1602,7 +1606,7 @@ export const INITIAL_RECIPES: Recipe[] = [
     id: 'add-roll-cream-cheese',
     name: 'Cream Cheese Glaze Cinnamon Rolls',
     description: 'Our absolute bestseller. Soft cinnamon rolls smothered in a thick, velvety layer of sweet and tangy gourmet cream cheese frosting.',
-    image: 'https://pixabay.com/get/gd2a92bc7fba472fd62f7e56799ff951def18b47ac25b4f6c346441adbe44de716e2198e2bd3d82f657f62f6ddba416d8aaade9ba58fcecfb8ad80368f0458bd9_1280.jpg',
+    image: imgRollCreamCheese,
     prepTime: 30,
     cookTime: 20,
     difficulty: 'Hard',

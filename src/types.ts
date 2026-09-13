@@ -118,7 +118,7 @@ export interface CheckoutData {
   deliveryAddress: string;
   gpsCoordinates: string;
   paymentMethod: 'UPI' | 'COD';
-  paymentStatus?: 'Unpaid' | 'Paid' | 'Pending' | 'Failed';
+  paymentStatus?: 'Unpaid' | 'Paid' | 'Pending' | 'Failed' | 'Verification Pending';
   paymentDetails?: {
     gateway?: string;
     upiId?: string;
@@ -127,6 +127,8 @@ export interface CheckoutData {
     gatewayRef?: string;
     paidAt?: string;
     verifiedOnServer?: boolean;
+    confirmedByAdmin?: string;
+    confirmedAt?: string;
   };
 }
 
@@ -155,7 +157,7 @@ export interface MealPlanEntry {
   deliveryAddress?: string;
   gpsCoordinates?: string;
   paymentMethod?: 'UPI' | 'COD';
-  paymentStatus?: 'Unpaid' | 'Paid' | 'Pending' | 'Failed' | 'Refunded';
+  paymentStatus?: 'Unpaid' | 'Paid' | 'Pending' | 'Failed' | 'Refunded' | 'Verification Pending';
   transactionId?: string;
   paymentTimestamp?: string;
   paidAmount?: number;
@@ -167,6 +169,8 @@ export interface MealPlanEntry {
     paidAt?: string;
     gatewayRef?: string;
     verifiedOnServer?: boolean;
+    confirmedByAdmin?: string;
+    confirmedAt?: string;
   };
   adminNotes?: string[];
   boxContents?: { name: string; quantity: number; price?: number }[]; // assorted box item selections with price

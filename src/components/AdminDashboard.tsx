@@ -436,6 +436,8 @@ export default function AdminDashboard(props: AdminDashboardProps) {
     }
   };
 
+  const [confirmingOrderId, setConfirmingOrderId] = useState<string | null>(null);
+
   // --- FIREBASE AUTH & FIRESTORE ACCESS CONTROL ---
   const [firebaseUser, setFirebaseUser] = useState<any>(null);
   const [isUnlocked, setIsUnlocked] = useState(false);
@@ -3606,6 +3608,59 @@ export default function AdminDashboard(props: AdminDashboardProps) {
                               <span>✓ PAID</span>
                               {order.paidAmount && <span>(₹{order.paidAmount})</span>}
                             </span>
+                          ) : order.paymentStatus === 'Verification Pending' ? (
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <span className="font-mono font-bold text-[9px] bg-amber-50 text-amber-800 border border-amber-300 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                <span>⏳ VERIFICATION PENDING</span>
+                                {(order.paymentDetails?.upiTransactionId || order.transactionId) && (
+                                  <span className="font-semibold text-amber-900">
+                                    [UTR: {order.paymentDetails?.upiTransactionId || order.transactionId}]
+                                  </span>
+                                )}
+                                {order.paymentDetails?.customerUpiId && (
+                                  <span className="text-amber-700 font-normal">
+                                    ({order.paymentDetails.customerUpiId})
+                                  </span>
+                                )}
+                              </span>
+                              <button
+                                type="button"
+                                disabled={confirmingOrderId === order.id}
+                                onClick={async () => {
+                                  try {
+                                    setConfirmingOrderId(order.id);
+                                    addAuditLog(`Verifying and confirming UPI payment for Order #${order.id}...`, 'info');
+                                    const idToken = auth.currentUser ? await auth.currentUser.getIdToken() : '';
+                                    const response = await fetch('/api/admin/confirm-payment', {
+                                      method: 'POST',
+                                      headers: {
+                                        'Content-Type': 'application/json',
+                                        'Authorization': `Bearer ${idToken}`,
+                                      },
+                                      body: JSON.stringify({ orderId: order.id }),
+                                    });
+                                    const data = await response.json();
+                                    if (response.ok && data.success) {
+                                      addAuditLog(`✅ [Payment Confirmed] Order #${order.id} marked as Paid.`, 'success');
+                                      triggerToast(`✓ Payment confirmed for Order #${order.id}!`);
+                                    } else {
+                                      addAuditLog(`❌ [Payment Confirmation Failed] ${data.error || 'Failed to confirm payment'}`, 'warning');
+                                      triggerToast(`⚠️ ${data.error || 'Failed to confirm payment'}`);
+                                    }
+                                  } catch (err: any) {
+                                    addAuditLog(`❌ [Payment Confirmation Error] ${err.message}`, 'warning');
+                                    triggerToast(`❌ Network error confirming payment.`);
+                                  } finally {
+                                    setConfirmingOrderId(null);
+                                  }
+                                }}
+                                className="inline-flex items-center gap-1 px-2.5 py-0.5 text-[9px] font-sans font-bold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 rounded-full transition-all cursor-pointer shadow-3xs disabled:opacity-50"
+                                title="Confirm UPI Payment"
+                              >
+                                <CheckCircle className="w-3 h-3 text-emerald-600" />
+                                <span>{confirmingOrderId === order.id ? 'Confirming...' : 'Confirm Payment'}</span>
+                              </button>
+                            </div>
                           ) : (
                             <span className="font-mono text-[9px] bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full">
                               {order.paymentMethod === 'COD' ? '💵 COD' : '📱 UPI'}

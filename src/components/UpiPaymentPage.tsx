@@ -51,7 +51,7 @@ export default function UpiPaymentPage() {
   const [customerUpiId, setCustomerUpiId] = useState<string>('');
   const [isVerifying, setIsVerifying] = useState<boolean>(false);
   const [verificationError, setVerificationError] = useState<string>('');
-  const [paymentStatus, setPaymentStatus] = useState<'PENDING' | 'VERIFYING' | 'PAID' | 'FAILED'>('PENDING');
+  const [paymentStatus, setPaymentStatus] = useState<'PENDING' | 'VERIFYING' | 'PAID' | 'FAILED' | 'AWAITING_CONFIRMATION'>('PENDING');
   const [verifiedPaymentData, setVerifiedPaymentData] = useState<any>(null);
   const [isLoadingOrder, setIsLoadingOrder] = useState<boolean>(false);
   const [fetchError, setFetchError] = useState<string>('');
@@ -75,7 +75,7 @@ export default function UpiPaymentPage() {
   useEffect(() => {
     if (!orderId) return;
 
-    // If we already have full details and positive amount, check if already paid
+    // If we already have full details and positive amount, check if already paid or pending verification
     if (orderDetails && totalAmount > 0) {
       if (orderDetails.paymentStatus === 'Paid') {
         setPaymentStatus('PAID');
@@ -84,6 +84,14 @@ export default function UpiPaymentPage() {
           paidAmount: totalAmount,
           transactionId: orderDetails.transactionId || 'Confirmed',
           paidAt: orderDetails.paymentTimestamp || new Date().toISOString(),
+        });
+      } else if (orderDetails.paymentStatus === 'Verification Pending') {
+        setPaymentStatus('AWAITING_CONFIRMATION');
+        setVerifiedPaymentData({
+          orderNumber: orderId,
+          submittedAmount: totalAmount,
+          transactionId: orderDetails.paymentDetails?.upiTransactionId || orderDetails.transactionId || 'Submitted',
+          submittedAt: orderDetails.paymentTimestamp || new Date().toISOString(),
         });
       }
       return;
@@ -113,6 +121,14 @@ export default function UpiPaymentPage() {
             paidAmount: derivedTotal,
             transactionId: data.transactionId || 'Confirmed',
             paidAt: data.paymentTimestamp || new Date().toISOString(),
+          });
+        } else if (data.paymentStatus === 'Verification Pending') {
+          setPaymentStatus('AWAITING_CONFIRMATION');
+          setVerifiedPaymentData({
+            orderNumber: orderId,
+            submittedAmount: derivedTotal,
+            transactionId: data.paymentDetails?.upiTransactionId || data.transactionId || 'Submitted',
+            submittedAt: data.paymentTimestamp || new Date().toISOString(),
           });
         }
       })
@@ -225,30 +241,34 @@ export default function UpiPaymentPage() {
       }
 
       // Success: update states
-      setPaymentStatus('PAID');
       setVerifiedPaymentData(data);
 
-      // Trigger celebratory confetti
-      triggerOrderSuccessConfetti();
+      if (data.status === 'Verification Pending') {
+        setPaymentStatus('AWAITING_CONFIRMATION');
+      } else {
+        setPaymentStatus('PAID');
+        // Trigger celebratory confetti
+        triggerOrderSuccessConfetti();
 
-      // Notify parent layout context
-      if (context?.handleUpiPaymentSuccess) {
-        context.handleUpiPaymentSuccess({
-          orderIds: [orderId],
-          orderNumber: orderId,
-          paidAmount: totalAmount,
-          transactionId: trimmedUtr,
-          paidAt: data.paidAt || new Date().toISOString(),
-          gatewayRef: trimmedUtr,
-          checkoutData: {
-            customerName: customerName || 'Customer',
-            customerPhone: customerPhone || '',
-            deliveryType: orderDetails?.deliveryType || 'Delivery',
-            deliveryAddress: orderDetails?.deliveryAddress || '',
-            pickupDate: orderDetails?.pickupDate || '',
-            pickupTime: orderDetails?.pickupTime || '',
-          },
-        });
+        // Notify parent layout context
+        if (context?.handleUpiPaymentSuccess) {
+          context.handleUpiPaymentSuccess({
+            orderIds: [orderId],
+            orderNumber: orderId,
+            paidAmount: totalAmount,
+            transactionId: trimmedUtr,
+            paidAt: data.paidAt || data.submittedAt || new Date().toISOString(),
+            gatewayRef: trimmedUtr,
+            checkoutData: {
+              customerName: customerName || 'Customer',
+              customerPhone: customerPhone || '',
+              deliveryType: orderDetails?.deliveryType || 'Delivery',
+              deliveryAddress: orderDetails?.deliveryAddress || '',
+              pickupDate: orderDetails?.pickupDate || '',
+              pickupTime: orderDetails?.pickupTime || '',
+            },
+          });
+        }
       }
     } catch (err: any) {
       console.error('UPI Verification error:', err);
@@ -382,6 +402,71 @@ export default function UpiPaymentPage() {
                 <span className="font-bold text-emerald-700 flex items-center gap-1">
                   <CheckCircle2 className="w-3.5 h-3.5" />
                   <span>Confirmed &amp; Baking Queue</span>
+                </span>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <Link
+                to="/my-orders"
+                className="flex-1 bg-brand-pink hover:bg-brand-pink-dark text-white text-xs font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-1.5"
+              >
+                <span>Track My Orders</span>
+                <ChevronRight className="w-4 h-4" />
+              </Link>
+              <Link
+                to="/shop"
+                className="flex-1 bg-white hover:bg-slate-50 border border-brand-cocoa-border text-brand-cocoa text-xs font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-1.5"
+              >
+                <ShoppingBag className="w-3.5 h-3.5 text-brand-cocoa-light" />
+                <span>Return to Menu</span>
+              </Link>
+            </div>
+          </div>
+        ) : paymentStatus === 'AWAITING_CONFIRMATION' ? (
+          <div className="bg-white border border-brand-cocoa-border rounded-2xl p-6 sm:p-8 text-center max-w-xl mx-auto shadow-xs space-y-6">
+            <div className="w-16 h-16 bg-amber-50 text-amber-600 rounded-full flex items-center justify-center mx-auto">
+              <Clock className="w-10 h-10 text-amber-600" />
+            </div>
+
+            <div>
+              <span className="text-[10px] font-mono uppercase tracking-widest text-amber-800 font-bold bg-amber-50 border border-amber-300 px-2.5 py-1 rounded-full">
+                Reference Number Received
+              </span>
+              <h2 className="font-display font-bold text-2xl sm:text-3xl text-brand-cocoa mt-3">
+                Verification Pending
+              </h2>
+              <p className="text-xs sm:text-sm text-brand-cocoa-light mt-1.5 font-sans">
+                Thank you{customerName ? `, ${customerName}` : ''}! Your UPI Reference Number (UTR) has been received. Our bakery team is verifying the payment and your order will be confirmed shortly.
+              </p>
+            </div>
+
+            {/* Submission Summary Card */}
+            <div className="bg-brand-cream-light/30 border border-brand-cocoa-border/60 rounded-xl p-4 text-left space-y-2.5 font-sans text-xs">
+              <div className="flex justify-between items-center border-b border-brand-cocoa-border/40 pb-2">
+                <span className="text-brand-cocoa-light">Order Number:</span>
+                <span className="font-mono font-bold text-brand-cocoa">{orderId}</span>
+              </div>
+              <div className="flex justify-between items-center border-b border-brand-cocoa-border/40 pb-2">
+                <span className="text-brand-cocoa-light">Submitted Amount:</span>
+                <span className="font-bold text-brand-cocoa text-sm">₹{totalAmount || verifiedPaymentData?.submittedAmount || verifiedPaymentData?.paidAmount}</span>
+              </div>
+              <div className="flex justify-between items-center border-b border-brand-cocoa-border/40 pb-2">
+                <span className="text-brand-cocoa-light">Payment Method:</span>
+                <span className="font-medium text-brand-cocoa">Direct UPI Transfer</span>
+              </div>
+              <div className="flex justify-between items-center border-b border-brand-cocoa-border/40 pb-2">
+                <span className="text-brand-cocoa-light">UPI Transaction ID / UTR:</span>
+                <span className="font-mono font-semibold text-brand-cocoa truncate max-w-[200px]">
+                  {verifiedPaymentData?.transactionId || utrNumber || 'Submitted'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-brand-cocoa-light">Status:</span>
+                <span className="font-bold text-amber-700 flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>Awaiting Confirmation</span>
                 </span>
               </div>
             </div>
