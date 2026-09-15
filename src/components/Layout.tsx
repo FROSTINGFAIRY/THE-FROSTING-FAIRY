@@ -4,6 +4,7 @@ import Navbar from './Navbar';
 import logoImg from '../assets/images/frosting_fairy_logo_1784129178255.webp';
 import OrderSuccessModal, { OrderSuccessDetails } from './OrderSuccessModal';
 import { BakeryStoreMapModal } from './BakeryMapModal';
+import DashboardSkeleton from './DashboardSkeleton';
 import { triggerOrderSuccessConfetti } from '../lib/confetti';
 import { INITIAL_RECIPES, INITIAL_CATEGORY_INFOS } from '../data';
 import { Recipe, ShoppingItem, MealPlanEntry, CategoryInfo, CheckoutData, LayoutContextType, CustomerProfile } from '../types';
@@ -28,6 +29,7 @@ export default function Layout() {
 
   // --- CORE STATE DRIVEN BY FIRESTORE ---
   const [recipes, setRecipes] = useState<Recipe[]>(INITIAL_RECIPES);
+  const [isProductsLoading, setIsProductsLoading] = useState<boolean>(true);
   const [mealPlan, setMealPlan] = useState<MealPlanEntry[]>([]);
   const [categoryInfos, setCategoryInfos] = useState<CategoryInfo[]>(INITIAL_CATEGORY_INFOS);
 
@@ -94,6 +96,7 @@ export default function Layout() {
 
         setRecipes(loadedRecipes);
       }
+      setIsProductsLoading(false);
     }, (err) => {
       if (err.message?.includes('CANCELLED') || err.code === 'cancelled') {
         console.debug('Firestore products stream re-establishing connection...');
@@ -101,6 +104,7 @@ export default function Layout() {
         console.warn('Firestore products listener notice:', err.message);
       }
       setRecipes(INITIAL_RECIPES);
+      setIsProductsLoading(false);
     });
 
     return () => unsubscribe();
@@ -626,6 +630,7 @@ export default function Layout() {
   const layoutContextValue: LayoutContextType = {
     recipes,
     setRecipes,
+    isProductsLoading,
     mealPlan,
     setMealPlan,
     categoryInfos,
@@ -705,10 +710,11 @@ export default function Layout() {
           >
             <Suspense
               fallback={
-                <div className="flex flex-col items-center justify-center p-16 min-h-[360px] space-y-3">
-                  <Loader2 className="w-8 h-8 text-brand-pink animate-spin" />
-                  <span className="text-xs font-mono text-brand-cocoa-light">Loading fresh treats...</span>
-                </div>
+                <DashboardSkeleton
+                  logo={logo}
+                  websiteName={websiteName}
+                  websiteSlogan={websiteSlogan}
+                />
               }
             >
               <Outlet context={layoutContextValue} />

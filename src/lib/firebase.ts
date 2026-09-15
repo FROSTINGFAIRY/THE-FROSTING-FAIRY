@@ -1,6 +1,9 @@
 import { initializeApp, getApps } from 'firebase/app';
 import { 
   getFirestore, 
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
   collection, 
   doc, 
   getDoc, 
@@ -37,9 +40,9 @@ const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0
 
 // Initialize Firestore with specific databaseId if provided
 const firestoreDbId = (firebaseConfig as any).firestoreDatabaseId;
-export const db = firestoreDbId 
-  ? getFirestore(app, firestoreDbId)
-  : getFirestore(app);
+export const db = firestoreDbId
+  ? initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) }, firestoreDbId)
+  : initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
 
 // Initialize Firebase Auth
 export const auth = getAuth(app);

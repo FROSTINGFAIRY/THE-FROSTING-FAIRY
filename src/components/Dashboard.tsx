@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams, useNavigate, useOutletContext } from 'react-router-dom';
 import { Search, Flame, Clock, ChefHat, Star, Heart, ArrowRight, ChevronLeft, ChevronRight, ArrowLeft, Sparkles, LayoutGrid, Cake, Cookie, Gift } from 'lucide-react';
 import { Recipe, CategoryInfo, LayoutContextType } from '../types';
+import DashboardSkeleton from './DashboardSkeleton';
 import {
   imgCakeVanilla,
   imgCakeChocolate,
@@ -163,6 +164,8 @@ interface DashboardProps {
   logo?: string;
   websiteName?: string;
   websiteSlogan?: string;
+  isLoading?: boolean;
+  isProductsLoading?: boolean;
 }
 
 export default function Dashboard(props: DashboardProps) {
@@ -171,6 +174,7 @@ export default function Dashboard(props: DashboardProps) {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const recipes = props.recipes || context?.recipes || [];
+  const isProductsLoading = props.isLoading ?? props.isProductsLoading ?? context?.isProductsLoading ?? false;
   const passedCategoryInfos = props.categoryInfos || context?.categoryInfos;
   const onSelectRecipe = props.onSelectRecipe || ((recipe: Recipe) => navigate(`/product/${recipe.id}`));
   const onToggleFavorite = props.onToggleFavorite || ((id: string) => context?.handleToggleFavorite(id));
@@ -251,6 +255,16 @@ export default function Dashboard(props: DashboardProps) {
       return matchesCategory && matchesSearch;
     });
   }, [recipes, activeCategory, searchQuery]);
+
+  if (isProductsLoading) {
+    return (
+      <DashboardSkeleton
+        logo={logo}
+        websiteName={websiteName}
+        websiteSlogan={websiteSlogan}
+      />
+    );
+  }
 
   return (
     <div id="dashboard-root" className="flex-1 px-4 sm:px-6 lg:px-8 py-8 bg-brand-cream">
@@ -464,7 +478,8 @@ export default function Dashboard(props: DashboardProps) {
                           alt={cat.name}
                           width="400"
                           height="224"
-                          loading="lazy"
+                          loading={idx < 3 ? "eager" : "lazy"}
+                          fetchPriority={idx < 3 ? "high" : "auto"}
                           decoding="async"
                           onError={(e) => {
                             (e.target as HTMLElement).style.display = 'none';
@@ -593,7 +608,8 @@ export default function Dashboard(props: DashboardProps) {
                       alt={currentCatInfo.name}
                       width="400"
                       height="300"
-                      loading="lazy"
+                      loading="eager"
+                      fetchPriority="high"
                       decoding="async"
                       className="w-full h-full object-cover"
                     />
@@ -643,7 +659,8 @@ export default function Dashboard(props: DashboardProps) {
                         alt={recipe.name}
                         width="400"
                         height="224"
-                        loading="lazy"
+                        loading={index < 4 ? "eager" : "lazy"}
+                        fetchPriority={index < 4 ? "high" : "auto"}
                         decoding="async"
                         onLoad={() => setLoadedImages(prev => ({ ...prev, [recipe.id]: true }))}
                         className={`w-full h-full object-cover transition-all duration-500 cursor-pointer ${loadedImages[recipe.id] ? 'opacity-100' : 'opacity-0'}`}
@@ -810,3 +827,5 @@ export default function Dashboard(props: DashboardProps) {
     </div>
   );
 }
+
+export { DashboardSkeleton };

@@ -6,6 +6,8 @@ import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
 import rateLimit from "express-rate-limit";
 import firebaseConfig from "./firebase-applet-config.json";
+import { requireAuth, AuthRequest } from "./src/middleware/auth.ts";
+import { getUsers, getOrCreateUser } from "./src/db/users.ts";
 import {
   getFirestoreDoc,
   setFirestoreDoc,
@@ -201,6 +203,30 @@ async function startServer() {
     })
   );
 
+  // Cloud SQL User Routes
+  app.get("/api/users/me", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      if (!req.user?.uid || !req.user?.email) {
+        return res.status(400).json({ error: "Invalid user token data" });
+      }
+      const user = await getOrCreateUser(req.user.uid, req.user.email, req.user.name);
+      res.json(user);
+    } catch (error: any) {
+      console.error("Failed to sync user:", error);
+      res.status(500).json({ error: error.message || "Failed to sync user" });
+    }
+  });
+
+  app.get("/api/users", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const users = await getUsers();
+      res.json(users);
+    } catch (error: any) {
+      console.error("Failed to fetch users:", error);
+      res.status(500).json({ error: error.message || "Failed to fetch users" });
+    }
+  });
+
   // Initialize GoogleGenAI client lazily via dynamic import
   let ai: any = null;
   const getAiClient = async () => {
@@ -265,13 +291,50 @@ async function startServer() {
           },
         });
 
-        let base64Image = null;
+        let base64Data: string | null = null;
+        let mimeType = "image/png";
+        let base64Image: string | null = null;
+
         if (response?.candidates?.[0]?.content?.parts) {
           for (const part of response.candidates[0].content.parts) {
             if (part.inlineData) {
-              base64Image = `data:${part.inlineData.mimeType || "image/png"};base64,${part.inlineData.data}`;
+              base64Data = part.inlineData.data || null;
+              mimeType = part.inlineData.mimeType || "image/png";
+              if (base64Data) {
+                base64Image = `data:${mimeType};base64,${base64Data}`;
+              }
               break;
             }
+          }
+        }
+
+        if (base64Data) {
+          try {
+            const buffer = Buffer.from(base64Data, "base64");
+            const timestamp = Date.now();
+            const random = Math.random().toString(36).substring(2, 9);
+            const fileName = `${timestamp}-${random}.png`;
+            const objectPath = `ai-generated-previews/${fileName}`;
+            const encodedPath = encodeURIComponent(objectPath);
+            const uploadUrl = `https://firebasestorage.googleapis.com/v0/b/promising-spider-sj1d7.firebasestorage.app/o?name=${encodedPath}&uploadType=media`;
+
+            const storageRes = await fetch(uploadUrl, {
+              method: "POST",
+              headers: {
+                "Content-Type": mimeType,
+              },
+              body: buffer,
+            });
+
+            if (storageRes.ok) {
+              const storageUrl = `https://firebasestorage.googleapis.com/v0/b/promising-spider-sj1d7.firebasestorage.app/o/${encodedPath}?alt=media`;
+              return res.json({ imageUrl: storageUrl });
+            } else {
+              const errText = await storageRes.text().catch(() => "");
+              console.warn("[Image Gen] Storage upload returned non-2xx status:", storageRes.status, errText);
+            }
+          } catch (uploadErr) {
+            console.warn("[Image Gen] Storage upload failed, falling back to data URI:", uploadErr);
           }
         }
 

@@ -179,6 +179,7 @@ export interface MealPlanEntry {
 export interface LayoutContextType {
   recipes: Recipe[];
   setRecipes: React.Dispatch<React.SetStateAction<Recipe[]>>;
+  isProductsLoading?: boolean;
   mealPlan: MealPlanEntry[];
   setMealPlan: React.Dispatch<React.SetStateAction<MealPlanEntry[]>>;
   categoryInfos: CategoryInfo[];

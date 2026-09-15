@@ -380,7 +380,8 @@ export default function Home(props: HomeProps) {
                         alt={cat.name}
                         width="400"
                         height="224"
-                        loading="lazy"
+                        loading={idx < 3 ? 'eager' : 'lazy'}
+                        fetchPriority={idx < 3 ? 'high' : 'auto'}
                         decoding="async"
                         onError={(e) => {
                           (e.target as HTMLElement).style.display = 'none';
@@ -463,6 +464,7 @@ export default function Home(props: HomeProps) {
                 width="800"
                 height="340"
                 loading="lazy"
+                fetchPriority="high"
                 decoding="async"
                 className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
               />
@@ -502,6 +504,7 @@ export default function Home(props: HomeProps) {
                 width="800"
                 height="340"
                 loading="lazy"
+                fetchPriority="high"
                 decoding="async"
                 className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
               />
